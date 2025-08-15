@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,6 @@ import {
   getUserStats,
   getUpcomingWarranties
 } from '@/lib/services';
-import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
   const router = useRouter();
