@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as borrowingService from '@/lib/services/borrowingService';
+import { z } from 'zod';
 
-// This would be imported from a shared data file in a real app
-let borrowRecords = [
-  {
-    id: 'BOR-001',
-    assetId: 'AST-001',
-    borrowerId: 'USR-001',
-    checkoutDate: '2024-01-10',
-    dueDate: '2024-01-24',
-    checkinDate: null,
-    status: 'checked-out',
-    purpose: 'work',
-    notes: 'Primary work laptop',
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-10T09:00:00Z',
-  },
-];
+const borrowingUpdateSchema = z.object({
+  assetId: z.string().min(1, "Asset ID is required").optional(),
+  borrowerId: z.string().min(1, "Borrower ID is required").optional(),
+  checkoutDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  checkinDate: z.string().optional().nullable(),
+  status: z.string().optional(),
+  purpose: z.string().optional(),
+  notes: z.string().optional(),
+  action: z.string().optional(), // For special actions like 'checkin'
+}).partial();
 
 // GET /api/borrowing/[id] - Get single borrow record
 export async function GET(
@@ -23,9 +20,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const record = borrowRecords.find(r => r.id === params.id);
+    const { id } = params;
+    const result = await borrowingService.getBorrowingRecordById(id);
     
-    if (!record) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Borrow record not found' },
         { status: 404 }
@@ -34,11 +32,12 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: record
+      data: result.rows[0]
     });
   } catch (error) {
+    console.error(`Failed to fetch borrow record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch borrow record' },
+      { success: false, error: `Failed to fetch borrow record ${params.id}` },
       { status: 500 }
     );
   }
@@ -50,41 +49,35 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { id } = params;
     const body = await request.json();
-    const recordIndex = borrowRecords.findIndex(r => r.id === params.id);
-    
-    if (recordIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Borrow record not found' },
-        { status: 404 }
-      );
+    const validation = borrowingUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+        return NextResponse.json(
+            { success: false, error: 'Invalid input', details: validation.error.flatten() },
+            { status: 400 }
+        );
     }
 
-    // If checking in, set checkin date and status
-    if (body.action === 'checkin') {
-      borrowRecords[recordIndex] = {
-        ...borrowRecords[recordIndex],
-        checkinDate: new Date().toISOString().split('T')[0],
-        status: 'returned',
-        updatedAt: new Date().toISOString(),
-        ...body,
-      };
-    } else {
-      borrowRecords[recordIndex] = {
-        ...borrowRecords[recordIndex],
-        ...body,
-        updatedAt: new Date().toISOString(),
-      };
+    const result = await borrowingService.updateBorrowingRecord(id, validation.data);
+
+    if (result.rowCount === 0) {
+        return NextResponse.json(
+            { success: false, error: 'Borrow record not found' },
+            { status: 404 }
+        );
     }
 
     return NextResponse.json({
       success: true,
-      data: borrowRecords[recordIndex],
+      data: result.rows[0],
       message: body.action === 'checkin' ? 'Asset checked in successfully' : 'Borrow record updated successfully'
     });
   } catch (error) {
+    console.error(`Failed to update borrow record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update borrow record' },
+      { success: false, error: `Failed to update borrow record ${params.id}` },
       { status: 500 }
     );
   }
@@ -96,25 +89,25 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const recordIndex = borrowRecords.findIndex(r => r.id === params.id);
+    const { id } = params;
+    const result = await borrowingService.deleteBorrowingRecord(id);
     
-    if (recordIndex === -1) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Borrow record not found' },
         { status: 404 }
       );
     }
 
-    const deletedRecord = borrowRecords.splice(recordIndex, 1)[0];
-
     return NextResponse.json({
       success: true,
-      data: deletedRecord,
+      data: result.rows[0],
       message: 'Borrow record deleted successfully'
     });
   } catch (error) {
+    console.error(`Failed to delete borrow record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete borrow record' },
+      { success: false, error: `Failed to delete borrow record ${params.id}` },
       { status: 500 }
     );
   }
