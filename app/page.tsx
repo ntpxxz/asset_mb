@@ -33,7 +33,7 @@ import {
   getSoftwareStats,
   getUserStats,
   getUpcomingWarranties
-} from '@/lib/services';
+} from '@/lib/data-store';
 
 export default function Dashboard() {
   const router = useRouter();
