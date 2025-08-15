@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +36,7 @@ import {
 } from '@/lib/data-store';
 
 export default function Dashboard() {
-  const [activeForm, setActiveForm] = useState<string | null>(null);
+  const router = useRouter();
   const [stats, setStats] = useState({
     hardware: { total: 0, inUse: 0, available: 0, underRepair: 0, retired: 0 },
     software: { total: 0, totalLicenses: 0, assignedLicenses: 0, availableLicenses: 0 },
@@ -128,116 +129,6 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Plus className="h-5 w-5" />
-            <span>Quick Actions</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {/* Primary Actions */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Add New</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Button
-                  onClick={() => setActiveForm('hardware')}
-                  className="h-20 flex flex-col space-y-2 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Package className="h-6 w-6" />
-                  <div className="text-center">
-                    <div className="font-medium">Hardware Asset</div>
-                    <div className="text-xs opacity-90">Add laptops, desktops, etc.</div>
-                  </div>
-                </Button>
-                <Button
-                  onClick={() => setActiveForm('software')}
-                  className="h-20 flex flex-col space-y-2 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Shield className="h-6 w-6" />
-                  <div className="text-center">
-                    <div className="font-medium">Software License</div>
-                    <div className="text-xs opacity-90">Track licenses & usage</div>
-                  </div>
-                </Button>
-                <Button
-                  onClick={() => setActiveForm('user')}
-                  className="h-20 flex flex-col space-y-2 bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <Users className="h-6 w-6" />
-                  <div className="text-center">
-                    <div className="font-medium">User Account</div>
-                    <div className="text-xs opacity-90">Add team members</div>
-                  </div>
-                </Button>
-              </div>
-            </div>
-
-            {/* Secondary Actions */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Asset Operations</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-16 flex flex-col space-y-1 hover:bg-orange-50 hover:border-orange-300"
-                >
-                  <Activity className="h-5 w-5 text-orange-600" />
-                  <span className="text-xs font-medium">Check Out</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 flex flex-col space-y-1 hover:bg-teal-50 hover:border-teal-300"
-                >
-                  <RotateCcw className="h-5 w-5 text-teal-600" />
-                  <span className="text-xs font-medium">Check In</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 flex flex-col space-y-1 hover:bg-indigo-50 hover:border-indigo-300"
-                >
-                  <FileText className="h-5 w-5 text-indigo-600" />
-                  <span className="text-xs font-medium">Generate Report</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 flex flex-col space-y-1 hover:bg-gray-50 hover:border-gray-300"
-                >
-                  <Settings className="h-5 w-5 text-gray-600" />
-                  <span className="text-xs font-medium">Settings</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Data Management */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Data Management</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-14 flex items-center justify-center space-x-2 hover:bg-emerald-50 hover:border-emerald-300"
-                >
-                  <Upload className="h-4 w-4 text-emerald-600" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Import CSV</div>
-                    <div className="text-xs text-gray-500">Bulk add assets</div>
-                  </div>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-14 flex items-center justify-center space-x-2 hover:bg-cyan-50 hover:border-cyan-300"
-                >
-                  <Download className="h-4 w-4 text-cyan-600" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Export Data</div>
-                    <div className="text-xs text-gray-500">Download reports</div>
-                  </div>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Hardware Status */}
@@ -510,25 +401,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Forms */}
-      {activeForm === 'hardware' && (
-        <AddAssetForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={refreshStats}
-        />
-      )}
-      {activeForm === 'software' && (
-        <AddSoftwareForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={refreshStats}
-        />
-      )}
-      {activeForm === 'user' && (
-        <AddUserForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={refreshStats}
-        />
-      )}
     </div>
   );
 }

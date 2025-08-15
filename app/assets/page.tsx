@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,9 @@ import {
   Monitor,
   Laptop,
   Smartphone,
-  Printer
+  Printer,
+  Activity,
+  RotateCcw
 } from 'lucide-react';
 import {
   Table,
@@ -33,8 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { hardwareService, userService, HardwareAsset } from '@/lib/data-store';
-import { AddAssetForm } from '@/components/forms/add-asset-form';
+import { hardwareApi, usersApi } from '@/lib/api-client';
 import { EditAssetForm } from '@/components/forms/edit-asset-form';
 
 const getStatusBadge = (status: string) => {
@@ -69,27 +71,49 @@ const getAssetIcon = (type: string) => {
 };
 
 export default function AssetsPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [assets, setAssets] = useState<HardwareAsset[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setAssets(hardwareService.getAll());
-    setUsers(userService.getAll());
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [assetsResponse, usersResponse] = await Promise.all([
+        hardwareApi.getAll(),
+        usersApi.getAll()
+      ]);
+      
+      if (assetsResponse.success && assetsResponse.data) {
+        setAssets(assetsResponse.data);
+      }
+      
+      if (usersResponse.success && usersResponse.data) {
+        setUsers(usersResponse.data);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (assetId: string) => {
+  const handleDelete = async (assetId: string) => {
     if (confirm('Are you sure you want to delete this asset?')) {
-      hardwareService.delete(assetId);
-      loadData();
+      const response = await hardwareApi.delete(assetId);
+      if (response.success) {
+        loadData();
+      } else {
+        alert('Failed to delete asset: ' + response.error);
+      }
     }
   };
 
@@ -108,6 +132,17 @@ export default function AssetsPage() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading assets...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -121,7 +156,7 @@ export default function AssetsPage() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm" onClick={() => setShowAddForm(true)}>
+          <Button size="sm" onClick={() => router.push('/assets/add')}>
             <Plus className="h-4 w-4 mr-2" />
             Add Asset
           </Button>
@@ -219,10 +254,10 @@ export default function AssetsPage() {
                       <TableCell className="font-medium">${asset.purchasePrice}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setEditingAsset(asset.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}/edit`)}>
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button 
@@ -244,20 +279,6 @@ export default function AssetsPage() {
         </CardContent>
       </Card>
 
-      {/* Forms */}
-      {showAddForm && (
-        <AddAssetForm 
-          onClose={() => setShowAddForm(false)} 
-          onSave={loadData}
-        />
-      )}
-      {editingAsset && (
-        <EditAssetForm 
-          assetId={editingAsset}
-          onClose={() => setEditingAsset(null)} 
-          onSave={loadData}
-        />
-      )}
     </div>
   );
 }

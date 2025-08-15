@@ -1,11 +1,21 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bell, Search, Plus } from 'lucide-react';
+import { Bell, Search, Plus, ChevronDown, Package, Shield, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function Header() {
+  const router = useRouter();
+
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -22,10 +32,29 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Quick Add
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Quick Add
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => router.push('/assets/add')}>
+                <Package className="h-4 w-4 mr-2" />
+                Hardware Asset
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/software/add')}>
+                <Shield className="h-4 w-4 mr-2" />
+                Software License
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/users/add')}>
+                <Users className="h-4 w-4 mr-2" />
+                User Account
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <div className="relative">
             <Button variant="ghost" size="sm" className="p-2">

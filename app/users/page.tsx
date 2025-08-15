@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { userService, User } from '@/lib/data-store';
-import { AddUserForm } from '@/components/forms/add-user-form';
 import { EditUserForm } from '@/components/forms/edit-user-form';
 
 const getStatusBadge = (status: string) => {
@@ -50,11 +50,11 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function UsersPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [users, setUsers] = useState<User[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function UsersPage() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm" onClick={() => setShowAddForm(true)}>
+          <Button size="sm" onClick={() => router.push('/users/add')}>
             <Plus className="h-4 w-4 mr-2" />
             Add User
           </Button>
@@ -263,10 +263,10 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => router.push(`/users/${user.id}`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingUser(user.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => router.push(`/users/${user.id}/edit`)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button 
@@ -287,20 +287,6 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {/* Forms */}
-      {showAddForm && (
-        <AddUserForm 
-          onClose={() => setShowAddForm(false)} 
-          onSave={loadData}
-        />
-      )}
-      {editingUser && (
-        <EditUserForm 
-          userId={editingUser}
-          onClose={() => setEditingUser(null)} 
-          onSave={loadData}
-        />
-      )}
     </div>
   );
 }
