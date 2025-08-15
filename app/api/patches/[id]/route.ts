@@ -1,38 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import pool from '@/lib/db';
+import { z } from 'zod';
 
-// This would be imported from a shared data file in a real app
-let patchRecords = [
-  {
-    id: 'PATCH-001',
-    assetId: 'AST-001',
-    patchStatus: 'up-to-date',
-    lastPatchCheck: '2024-01-15',
-    operatingSystem: 'macOS Ventura 13.6',
-    vulnerabilities: 0,
-    pendingUpdates: 0,
-    criticalUpdates: 0,
-    securityUpdates: 0,
-    notes: 'All security patches applied',
-    nextCheckDate: '2024-02-15',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T14:30:00Z',
-  },
-  {
-    id: 'PATCH-002',
-    assetId: 'AST-002',
-    patchStatus: 'needs-review',
-    lastPatchCheck: '2023-12-20',
-    operatingSystem: 'Windows 11 Pro',
-    vulnerabilities: 3,
-    pendingUpdates: 5,
-    criticalUpdates: 1,
-    securityUpdates: 2,
-    notes: 'Requires manual review for critical updates',
-    nextCheckDate: '2024-01-20',
-    createdAt: '2023-12-20T16:00:00Z',
-    updatedAt: '2024-01-10T09:00:00Z',
-  },
-];
+// Zod schema for validation (all fields optional for updates)
+const patchUpdateSchema = z.object({
+  assetId: z.string().min(1, "Asset ID is required").optional(),
+  patchStatus: z.string().optional(),
+  lastPatchCheck: z.string().optional(),
+  operatingSystem: z.string().optional(),
+  vulnerabilities: z.coerce.number().int().optional(),
+  pendingUpdates: z.coerce.number().int().optional(),
+  criticalUpdates: z.coerce.number().int().optional(),
+  securityUpdates: z.coerce.number().int().optional(),
+  notes: z.string().optional(),
+  nextCheckDate: z.string().optional(),
+}).partial();
+
 
 // GET /api/patches/[id] - Get single patch record
 export async function GET(
@@ -40,9 +23,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const record = patchRecords.find(r => r.id === params.id);
+    const { id } = params;
+    const result = await pool.query('SELECT * FROM asset_patches WHERE id = $1', [id]);
     
-    if (!record) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Patch record not found' },
         { status: 404 }
@@ -51,11 +35,12 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: record
+      data: result.rows[0]
     });
   } catch (error) {
+    console.error(`Failed to fetch patch record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch patch record' },
+      { success: false, error: `Failed to fetch patch record ${params.id}` },
       { status: 500 }
     );
   }
@@ -67,30 +52,51 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { id } = params;
     const body = await request.json();
-    const recordIndex = patchRecords.findIndex(r => r.id === params.id);
+    const validation = patchUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+        return NextResponse.json(
+            { success: false, error: 'Invalid input', details: validation.error.flatten() },
+            { status: 400 }
+        );
+    }
     
-    if (recordIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Patch record not found' },
-        { status: 404 }
-      );
+    const fields: { [key: string]: any } = validation.data;
+    if (Object.keys(fields).length === 0) {
+        return NextResponse.json(
+            { success: false, error: 'No fields to update' },
+            { status: 400 }
+        );
     }
 
-    patchRecords[recordIndex] = {
-      ...patchRecords[recordIndex],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
+    fields.updatedAt = new Date().toISOString();
+
+    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
+    const queryParams = Object.values(fields);
+    queryParams.push(id);
+    
+    const query = `UPDATE asset_patches SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`;
+    
+    const result = await pool.query(query, queryParams);
+
+    if (result.rowCount === 0) {
+        return NextResponse.json(
+            { success: false, error: 'Patch record not found' },
+            { status: 404 }
+        );
+    }
 
     return NextResponse.json({
       success: true,
-      data: patchRecords[recordIndex],
+      data: result.rows[0],
       message: 'Patch record updated successfully'
     });
   } catch (error) {
+    console.error(`Failed to update patch record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update patch record' },
+      { success: false, error: `Failed to update patch record ${params.id}` },
       { status: 500 }
     );
   }
@@ -102,25 +108,25 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const recordIndex = patchRecords.findIndex(r => r.id === params.id);
+    const { id } = params;
+    const result = await pool.query('DELETE FROM asset_patches WHERE id = $1 RETURNING *;', [id]);
     
-    if (recordIndex === -1) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Patch record not found' },
         { status: 404 }
       );
     }
 
-    const deletedRecord = patchRecords.splice(recordIndex, 1)[0];
-
     return NextResponse.json({
       success: true,
-      data: deletedRecord,
+      data: result.rows[0],
       message: 'Patch record deleted successfully'
     });
   } catch (error) {
+    console.error(`Failed to delete patch record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete patch record' },
+      { success: false, error: `Failed to delete patch record ${params.id}` },
       { status: 500 }
     );
   }

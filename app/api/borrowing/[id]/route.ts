@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import pool from '@/lib/db';
+import { z } from 'zod';
 
-// This would be imported from a shared data file in a real app
-let borrowRecords = [
-  {
-    id: 'BOR-001',
-    assetId: 'AST-001',
-    borrowerId: 'USR-001',
-    checkoutDate: '2024-01-10',
-    dueDate: '2024-01-24',
-    checkinDate: null,
-    status: 'checked-out',
-    purpose: 'work',
-    notes: 'Primary work laptop',
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-10T09:00:00Z',
-  },
-];
+// Zod schema for validation (all fields optional for updates)
+const borrowingUpdateSchema = z.object({
+  assetId: z.string().min(1, "Asset ID is required").optional(),
+  borrowerId: z.string().min(1, "Borrower ID is required").optional(),
+  checkoutDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  checkinDate: z.string().optional().nullable(),
+  status: z.string().optional(),
+  purpose: z.string().optional(),
+  notes: z.string().optional(),
+  action: z.string().optional(), // For special actions like 'checkin'
+}).partial();
+
 
 // GET /api/borrowing/[id] - Get single borrow record
 export async function GET(
@@ -23,9 +22,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const record = borrowRecords.find(r => r.id === params.id);
+    const { id } = params;
+    const result = await pool.query('SELECT * FROM asset_borrowing WHERE id = $1', [id]);
     
-    if (!record) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Borrow record not found' },
         { status: 404 }
@@ -34,11 +34,12 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: record
+      data: result.rows[0]
     });
   } catch (error) {
+    console.error(`Failed to fetch borrow record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch borrow record' },
+      { success: false, error: `Failed to fetch borrow record ${params.id}` },
       { status: 500 }
     );
   }
@@ -50,41 +51,59 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { id } = params;
     const body = await request.json();
-    const recordIndex = borrowRecords.findIndex(r => r.id === params.id);
+    const validation = borrowingUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+        return NextResponse.json(
+            { success: false, error: 'Invalid input', details: validation.error.flatten() },
+            { status: 400 }
+        );
+    }
     
-    if (recordIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Borrow record not found' },
-        { status: 404 }
-      );
+    const fields: { [key: string]: any } = validation.data;
+    if (Object.keys(fields).length === 0 && !body.action) {
+        return NextResponse.json(
+            { success: false, error: 'No fields to update' },
+            { status: 400 }
+        );
     }
 
-    // If checking in, set checkin date and status
+    // Special logic for check-in
     if (body.action === 'checkin') {
-      borrowRecords[recordIndex] = {
-        ...borrowRecords[recordIndex],
-        checkinDate: new Date().toISOString().split('T')[0],
-        status: 'returned',
-        updatedAt: new Date().toISOString(),
-        ...body,
-      };
-    } else {
-      borrowRecords[recordIndex] = {
-        ...borrowRecords[recordIndex],
-        ...body,
-        updatedAt: new Date().toISOString(),
-      };
+        fields.checkinDate = new Date().toISOString().split('T')[0];
+        fields.status = 'returned';
+    }
+    delete fields.action; // Don't try to update a column named 'action'
+
+
+    fields.updatedAt = new Date().toISOString();
+
+    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
+    const queryParams = Object.values(fields);
+    queryParams.push(id);
+    
+    const query = `UPDATE asset_borrowing SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`;
+    
+    const result = await pool.query(query, queryParams);
+
+    if (result.rowCount === 0) {
+        return NextResponse.json(
+            { success: false, error: 'Borrow record not found' },
+            { status: 404 }
+        );
     }
 
     return NextResponse.json({
       success: true,
-      data: borrowRecords[recordIndex],
+      data: result.rows[0],
       message: body.action === 'checkin' ? 'Asset checked in successfully' : 'Borrow record updated successfully'
     });
   } catch (error) {
+    console.error(`Failed to update borrow record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update borrow record' },
+      { success: false, error: `Failed to update borrow record ${params.id}` },
       { status: 500 }
     );
   }
@@ -96,25 +115,25 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const recordIndex = borrowRecords.findIndex(r => r.id === params.id);
+    const { id } = params;
+    const result = await pool.query('DELETE FROM asset_borrowing WHERE id = $1 RETURNING *;', [id]);
     
-    if (recordIndex === -1) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Borrow record not found' },
         { status: 404 }
       );
     }
 
-    const deletedRecord = borrowRecords.splice(recordIndex, 1)[0];
-
     return NextResponse.json({
       success: true,
-      data: deletedRecord,
+      data: result.rows[0],
       message: 'Borrow record deleted successfully'
     });
   } catch (error) {
+    console.error(`Failed to delete borrow record ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete borrow record' },
+      { success: false, error: `Failed to delete borrow record ${params.id}` },
       { status: 500 }
     );
   }

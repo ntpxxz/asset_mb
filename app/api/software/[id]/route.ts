@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import pool from '@/lib/db';
+import { z } from 'zod';
 
-let softwareLicenses = [
-  {
-    id: 'SW-001',
-    softwareName: 'Microsoft Office 365',
-    publisher: 'Microsoft',
-    version: '2023',
-    licenseKey: 'XXXXX-XXXXX-XXXXX-XXXXX',
-    licenseType: 'subscription',
-    purchaseDate: '2023-01-01',
-    expiryDate: '2024-01-01',
-    licensesTotal: 150,
-    licensesAssigned: 142,
-    category: 'productivity',
-    description: 'Office productivity suite',
-    notes: 'Enterprise subscription',
-    status: 'active',
-    createdAt: '2023-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-];
+// Zod schema for validation (all fields optional for updates)
+const softwareUpdateSchema = z.object({
+  softwareName: z.string().min(1, "Software name is required").optional(),
+  publisher: z.string().optional(),
+  version: z.string().optional(),
+  licenseKey: z.string().min(1, "License key is required").optional(),
+  licenseType: z.string().optional(),
+  purchaseDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+  licensesTotal: z.coerce.number().int().optional(),
+  licensesAssigned: z.coerce.number().int().optional(),
+  category: z.string().optional(),
+  description: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.string().optional(),
+}).partial();
+
 
 // GET /api/software/[id] - Get single software license
 export async function GET(
@@ -27,9 +26,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const software = softwareLicenses.find(s => s.id === params.id);
+    const { id } = params;
+    const result = await pool.query('SELECT * FROM software WHERE id = $1', [id]);
     
-    if (!software) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Software license not found' },
         { status: 404 }
@@ -38,11 +38,12 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: software
+      data: result.rows[0]
     });
   } catch (error) {
+    console.error(`Failed to fetch software license ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch software license' },
+      { success: false, error: `Failed to fetch software license ${params.id}` },
       { status: 500 }
     );
   }
@@ -54,30 +55,57 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { id } = params;
     const body = await request.json();
-    const softwareIndex = softwareLicenses.findIndex(s => s.id === params.id);
+    const validation = softwareUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+        return NextResponse.json(
+            { success: false, error: 'Invalid input', details: validation.error.flatten() },
+            { status: 400 }
+        );
+    }
     
-    if (softwareIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Software license not found' },
-        { status: 404 }
-      );
+    const fields: { [key: string]: any } = validation.data;
+    if (Object.keys(fields).length === 0) {
+        return NextResponse.json(
+            { success: false, error: 'No fields to update' },
+            { status: 400 }
+        );
     }
 
-    softwareLicenses[softwareIndex] = {
-      ...softwareLicenses[softwareIndex],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
+    fields.updatedAt = new Date().toISOString();
+
+    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
+    const queryParams = Object.values(fields);
+    queryParams.push(id);
+    
+    const query = `UPDATE software SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`;
+    
+    const result = await pool.query(query, queryParams);
+
+    if (result.rowCount === 0) {
+        return NextResponse.json(
+            { success: false, error: 'Software license not found' },
+            { status: 404 }
+        );
+    }
 
     return NextResponse.json({
       success: true,
-      data: softwareLicenses[softwareIndex],
+      data: result.rows[0],
       message: 'Software license updated successfully'
     });
   } catch (error) {
+    console.error(`Failed to update software license ${params.id}:`, error);
+    if (error.code === '23505') { // unique_violation
+        return NextResponse.json(
+            { success: false, error: 'Software with this license key already exists.' },
+            { status: 409 }
+        );
+    }
     return NextResponse.json(
-      { success: false, error: 'Failed to update software license' },
+      { success: false, error: `Failed to update software license ${params.id}` },
       { status: 500 }
     );
   }
@@ -89,25 +117,25 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const softwareIndex = softwareLicenses.findIndex(s => s.id === params.id);
+    const { id } = params;
+    const result = await pool.query('DELETE FROM software WHERE id = $1 RETURNING *;', [id]);
     
-    if (softwareIndex === -1) {
+    if (result.rowCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Software license not found' },
         { status: 404 }
       );
     }
 
-    const deletedSoftware = softwareLicenses.splice(softwareIndex, 1)[0];
-
     return NextResponse.json({
       success: true,
-      data: deletedSoftware,
+      data: result.rows[0],
       message: 'Software license deleted successfully'
     });
   } catch (error) {
+    console.error(`Failed to delete software license ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete software license' },
+      { success: false, error: `Failed to delete software license ${params.id}` },
       { status: 500 }
     );
   }
