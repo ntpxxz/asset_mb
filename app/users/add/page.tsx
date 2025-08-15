@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { X, UserPlus, Save } from 'lucide-react';
+import { ArrowLeft, UserPlus, Save } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -13,13 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { userService } from '@/lib/data-store';
 
-interface AddUserFormProps {
-  onClose: () => void;
-  onSave: () => void;
-}
-
-export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
+export default function AddUserPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -51,8 +49,7 @@ export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
       status: 'active',
     });
     
-    onSave();
-    onClose();
+    router.push('/users');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -60,19 +57,28 @@ export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Add New User</h1>
+          <p className="text-gray-600">Create a new user account</p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <UserPlus className="h-5 w-5" />
-            <span>Add New User</span>
+            <span>User Information</span>
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
@@ -213,7 +219,7 @@ export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
 
             {/* Form Actions */}
             <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
               </Button>
               <Button type="submit">

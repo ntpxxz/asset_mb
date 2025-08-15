@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { softwareService, SoftwareLicense } from '@/lib/data-store';
-import { AddSoftwareForm } from '@/components/forms/add-software-form';
 import { EditSoftwareForm } from '@/components/forms/edit-software-form';
 
 const getStatusBadge = (status: string) => {
@@ -63,11 +63,11 @@ const getLicenseTypeBadge = (type: string) => {
 };
 
 export default function SoftwarePage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [software, setSoftware] = useState<SoftwareLicense[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [editingSoftware, setEditingSoftware] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function SoftwarePage() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm" onClick={() => setShowAddForm(true)}>
+          <Button size="sm" onClick={() => router.push('/software/add')}>
             <Plus className="h-4 w-4 mr-2" />
             Add License
           </Button>
@@ -295,12 +295,6 @@ export default function SoftwarePage() {
       </Card>
 
       {/* Forms */}
-      {showAddForm && (
-        <AddSoftwareForm 
-          onClose={() => setShowAddForm(false)} 
-          onSave={loadData}
-        />
-      )}
       {editingSoftware && (
         <EditSoftwareForm 
           softwareId={editingSoftware}

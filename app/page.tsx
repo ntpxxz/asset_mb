@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,12 +31,9 @@ import {
   borrowService,
   getAssetStats,
   getSoftwareStats,
-  getUserStats,
-  getUpcomingWarranties
-} from '@/lib/data-store';
 
 export default function Dashboard() {
-  const [activeForm, setActiveForm] = useState<string | null>(null);
+  const router = useRouter();
   const [stats, setStats] = useState({
     hardware: { total: 0, inUse: 0, available: 0, underRepair: 0, retired: 0 },
     software: { total: 0, totalLicenses: 0, assignedLicenses: 0, availableLicenses: 0 },
@@ -142,7 +140,7 @@ export default function Dashboard() {
               <h3 className="text-sm font-medium text-gray-700 mb-3">Add New</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <Button
-                  onClick={() => setActiveForm('hardware')}
+                  onClick={() => router.push('/assets/add')}
                   className="h-20 flex flex-col space-y-2 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Package className="h-6 w-6" />
@@ -152,7 +150,7 @@ export default function Dashboard() {
                   </div>
                 </Button>
                 <Button
-                  onClick={() => setActiveForm('software')}
+                  onClick={() => router.push('/software/add')}
                   className="h-20 flex flex-col space-y-2 bg-green-600 hover:bg-green-700 text-white"
                 >
                   <Shield className="h-6 w-6" />
@@ -162,7 +160,7 @@ export default function Dashboard() {
                   </div>
                 </Button>
                 <Button
-                  onClick={() => setActiveForm('user')}
+                  onClick={() => router.push('/users/add')}
                   className="h-20 flex flex-col space-y-2 bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <Users className="h-6 w-6" />
@@ -510,25 +508,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Forms */}
-      {activeForm === 'hardware' && (
-        <AddAssetForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={refreshStats}
-        />
-      )}
-      {activeForm === 'software' && (
-        <AddSoftwareForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={refreshStats}
-        />
-      )}
-      {activeForm === 'user' && (
-        <AddUserForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={refreshStats}
-        />
-      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,9 @@ import {
   Monitor,
   Laptop,
   Smartphone,
-  Printer
+  Printer,
+  Activity,
+  RotateCcw
 } from 'lucide-react';
 import {
   Table,
@@ -34,7 +37,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { hardwareService, userService, HardwareAsset } from '@/lib/data-store';
-import { AddAssetForm } from '@/components/forms/add-asset-form';
 import { EditAssetForm } from '@/components/forms/edit-asset-form';
 
 const getStatusBadge = (status: string) => {
@@ -69,12 +71,12 @@ const getAssetIcon = (type: string) => {
 };
 
 export default function AssetsPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [assets, setAssets] = useState<HardwareAsset[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function AssetsPage() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm" onClick={() => setShowAddForm(true)}>
+          <Button size="sm" onClick={() => router.push('/assets/add')}>
             <Plus className="h-4 w-4 mr-2" />
             Add Asset
           </Button>
@@ -245,12 +247,6 @@ export default function AssetsPage() {
       </Card>
 
       {/* Forms */}
-      {showAddForm && (
-        <AddAssetForm 
-          onClose={() => setShowAddForm(false)} 
-          onSave={loadData}
-        />
-      )}
       {editingAsset && (
         <EditAssetForm 
           assetId={editingAsset}

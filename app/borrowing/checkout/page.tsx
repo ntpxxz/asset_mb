@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Activity, Save, Search } from 'lucide-react';
+import { ArrowLeft, Activity, Save } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,13 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { borrowService } from '@/lib/data-store';
 
-interface CheckoutAssetFormProps {
-  onClose: () => void;
-  onSave: () => void;
-}
-
-export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
+export default function CheckoutAssetPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     assetId: '',
     userId: '',
@@ -43,8 +41,7 @@ export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
       formData.notes
     );
     
-    onSave();
-    onClose();
+    router.push('/borrowing');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -67,19 +64,28 @@ export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Asset Checkout</h1>
+          <p className="text-gray-600">Check out an asset to a user</p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Activity className="h-5 w-5" />
-            <span>Asset Checkout</span>
+            <span>Checkout Information</span>
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Asset Selection */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Asset & User Selection</h3>
@@ -200,7 +206,7 @@ export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
 
             {/* Form Actions */}
             <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
               </Button>
               <Button type="submit">

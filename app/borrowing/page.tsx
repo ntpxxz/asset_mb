@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CheckoutAssetForm } from '@/components/forms/checkout-asset-form';
-import { CheckinAssetForm } from '@/components/forms/checkin-asset-form';
 import { 
   hardwareService, 
   userService, 
@@ -50,8 +49,8 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function BorrowingPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeForm, setActiveForm] = useState<string | null>(null);
   const [checkedOutAssets, setCheckedOutAssets] = useState<any[]>([]);
   const [loanableAssets, setLoanableAssets] = useState<HardwareAsset[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -113,11 +112,11 @@ export default function BorrowingPage() {
           <p className="text-gray-600">Track borrowed assets and manage returns</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={() => setActiveForm('checkin')}>
+          <Button variant="outline" size="sm" onClick={() => router.push('/borrowing/checkin')}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Check In
           </Button>
-          <Button size="sm" onClick={() => setActiveForm('checkout')}>
+          <Button size="sm" onClick={() => router.push('/borrowing/checkout')}>
             <Activity className="h-4 w-4 mr-2" />
             Check Out
           </Button>
@@ -277,7 +276,7 @@ export default function BorrowingPage() {
                     <TableCell>{asset.location}</TableCell>
                     <TableCell>{getStatusBadge('in-stock')}</TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => setActiveForm('checkout')}>
+                      <Button variant="outline" size="sm" onClick={() => router.push('/borrowing/checkout')}>
                         <Activity className="h-4 w-4 mr-1" />
                         Check Out
                       </Button>
@@ -290,19 +289,6 @@ export default function BorrowingPage() {
         </CardContent>
       </Card>
 
-      {/* Forms */}
-      {activeForm === 'checkout' && (
-        <CheckoutAssetForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={loadData}
-        />
-      )}
-      {activeForm === 'checkin' && (
-        <CheckinAssetForm 
-          onClose={() => setActiveForm(null)} 
-          onSave={loadData}
-        />
-      )}
     </div>
   );
 }
