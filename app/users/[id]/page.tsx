@@ -1,7 +1,4 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { usersApi, hardwareApi } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +6,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   ArrowLeft, 
   User, 
-  Edit, 
-  Trash2,
   Mail,
   Phone,
   MapPin,
@@ -18,9 +13,8 @@ import {
   Package,
   Activity
 } from 'lucide-react';
-import { userService, hardwareService, User as UserType } from '@/lib/data-store';
-import { EditUserForm } from '@/components/forms/edit-user-form';
-
+import Link from 'next/link';
+import { UserActions } from '@/components/users/user-actions';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -35,54 +29,35 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-export default function UserViewPage() {
-  const router = useRouter();
-  const params = useParams();
-  const [user, setUser] = useState<UserType | null>(null);
-  const [userAssets, setUserAssets] = useState<any[]>([]);
-  const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+async function getUserData(id: string) {
+  const userResponse = await usersApi.getById(id);
 
-  useEffect(() => {
-    if (params.id) {
-      const userData = userService.getById(params.id as string);
-      if (userData) {
-        setUser(userData);
-        // Get assets assigned to this user
-        const allAssets = hardwareService.getAll();
-        const assignedAssets = allAssets.filter(asset => asset.assignedUser === userData.id);
-        setUserAssets(assignedAssets);
-      }
-      setLoading(false);
-    }
-  }, [params.id]);
-
-  const handleDelete = () => {
-    if (user && confirm('Are you sure you want to delete this user?')) {
-      userService.delete(user.id);
-      router.push('/users');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading user details...</p>
-        </div>
-      </div>
-    );
+  if (!userResponse.success || !userResponse.data) {
+    return { user: null, userAssets: [] };
   }
+
+  // Assuming the API can filter assets by user ID
+  const assetsResponse = await hardwareApi.getAll({ assignedUser: id });
+
+  return {
+    user: userResponse.data,
+    userAssets: assetsResponse.data || [],
+  };
+}
+
+export default async function UserViewPage({ params }: { params: { id: string } }) {
+  const { user, userAssets } = await getUserData(params.id);
 
   if (!user) {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+          <Link href="/users">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
         </div>
         <Card>
           <CardContent className="p-6 text-center">
@@ -100,10 +75,12 @@ export default function UserViewPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+          <Link href="/users">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12">
               <AvatarFallback className="text-lg">
@@ -116,16 +93,7 @@ export default function UserViewPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.push(`/users/${user.id}/edit`)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
+        <UserActions userId={user.id} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -236,9 +204,11 @@ export default function UserViewPage() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge className="bg-green-100 text-green-800">{asset.status}</Badge>
-                        <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}`)}>
-                          View
-                        </Button>
+                        <Link href={`/assets/${asset.id}`}>
+                          <Button variant="ghost" size="sm">
+                            View
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -332,7 +302,6 @@ export default function UserViewPage() {
           </Card>
         </div>
       </div>
-
     </div>
   );
 }

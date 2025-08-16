@@ -16,8 +16,7 @@ import {
   Key,
   Package
 } from 'lucide-react';
-import { softwareService, SoftwareLicense } from '@/lib/data-store';
-import { EditSoftwareForm } from '@/components/forms/edit-software-form';
+import { softwareApi } from '@/lib/api-client';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -49,24 +48,30 @@ const getLicenseTypeBadge = (type: string) => {
 export default function SoftwareViewPage() {
   const router = useRouter();
   const params = useParams();
-  const [software, setSoftware] = useState<SoftwareLicense | null>(null);
-  const [editingSoftware, setEditingSoftware] = useState<string | null>(null);
+  const [software, setSoftware] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (params.id) {
-      const softwareData = softwareService.getById(params.id as string);
-      if (softwareData) {
-        setSoftware(softwareData);
+      const fetchSoftware = async () => {
+        const response = await softwareApi.getById(params.id as string);
+        if (response.success && response.data) {
+          setSoftware(response.data);
+        }
+        setLoading(false);
       }
-      setLoading(false);
+      fetchSoftware();
     }
   }, [params.id]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (software && confirm('Are you sure you want to delete this software license?')) {
-      softwareService.delete(software.id);
-      router.push('/software');
+      const response = await softwareApi.delete(software.id);
+      if(response.success) {
+        router.push('/software');
+      } else {
+        alert('Failed to delete software license: ' + response.error);
+      }
     }
   };
 

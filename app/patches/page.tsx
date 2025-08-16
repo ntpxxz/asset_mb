@@ -1,99 +1,46 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { patchesApi, hardwareApi, usersApi } from '@/lib/api-client';
+import { PatchesTable } from '@/components/patches/patches-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Edit, 
-  Shield,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  RefreshCw
-} from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { hardwareService, userService, HardwareAsset } from '@/lib/data-store';
+import { Card, CardContent } from '@/components/ui/card';
+import { Download, RefreshCw, Shield, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
 
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'up-to-date':
-      return <Badge className="bg-green-100 text-green-800">Up-to-Date</Badge>;
-    case 'needs-review':
-      return <Badge className="bg-yellow-100 text-yellow-800">Needs Review</Badge>;
-    case 'update-pending':
-      return <Badge className="bg-red-100 text-red-800">Update Pending</Badge>;
-    default:
-      return <Badge variant="secondary">{status}</Badge>;
-  }
-};
+async function getPatchData() {
+  const [patchesResponse, assetsResponse, usersResponse] = await Promise.all([
+    patchesApi.getAll(),
+    hardwareApi.getAll(),
+    usersApi.getAll()
+  ]);
 
-const getVulnerabilityBadge = (count: number) => {
-  if (count === 0) {
-    return <Badge className="bg-green-100 text-green-800">None</Badge>;
-  } else if (count <= 3) {
-    return <Badge className="bg-yellow-100 text-yellow-800">{count} Low</Badge>;
-  } else {
-    return <Badge className="bg-red-100 text-red-800">{count} High</Badge>;
-  }
-};
+  const patchRecords = patchesResponse.data || [];
+  const allAssets = assetsResponse.data || [];
+  const allUsers = usersResponse.data || [];
 
-export default function PatchesPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [patchData, setPatchData] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const assets = hardwareService.getAll();
-    const users = userService.getAll();
-    
-    const patchInfo = assets.map(asset => {
-      const user = users.find(u => u.id === asset.assignedUser);
-      return {
-        assetId: asset.id,
-        assetName: `${asset.manufacturer} ${asset.model}`,
-        assignedUser: user ? `${user.firstName} ${user.lastName}` : 'Unassigned',
-        operatingSystem: asset.operatingSystem || 'Not specified',
-        patchStatus: asset.patchStatus,
-        lastChecked: asset.lastPatchCheck || 'Never',
-        location: asset.location,
-        vulnerabilities: Math.floor(Math.random() * 10), // Mock vulnerability count
-      };
-    });
-    
-    setPatchData(patchInfo);
-  };
-
-  const filteredAssets = patchData.filter(asset => {
-    const matchesSearch = asset.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.assignedUser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.operatingSystem.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || asset.patchStatus === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+  const patchInfo = patchRecords.map(record => {
+    const asset = allAssets.find(a => a.id === record.assetId);
+    const user = allUsers.find(u => u.id === asset?.assignedUser);
+    return {
+      assetId: record.assetId,
+      assetName: asset ? `${asset.manufacturer} ${asset.model}` : 'Unknown Asset',
+      assignedUser: user ? `${user.firstName} ${user.lastName}` : 'Unassigned',
+      operatingSystem: record.operatingSystem || 'Not specified',
+      patchStatus: record.patchStatus,
+      lastChecked: record.lastPatchCheck || 'Never',
+      location: asset?.location || 'Unknown',
+      vulnerabilities: record.vulnerabilities || 0,
+    };
   });
+
+  return patchInfo;
+}
+
+export default async function PatchesPage() {
+  const patchData = await getPatchData();
+
+  const upToDateCount = patchData.filter(a => a.patchStatus === 'up-to-date').length;
+  const needsReviewCount = patchData.filter(a => a.patchStatus === 'needs-review').length;
+  const updatePendingCount = patchData.filter(a => a.patchStatus === 'update-pending').length;
+  const totalVulnerabilities = patchData.reduce((sum, a) => sum + a.vulnerabilities, 0);
 
   return (
     <div className="space-y-6">
@@ -125,7 +72,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Up-to-Date</p>
-                <p className="text-2xl font-bold">{patchData.filter(a => a.patchStatus === 'up-to-date').length}</p>
+                <p className="text-2xl font-bold">{upToDateCount}</p>
               </div>
             </div>
           </CardContent>
@@ -138,7 +85,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Needs Review</p>
-                <p className="text-2xl font-bold">{patchData.filter(a => a.patchStatus === 'needs-review').length}</p>
+                <p className="text-2xl font-bold">{needsReviewCount}</p>
               </div>
             </div>
           </CardContent>
@@ -151,7 +98,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Update Pending</p>
-                <p className="text-2xl font-bold">{patchData.filter(a => a.patchStatus === 'update-pending').length}</p>
+                <p className="text-2xl font-bold">{updatePendingCount}</p>
               </div>
             </div>
           </CardContent>
@@ -164,94 +111,14 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Vulnerabilities</p>
-                <p className="text-2xl font-bold">{patchData.reduce((sum, a) => sum + a.vulnerabilities, 0)}</p>
+                <p className="text-2xl font-bold">{totalVulnerabilities}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search by asset, user, or operating system..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Patch Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="up-to-date">Up-to-Date</SelectItem>
-                <SelectItem value="needs-review">Needs Review</SelectItem>
-                <SelectItem value="update-pending">Update Pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Patch Status Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Asset Patch Status ({filteredAssets.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset</TableHead>
-                  <TableHead>Operating System</TableHead>
-                  <TableHead>Patch Status</TableHead>
-                  <TableHead>Last Checked</TableHead>
-                  <TableHead>Vulnerabilities</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAssets.map((asset) => (
-                  <TableRow key={asset.assetId}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{asset.assetName}</p>
-                        <p className="text-sm text-gray-500">{asset.assignedUser} - {asset.location}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm">{asset.operatingSystem}</span>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(asset.patchStatus)}</TableCell>
-                    <TableCell>{asset.lastChecked}</TableCell>
-                    <TableCell>{getVulnerabilityBadge(asset.vulnerabilities)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          Check
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <PatchesTable initialPatchData={patchData} />
     </div>
   );
 }
