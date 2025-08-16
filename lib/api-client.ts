@@ -9,20 +9,35 @@ export interface ApiResponse<T> {
 }
 
 class ApiClient {
-  private baseUrl = '';
+  private getBaseUrl() {
+    if (typeof window !== 'undefined') {
+      // Client-side, use relative path
+      return '';
+    }
+    // Server-side, use absolute path
+    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+  }
+
+  private buildUrl(endpoint: string, params?: Record<string, string | undefined>): URL {
+    const baseUrl = this.getBaseUrl();
+    const urlString = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+    const url = new URL(urlString);
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) url.searchParams.append(key, value);
+      });
+    }
+    return url;
+  }
 
   async get<T>(endpoint: string, params?: Record<string, string>): Promise<ApiResponse<T>> {
     try {
-      const url = new URL(endpoint, window.location.origin);
-      if (params) {
-        Object.entries(params).forEach(([key, value]) => {
-          if (value) url.searchParams.append(key, value);
-        });
-      }
-
-      const response = await fetch(url.toString());
+      const url = this.buildUrl(endpoint, params);
+      const response = await fetch(url.toString(), { cache: 'no-store' });
       return await response.json();
     } catch (error) {
+      console.error(`API GET Error (${endpoint}):`, error);
       return {
         success: false,
         error: 'Network error occurred'
@@ -32,16 +47,17 @@ class ApiClient {
 
   async post<T>(endpoint: string, data: any): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(endpoint, {
+      const url = this.buildUrl(endpoint);
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
-
       return await response.json();
     } catch (error) {
+      console.error(`API POST Error (${endpoint}):`, error);
       return {
         success: false,
         error: 'Network error occurred'
@@ -51,16 +67,17 @@ class ApiClient {
 
   async put<T>(endpoint: string, data: any): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(endpoint, {
+      const url = this.buildUrl(endpoint);
+      const response = await fetch(url.toString(), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
-
       return await response.json();
     } catch (error) {
+      console.error(`API PUT Error (${endpoint}):`, error);
       return {
         success: false,
         error: 'Network error occurred'
@@ -70,12 +87,13 @@ class ApiClient {
 
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(endpoint, {
+      const url = this.buildUrl(endpoint);
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
       });
-
       return await response.json();
     } catch (error) {
+      console.error(`API DELETE Error (${endpoint}):`, error);
       return {
         success: false,
         error: 'Network error occurred'

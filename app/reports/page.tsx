@@ -46,14 +46,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { 
-  hardwareService, 
-  softwareService, 
-  userService, 
-  getAssetStats, 
-  getSoftwareStats,
-  getUserStats 
-} from '@/lib/data-store';
+import { hardwareApi, softwareApi, usersApi } from '@/lib/api-client';
 
 const assetTypeData = [
   { name: 'Laptops', value: 45, color: '#3b82f6' },
@@ -100,11 +93,44 @@ export default function ReportsPage() {
   });
 
   useEffect(() => {
-    setStats({
-      hardware: getAssetStats(),
-      software: getSoftwareStats(),
-      users: getUserStats()
-    });
+    const fetchStats = async () => {
+      const [hardwareResponse, softwareResponse, usersResponse] = await Promise.all([
+        hardwareApi.getAll(),
+        softwareApi.getAll(),
+        usersApi.getAll()
+      ]);
+
+      let hardwareStats = { total: 0, inUse: 0, available: 0, underRepair: 0, retired: 0 };
+      if (hardwareResponse.success && hardwareResponse.data) {
+        hardwareStats.total = hardwareResponse.data.length;
+        hardwareStats.inUse = hardwareResponse.data.filter(a => a.status === 'in-use').length;
+        hardwareStats.available = hardwareResponse.data.filter(a => a.status === 'in-stock').length;
+        hardwareStats.underRepair = hardwareResponse.data.filter(a => a.status === 'under-repair').length;
+        hardwareStats.retired = hardwareResponse.data.filter(a => a.status === 'retired').length;
+      }
+
+      let softwareStats = { total: 0, totalLicenses: 0, assignedLicenses: 0, availableLicenses: 0 };
+      if (softwareResponse.success && softwareResponse.data) {
+        softwareStats.total = softwareResponse.data.length;
+        softwareStats.totalLicenses = softwareResponse.data.reduce((sum, sw) => sum + (sw.licensesTotal || 0), 0);
+        softwareStats.assignedLicenses = softwareResponse.data.reduce((sum, sw) => sum + (sw.licensesAssigned || 0), 0);
+        softwareStats.availableLicenses = softwareStats.totalLicenses - softwareStats.assignedLicenses;
+      }
+
+      let usersStats = { total: 0, active: 0, inactive: 0 };
+      if (usersResponse.success && usersResponse.data) {
+        usersStats.total = usersResponse.data.length;
+        usersStats.active = usersResponse.data.filter(u => u.status === 'active').length;
+        usersStats.inactive = usersResponse.data.filter(u => u.status === 'inactive').length;
+      }
+
+      setStats({
+        hardware: hardwareStats,
+        software: softwareStats,
+        users: usersStats
+      });
+    }
+    fetchStats();
   }, []);
 
   const totalAssetValue = departmentData.reduce((sum, dept) => sum + dept.cost, 0);

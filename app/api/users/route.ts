@@ -1,60 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as userService from '@/lib/services/userService';
+import { z } from 'zod';
 
-let users = [
-  {
-    id: 'USR-001',
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@company.com',
-    phone: '+1 (555) 123-4567',
-    department: 'engineering',
-    role: 'Senior Developer',
-    location: 'ny-office',
-    employeeId: 'EMP-001',
-    manager: 'MGR-001',
-    startDate: '2022-01-15',
-    status: 'active',
-    assetsCount: 1,
-    createdAt: '2022-01-15T00:00:00Z',
-    updatedAt: '2024-01-15T00:00:00Z',
-  },
-];
+const userSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+  department: z.string().optional(),
+  role: z.string().optional(),
+  location: z.string().optional(),
+  employeeId: z.string().optional(),
+  manager: z.string().optional(),
+  startDate: z.string().optional(),
+  status: z.enum(['active', 'inactive', 'on-leave']),
+});
 
 // GET /api/users - Get all users
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get('search');
+  const status = searchParams.get('status');
+  const department = searchParams.get('department');
+
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const status = searchParams.get('status');
-    const department = searchParams.get('department');
-
-    let filteredUsers = [...users];
-
-    // Apply filters
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredUsers = filteredUsers.filter(user => {
-        const fullName = `${user.firstName} ${user.lastName}`;
-        return fullName.toLowerCase().includes(searchLower) ||
-               user.email.toLowerCase().includes(searchLower) ||
-               user.department.toLowerCase().includes(searchLower);
-      });
-    }
-
-    if (status && status !== 'all') {
-      filteredUsers = filteredUsers.filter(user => user.status === status);
-    }
-
-    if (department && department !== 'all') {
-      filteredUsers = filteredUsers.filter(user => user.department === department);
-    }
-
+    const result = await userService.getUsers(search, status, department);
     return NextResponse.json({
       success: true,
-      data: filteredUsers,
-      total: filteredUsers.length
+      data: result.rows,
+      total: result.rowCount
     });
   } catch (error) {
+    console.error('Failed to fetch users:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch users' },
       { status: 500 }
@@ -66,23 +43,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    const newUser = {
-      ...body,
-      id: `USR-${Date.now()}`,
-      assetsCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const validation = userSchema.safeParse(body);
 
-    users.push(newUser);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: validation.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const result = await userService.createUser(validation.data);
 
     return NextResponse.json({
       success: true,
-      data: newUser,
+      data: result.rows[0],
       message: 'User created successfully'
     }, { status: 201 });
   } catch (error) {
+    console.error('Failed to create user:', error);
+    if (error.code === '23505') { // unique_violation
+        return NextResponse.json(
+            { success: false, error: 'User with this email or employee ID already exists.' },
+            { status: 409 }
+        );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to create user' },
       { status: 500 }

@@ -1,106 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as assetService from '@/lib/services/assetService';
+import { z } from 'zod';
 
-// In-memory storage (in production, this would be a database)
-let hardwareAssets = [
-  {
-    id: 'AST-001',
-    assetTag: 'AST-001',
-    type: 'laptop',
-    manufacturer: 'Apple',
-    model: 'MacBook Pro 16"',
-    serialNumber: 'MBP16-2023-001',
-    purchaseDate: '2023-01-15',
-    purchasePrice: '2499',
-    supplier: 'Apple Store',
-    warrantyExpiry: '2026-01-15',
-    assignedUser: 'USR-001',
-    location: 'ny-office',
-    department: 'engineering',
-    status: 'in-use',
-    operatingSystem: 'macOS Ventura 13.6',
-    processor: 'Apple M2 Pro',
-    memory: '16GB',
-    storage: '512GB SSD',
-    hostname: 'MBPRO-JS-001',
-    ipAddress: '192.168.1.101',
-    macAddress: '00:1B:44:11:3A:B7',
-    patchStatus: 'up-to-date',
-    lastPatchCheck: '2024-01-15',
-    isLoanable: false,
-    condition: 'excellent',
-    description: 'Primary development laptop',
-    notes: 'Configured with development tools',
-    createdAt: '2023-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T14:30:00Z',
-  },
-  {
-    id: 'AST-002',
-    assetTag: 'AST-002',
-    type: 'desktop',
-    manufacturer: 'Dell',
-    model: 'OptiPlex 7090',
-    serialNumber: 'DELL-7090-002',
-    purchaseDate: '2023-02-20',
-    purchasePrice: '1299',
-    supplier: 'CDW',
-    warrantyExpiry: '2026-02-20',
-    assignedUser: '',
-    location: 'it-storage',
-    department: '',
-    status: 'in-stock',
-    operatingSystem: 'Windows 11 Pro',
-    processor: 'Intel i7-11700',
-    memory: '16GB DDR4',
-    storage: '512GB NVMe SSD',
-    hostname: '',
-    ipAddress: '',
-    macAddress: '',
-    patchStatus: 'needs-review',
-    lastPatchCheck: '2023-12-20',
-    isLoanable: true,
-    condition: 'good',
-    description: 'Standard office desktop',
-    notes: 'Available for assignment',
-    createdAt: '2023-02-20T09:00:00Z',
-    updatedAt: '2023-12-20T16:00:00Z',
-  },
-];
+const assetSchema = z.object({
+  assetTag: z.string().min(1, "Asset tag is required"),
+  type: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  serialNumber: z.string().min(1, "Serial number is required"),
+  purchaseDate: z.string().optional(),
+  purchasePrice: z.coerce.number().optional(),
+  supplier: z.string().optional(),
+  warrantyExpiry: z.string().optional(),
+  assignedUser: z.string().optional().nullable(),
+  location: z.string().optional(),
+  department: z.string().optional(),
+  status: z.string(),
+  operatingSystem: z.string().optional(),
+  processor: z.string().optional(),
+  memory: z.string().optional(),
+  storage: z.string().optional(),
+  hostname: z.string().optional(),
+  ipAddress: z.string().optional(),
+  macAddress: z.string().optional(),
+  patchStatus: z.string().optional(),
+  lastPatchCheck: z.string().optional(),
+  isLoanable: z.boolean(),
+  condition: z.string().optional(),
+  description: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 // GET /api/assets - Get all assets
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get('search');
+  const status = searchParams.get('status');
+  const type = searchParams.get('type');
+
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const status = searchParams.get('status');
-    const type = searchParams.get('type');
-
-    let filteredAssets = [...hardwareAssets];
-
-    // Apply filters
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredAssets = filteredAssets.filter(asset =>
-        asset.assetTag.toLowerCase().includes(searchLower) ||
-        asset.serialNumber.toLowerCase().includes(searchLower) ||
-        asset.manufacturer.toLowerCase().includes(searchLower) ||
-        asset.model.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (status && status !== 'all') {
-      filteredAssets = filteredAssets.filter(asset => asset.status === status);
-    }
-
-    if (type && type !== 'all') {
-      filteredAssets = filteredAssets.filter(asset => asset.type === type);
-    }
-
+    const result = await assetService.getAssets(search, status, type);
     return NextResponse.json({
       success: true,
-      data: filteredAssets,
-      total: filteredAssets.length
+      data: result.rows,
+      total: result.rowCount
     });
   } catch (error) {
+    console.error('Failed to fetch assets:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch assets' },
       { status: 500 }
@@ -112,22 +58,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    const newAsset = {
-      ...body,
-      id: body.assetTag || `AST-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const validation = assetSchema.safeParse(body);
 
-    hardwareAssets.push(newAsset);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: validation.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const result = await assetService.createAsset(validation.data);
 
     return NextResponse.json({
       success: true,
-      data: newAsset,
+      data: result.rows[0],
       message: 'Asset created successfully'
     }, { status: 201 });
   } catch (error) {
+    console.error('Failed to create asset:', error);
+    if (error.code === '23505') { // unique_violation
+        return NextResponse.json(
+            { success: false, error: 'Asset with this Asset Tag or Serial Number already exists.' },
+            { status: 409 }
+        );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to create asset' },
       { status: 500 }
