@@ -22,26 +22,86 @@ export default function EditUserPage() {
   const params = useParams();
   const [formData, setFormData] = useState<Partial<User>>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (params.id) {
-      const user = userService.getById(params.id as string);
-      if (user) {
-        setFormData(user);
-      }
-      setLoading(false);
+      fetchUsers(params.id as string);
     }
   }, [params.id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.id) {
-      userService.update(formData.id, formData);
-      router.push(`/users/${formData.id}`);
+  const fetchUsers = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/users/${id}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch user');
+      }
+      
+      if (result.success && result.data) {
+        // Convert date strings to YYYY-MM-DD format for HTML date inputs
+        const data = { ...result.data };
+        if (data.startDate) {
+          data.startDate = new Date(data.startDate).toISOString().split('T')[0];
+        }
+
+        // Debug log to check data
+        console.log('Asset data from API:', data);
+        console.log('Status:', data.status, 'Location:', data.location);
+        
+        setFormData(data);
+      } else {
+        setError('User not found');
+      }
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load user');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.id) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      
+      const response = await fetch(`/api/users/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update user');
+      }
+      
+      if (result.success) {
+        router.push(`/users/${formData.id}`);
+      } else {
+        throw new Error(result.error || 'Failed to update user');
+      }
+    } catch (err) {
+      console.error('Error updating asset:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update asset');
+    } finally {
+      setSaving(false);
+    }
+  };
+ 
+  const handleInputChange = (field: string, value: string | boolean | number ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -56,7 +116,7 @@ export default function EditUserPage() {
     );
   }
 
-  if (!formData.id) {
+  if (error || !formData.id) {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
@@ -180,14 +240,11 @@ export default function EditUserPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="engineering">Engineering</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="sales">Sales</SelectItem>
-                      <SelectItem value="hr">Human Resources</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="it">Information Technology</SelectItem>
-                      <SelectItem value="operations">Operations</SelectItem>
-                      <SelectItem value="legal">Legal</SelectItem>
+                      <SelectItem value="ENG">ENG</SelectItem>
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="PC/MC">PC/MC</SelectItem>
+                      <SelectItem value="PD">PD</SelectItem>
+                      <SelectItem value="POM">POM</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -204,17 +261,16 @@ export default function EditUserPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="location">Office Location</Label>
+                  <Label htmlFor="location">Location</Label>
                   <Select value={formData.location || ''} onValueChange={(value) => handleInputChange('location', value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ny-office">New York Office</SelectItem>
-                      <SelectItem value="chicago-office">Chicago Office</SelectItem>
-                      <SelectItem value="la-office">Los Angeles Office</SelectItem>
-                      <SelectItem value="remote">Remote</SelectItem>
-                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                      <SelectItem value="CR">Clean Room</SelectItem>
+                      <SelectItem value="WR">White Room</SelectItem>                      
+                      <SelectItem value="SPD">Spindle Office</SelectItem>
+                      <SelectItem value="SPD FAC 2">SPD FAC 2</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -23,9 +23,7 @@ import {
   RefreshCw,
   Activity
 } from 'lucide-react';
-import { hardwareService, userService, HardwareAsset } from '@/lib/data-store';
-import { EditAssetForm } from '@/components/forms/edit-asset-form';
-
+import { HardwareAsset } from '@/lib/data-store';
 
 
 const getStatusBadge = (status: string) => {
@@ -77,27 +75,74 @@ export default function AssetViewPage() {
   const params = useParams();
   const [asset, setAsset] = useState<HardwareAsset | null>(null);
   const [assignedUser, setAssignedUser] = useState<any>(null);
-  const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (params.id) {
-      const assetData = hardwareService.getById(params.id as string);
-      if (assetData) {
-        setAsset(assetData);
-        if (assetData.assignedUser) {
-          const user = userService.getById(assetData.assignedUser);
-          setAssignedUser(user);
-        }
-      }
-      setLoading(false);
+      fetchAsset(params.id as string);
     }
   }, [params.id]);
 
-  const handleDelete = () => {
-    if (asset && confirm('Are you sure you want to delete this asset?')) {
-      hardwareService.delete(asset.id);
-      router.push('/assets');
+
+
+  const fetchAsset = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/assets/${id}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch asset');
+      }
+      
+      if (result.success && result.data) {
+        // Convert date strings to YYYY-MM-DD format for HTML date inputs
+        const data = { ...result.data };
+        if (data.purchaseDate) {
+          data.purchaseDate = new Date(data.purchaseDate).toISOString().split('T')[0];
+        }
+        if (data.warrantyExpiry) {
+          data.warrantyExpiry = new Date(data.warrantyExpiry).toISOString().split('T')[0];
+        }
+        if (data.lastPatchCheck) {
+          data.lastPatchCheck = new Date(data.lastPatchCheck).toISOString().split('T')[0];
+        }
+        setAsset(data);
+      } else {
+        setError('Asset not found');
+      }
+    } catch (err) {
+      console.error('Error fetching asset:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load asset');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleDelete = async () => {
+    if (!asset) return;
+    
+    if (confirm('Are you sure you want to delete this asset?')) {
+      try {
+        const response = await fetch(`/api/assets/${asset.id}`, {
+          method: 'DELETE',
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          router.push('/assets');
+        } else {
+          alert(result.error || 'Failed to delete asset');
+        }
+      } catch (err) {
+        console.error('Error deleting asset:', err);
+        alert('Failed to delete asset');
+      }
     }
   };
 
@@ -112,7 +157,7 @@ export default function AssetViewPage() {
     );
   }
 
-  if (!asset) {
+  if (error || !asset) {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
@@ -125,7 +170,7 @@ export default function AssetViewPage() {
           <CardContent className="p-6 text-center">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Asset Not Found</h3>
-            <p className="text-gray-600">The requested asset could not be found.</p>
+            <p className="text-gray-600">{error || 'The requested asset could not be found.'}</p>
           </CardContent>
         </Card>
       </div>
@@ -409,7 +454,6 @@ export default function AssetViewPage() {
           )}
         </div>
       </div>
-
     </div>
   );
 }

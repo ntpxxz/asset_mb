@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Download, 
-  Edit, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Download,
+  Edit,
   Trash2,
   Eye,
   Monitor,
@@ -36,9 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ApiResponse, hardwareApi, usersApi } from '@/lib/api-client';
-import { EditAssetForm } from '@/components/forms/edit-asset-form';
-
+import { hardwareApi, usersApi } from '@/lib/api-client';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -47,7 +45,7 @@ const getStatusBadge = (status: string) => {
     case 'in-stock':
       return <Badge className="bg-blue-100 text-blue-800">Available</Badge>;
     case 'under-repair':
-      return <Badge className="bg-yellow-100 text-yellow-500">Maintenance</Badge>;
+      return <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>;
     case 'retired':
       return <Badge className="bg-gray-100 text-gray-800">Retired</Badge>;
     default:
@@ -71,55 +69,31 @@ const getAssetIcon = (type: string) => {
   }
 };
 
-export default function AssetsPage() {
+interface AssetsTableProps {
+  initialAssets: any[];
+  initialUsers: any[];
+}
+
+export function AssetsTable({ initialAssets, initialUsers }: AssetsTableProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  
-  const [assets, setAssets] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [editingAsset, setEditingAsset] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [assets, setAssets] = useState(initialAssets);
+  const [users, setUsers] = useState(initialUsers);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [assetsResponse, usersResponse] = await Promise.all([
-        hardwareApi.getAll(),
-        usersApi.getAll()
-      ]) as [ApiResponse<any[]>, ApiResponse<any[]>];
-      
-      if (assetsResponse.success && assetsResponse.data) {
-        setAssets(assetsResponse.data);
-      } else{
-        setAssets([])
-      }
-      
-      if (usersResponse.success && usersResponse.data) {
-        setUsers(usersResponse.data);
-      }
-      else {
-        setUsers([]);
-      }
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      setAssets([])
-      setUsers([])
-    } finally {
-      setLoading(false);
+  const loadAssets = async () => {
+    const response = await hardwareApi.getAll();
+    if (response.success && response.data) {
+      setAssets(response.data);
     }
-  };
+  }
 
   const handleDelete = async (assetId: string) => {
     if (confirm('Are you sure you want to delete this asset?')) {
       const response = await hardwareApi.delete(assetId);
       if (response.success) {
-        loadData();
+        loadAssets();
       } else {
         alert('Failed to delete asset: ' + response.error);
       }
@@ -137,41 +111,12 @@ export default function AssetsPage() {
                          getUserName(asset.assignedUser).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || asset.type === categoryFilter;
-    
+
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading assets...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hardware</h1>
-          <p className="text-gray-600">Manage your IT assets and track their lifecycle</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button size="sm" onClick={() => router.push('/assets/add')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Hardware
-          </Button>
-        </div>
-      </div>
-
       {/* Filters */}
       <Card>
         <CardContent className="p-6">
@@ -224,14 +169,14 @@ export default function AssetsPage() {
       {/* Assets Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Hardware Inventory ({filteredAssets.length})</CardTitle>
+          <CardTitle>Asset Inventory ({filteredAssets.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Hardware</TableHead>
+                  <TableHead>Asset</TableHead>
                   <TableHead>Serial Number</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Assigned To</TableHead>
@@ -263,15 +208,15 @@ export default function AssetsPage() {
                       <TableCell className="font-medium">${asset.purchasePrice}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}/`)}>
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}/edit`)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-600 hover:text-red-700"
                             onClick={() => handleDelete(asset.id)}
                           >
@@ -287,7 +232,6 @@ export default function AssetsPage() {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 }

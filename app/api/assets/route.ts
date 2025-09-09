@@ -3,29 +3,29 @@ import pool from '@/lib/db';
 import { z } from 'zod';
 
 const assetSchema = z.object({
-  assetTag: z.string().min(1, "Asset tag is required"),
+  asset_tag: z.string().min(1, "Asset tag is required"),
   type: z.string().optional(),
   manufacturer: z.string().optional(),
   model: z.string().optional(),
-  serialNumber: z.string().min(1, "Serial number is required"),
-  purchaseDate: z.string().optional(),
-  purchasePrice: z.coerce.number().optional(),
+  serialnumber: z.string().min(1, "Serial number is required"),
+  purchasedate: z.string().optional(),
+  purchaseprice: z.coerce.number().optional(),
   supplier: z.string().optional(),
-  warrantyExpiry: z.string().optional(),
-  assignedUser: z.string().optional().nullable(),
+  warrantyexpiry: z.string().optional(),
+  assigneduser: z.string().optional().nullable(),
   location: z.string().optional(),
   department: z.string().optional(),
   status: z.string(),
-  operatingSystem: z.string().optional(),
+  operatingsystem: z.string().optional(),
   processor: z.string().optional(),
   memory: z.string().optional(),
   storage: z.string().optional(),
   hostname: z.string().optional(),
-  ipAddress: z.string().optional(),
-  macAddress: z.string().optional(),
-  patchStatus: z.string().optional(),
-  lastPatchCheck: z.string().optional(),
-  isLoanable: z.boolean(),
+  ipaddress: z.string().optional(),
+  macaddress: z.string().optional(),
+  patchstatus: z.string().optional(),
+  lastpatch_check: z.string().optional(),
+  isloanable: z.boolean(),
   condition: z.string().optional(),
   description: z.string().optional(),
   notes: z.string().optional(),
@@ -92,23 +92,23 @@ export async function POST(request: NextRequest) {
     }
     
     const { 
-      assetTag, type, manufacturer, model, serialNumber, purchaseDate, purchasePrice,
-      supplier, warrantyExpiry, assignedUser, location, department, status,
-      operatingSystem, processor, memory, storage, hostname, ipAddress, macAddress,
-      patchStatus, lastPatchCheck, isLoanable, condition, description, notes
+      asset_tag, type, manufacturer, model, serialnumber, purchasedate, purchaseprice,
+      supplier, warrantyexpiry, assigneduser, location, department, status,
+      operatingsystem, processor, memory, storage, hostname, ipaddress, macaddress,
+      patchstatus, lastpatch_check, isloanable, condition, description, notes
     } = validation.data;
 
     const id = `AST-${Date.now()}`;
-    const createdAt = new Date().toISOString();
-    const updatedAt = new Date().toISOString();
+    const created_at = new Date().toISOString();
+    const updated_at = new Date().toISOString();
 
     const query = `
       INSERT INTO assets (
-        id, "assetTag", type, manufacturer, model, "serialNumber", "purchaseDate", "purchasePrice",
-        supplier, "warrantyExpiry", "assignedUser", location, department, status,
-        "operatingSystem", processor, memory, storage, hostname, "ipAddress", "macAddress",
-        "patchStatus", "lastPatchCheck", "isLoanable", condition, description, notes,
-        "createdAt", "updatedAt"
+        id, "asset_tag", type, manufacturer, model, "serialnumber", "purchasedate", "purchaseprice",
+        supplier, "warrantyexpiry", "assigneduser", location, department, status,
+        "operatingsystem", processor, memory, storage, hostname, "ipaddress", "macaddress",
+        "patchstatus", "lastpatch_check", "isloanable", codition, description, notes,
+        "created_at", "updated_at"
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
@@ -117,11 +117,11 @@ export async function POST(request: NextRequest) {
       RETURNING *;
     `;
     const queryParams = [
-      id, assetTag, type, manufacturer, model, serialNumber, purchaseDate, purchasePrice,
-      supplier, warrantyExpiry, assignedUser, location, department, status,
-      operatingSystem, processor, memory, storage, hostname, ipAddress, macAddress,
-      patchStatus, lastPatchCheck, isLoanable, condition, description, notes,
-      createdAt, updatedAt
+      id, asset_tag, type, manufacturer, model, serialnumber, purchasedate, purchaseprice,
+      supplier, warrantyexpiry, assigneduser, location, department, status,
+      operatingsystem, processor, memory, storage, hostname, ipaddress, macaddress,
+      patchstatus, lastpatch_check, isloanable, condition, description, notes,
+      created_at, updated_at
     ];
     
     const result = await pool.query(query, queryParams);
@@ -131,9 +131,9 @@ export async function POST(request: NextRequest) {
       data: result.rows[0],
       message: 'Asset created successfully'
     }, { status: 201 });
-  } catch (error) {
+  } catch (error:unknown) {
     console.error('Failed to create asset:', error);
-    if (error.code === '23505') { // unique_violation
+    if (error) { // unique_violation
         return NextResponse.json(
             { success: false, error: 'Asset with this Asset Tag or Serial Number already exists.' },
             { status: 409 }

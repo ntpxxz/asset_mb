@@ -19,14 +19,34 @@ const softwareUpdateSchema = z.object({
   status: z.string().optional(),
 }).partial();
 
+// Helper function to clean data - remove null/empty values and convert empty strings to null
+function cleanUpdateData(data: any) {
+  const cleaned: any = {};
+  
+  Object.entries(data).forEach(([key, value]) => {
+    // Skip undefined values
+    if (value === undefined) return;
+    
+    // Convert empty strings to null for optional fields
+    if (value === '') {
+      cleaned[key] = null;
+    } else {
+      cleaned[key] = value;
+    }
+  });
+  
+  return cleaned;
+}
+
+//
 
 // GET /api/software/[id] - Get single software license
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } =  await params;
     const result = await pool.query('SELECT * FROM software WHERE id = $1', [id]);
     
     if (result.rowCount === 0) {
@@ -41,9 +61,9 @@ export async function GET(
       data: result.rows[0]
     });
   } catch (error) {
-    console.error(`Failed to fetch software license ${params.id}:`, error);
+    console.error(`Failed to fetch software license:`, error);
     return NextResponse.json(
-      { success: false, error: `Failed to fetch software license ${params.id}` },
+      { success: false, error: `Failed to fetch software license ` },
       { status: 500 }
     );
   }
@@ -96,9 +116,9 @@ export async function PUT(
       data: result.rows[0],
       message: 'Software license updated successfully'
     });
-  } catch (error) {
+  } catch (error:unknown) {
     console.error(`Failed to update software license ${params.id}:`, error);
-    if (error.code === '23505') { // unique_violation
+    if (error) { // unique_violation
         return NextResponse.json(
             { success: false, error: 'Software with this license key already exists.' },
             { status: 409 }

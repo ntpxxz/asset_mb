@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { userService } from '@/lib/data-store';
 
 interface AddUserFormProps {
   onClose: () => void;

@@ -59,7 +59,7 @@ export default function AddAssetPage() {
     isLoanable: false,
     
     // Additional
-    condition: 'excellent',
+    condition: 'good',
     description: '',
     notes: '',
   });
@@ -92,7 +92,7 @@ export default function AddAssetPage() {
       patchStatus: formData.patchStatus as any,
       lastPatchCheck: formData.lastPatchCheck,
       isLoanable: formData.isLoanable,
-      condition: formData.condition,
+      condition: formData.condition as any,
       description: formData.description,
       notes: formData.notes,
     });

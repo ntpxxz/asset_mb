@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { userService, hardwareService, User as UserType } from '@/lib/data-store';
 import { EditUserForm } from '@/components/forms/edit-user-form';
-
+import { HardwareAsset,  } from '@/lib/data-store';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -42,20 +42,54 @@ export default function UserViewPage() {
   const [userAssets, setUserAssets] = useState<any[]>([]);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (params.id) {
-      const userData = userService.getById(params.id as string);
-      if (userData) {
-        setUser(userData);
-        // Get assets assigned to this user
-        const allAssets = hardwareService.getAll();
-        const assignedAssets = allAssets.filter(asset => asset.assignedUser === userData.id);
-        setUserAssets(assignedAssets);
-      }
-      setLoading(false);
+      fetchUser(params.id as string);
     }
   }, [params.id]);
+
+  const fetchUser = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/users/${id}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch user');
+      }
+      
+      if (result.success && result.data) {
+        setUser(result.data);
+        // Fetch assets assigned to this user
+        fetchUserAssets(result.data.id);
+      } else {
+        setError('User not found');
+      }
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserAssets = async (userId: string) => {
+    try {
+      const response = await fetch('/api/assets');
+      const result = await response.json();
+      
+      if (response.ok && result.success && result.data) {
+        const assignedAssets = result.data.filter((asset: HardwareAsset) => asset.assignedUser === userId);
+        setUserAssets(assignedAssets);
+      }
+    } catch (err) {
+      console.error('Error fetching user assets:', err);
+    }
+  };
 
   const handleDelete = () => {
     if (user && confirm('Are you sure you want to delete this user?')) {

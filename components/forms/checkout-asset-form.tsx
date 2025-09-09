@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { borrowService } from '@/lib/data-store';
 
 interface CheckoutAssetFormProps {
   onClose: () => void;

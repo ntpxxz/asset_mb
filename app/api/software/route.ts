@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('Failed to create software license:', error);
-    if (error.code === '23505') { // unique_violation
+    if (error) { // unique_violation
         return NextResponse.json(
             { success: false, error: 'Software with this license key already exists.' },
             { status: 409 }

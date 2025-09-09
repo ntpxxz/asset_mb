@@ -23,16 +23,51 @@ export default function EditSoftwarePage() {
   const params = useParams();
   const [formData, setFormData] = useState<Partial<SoftwareLicense>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
 
   useEffect(() => {
     if (params.id) {
-      const software = softwareService.getById(params.id as string);
-      if (software) {
-        setFormData(software);
-      }
-      setLoading(false);
+      fetchSoftware(params.id as string)
     }
   }, [params.id]);
+  const fetchSoftware = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/software/${id}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch asset');
+      }
+      
+      if (result.success && result.data) {
+        // Convert date strings to YYYY-MM-DD format for HTML date inputs
+        const data = { ...result.data };
+        if (data.purchaseDate) {
+          data.purchaseDate = new Date(data.purchaseDate).toISOString().split('T')[0];
+        }
+        if (data.expiryDate) {
+          data.expiryDate = new Date(data.expiryDate).toISOString().split('T')[0];
+        }
+        
+        // Debug log to check data
+        console.log('Asset data from API:', data);
+        console.log('Status:', data.status, 'Location:', data.location);
+        
+        setFormData(data);
+      } else {
+        setError('Asset not found');
+      }
+    } catch (err) {
+      console.error('Error fetching asset:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load asset');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,24 +202,38 @@ export default function EditSoftwarePage() {
                   onChange={(e) => handleInputChange('licenseKey', e.target.value)}
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label htmlFor="license-type">License Type *</Label>
                   <Select value={formData.licenseType || ''} onValueChange={(value) => handleInputChange('licenseType', value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="perpetual">Perpetual License</SelectItem>
-                      <SelectItem value="subscription">Subscription</SelectItem>
-                      <SelectItem value="volume">Volume License</SelectItem>
-                      <SelectItem value="oem">OEM License</SelectItem>
-                      <SelectItem value="trial">Trial License</SelectItem>
-                      <SelectItem value="educational">Educational License</SelectItem>
+                      <SelectItem value="Perpetual">Perpetual License</SelectItem>
+                      <SelectItem value="Subscription">Subscription</SelectItem>
+                      <SelectItem value="Volume">Volume License</SelectItem>
+                      <SelectItem value="OEM">OEM License</SelectItem>
+                      <SelectItem value="Trial">Trial License</SelectItem>
+                      <SelectItem value="Educational">Educational License</SelectItem>
+                      <SelectItem value="Bundled">Bundled License</SelectItem>
+
+                      
                     </SelectContent>
                   </Select>
                 </div>
+
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                  <Label htmlFor="purchase-date">Purchase Date</Label>
+                  <Input
+                    id="purchase-date"
+                    type="date"
+                    value={formData.purchaseDate || ''}
+                    onChange={(e) => handleInputChange('purchaseDate', e.target.value)}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="expiry-date">Expiry Date</Label>
                   <Input

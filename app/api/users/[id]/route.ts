@@ -15,16 +15,16 @@ const userUpdateSchema = z.object({
   manager: z.string().optional(),
   startDate: z.string().optional(),
   status: z.enum(['active', 'inactive', 'on-leave']).optional(),
+  updatedAt: z.string().datetime().optional(), 
 }).partial();
-
 
 // GET /api/users/[id] - Get single user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     
     if (result.rowCount === 0) {
@@ -38,10 +38,11 @@ export async function GET(
       success: true,
       data: result.rows[0]
     });
-  } catch (error) {
-    console.error(`Failed to fetch user ${params.id}:`, error);
+  } catch (error: any) {
+    const { id } = await params;
+    console.error(`Failed to fetch user ${id}:`, error);
     return NextResponse.json(
-      { success: false, error: `Failed to fetch user ${params.id}` },
+      { success: false, error: `Failed to fetch user ${id}`, details: error.message },
       { status: 500 }
     );
   }
@@ -50,10 +51,10 @@ export async function GET(
 // PUT /api/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const validation = userUpdateSchema.safeParse(body);
 
@@ -72,13 +73,20 @@ export async function PUT(
         );
     }
 
-    fields.updatedAt = new Date().toISOString();
+    fields.updatedAt = new Date().toISOString(); // ใช้ ISO string แทน toString()
 
+    // แก้ไข: เพิ่ม $ หน้า parameter placeholders
     const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
     const queryParams = Object.values(fields);
     queryParams.push(id);
     
+    // แก้ไข: เพิ่ม $ หน้า parameter ตัวสุดท้าย
     const query = `UPDATE users SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`;
+    
+    // Debug logging
+    console.log('Update query:', query);
+    console.log('Query params:', queryParams);
+    console.log('Fields to update:', fields);
     
     const result = await pool.query(query, queryParams);
 
@@ -94,16 +102,26 @@ export async function PUT(
       data: result.rows[0],
       message: 'User updated successfully'
     });
-  } catch (error) {
-    console.error(`Failed to update user ${params.id}:`, error);
+  } catch (error: any) {
+    const { id } = await params;
+    console.error(`Failed to update user ${id}:`, error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      detail: error.detail,
+      stack: error.stack
+    });
+    
+    // Check for PostgreSQL unique constraint violation
     if (error.code === '23505') { // unique_violation
         return NextResponse.json(
             { success: false, error: 'User with this email or employee ID already exists.' },
             { status: 409 }
         );
     }
+    
     return NextResponse.json(
-      { success: false, error: `Failed to update user ${params.id}` },
+      { success: false, error: `Failed to update user ${id}`, details: error.message },
       { status: 500 }
     );
   }
@@ -112,10 +130,10 @@ export async function PUT(
 // DELETE /api/users/[id] - Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *;', [id]);
     
     if (result.rowCount === 0) {
@@ -130,10 +148,11 @@ export async function DELETE(
       data: result.rows[0],
       message: 'User deleted successfully'
     });
-  } catch (error) {
-    console.error(`Failed to delete user ${params.id}:`, error);
+  } catch (error: any) {
+    const { id } = await params;
+    console.error(`Failed to delete user ${id}:`, error);
     return NextResponse.json(
-      { success: false, error: `Failed to delete user ${params.id}` },
+      { success: false, error: `Failed to delete user ${id}`, details: error.message },
       { status: 500 }
     );
   }

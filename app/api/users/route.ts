@@ -104,10 +104,10 @@ export async function POST(request: NextRequest) {
       data: result.rows[0],
       message: 'User created successfully'
     }, { status: 201 });
-  } catch (error) {
+  } catch (error:unknown) {
     console.error('Failed to create user:', error);
     // Check for unique constraint violation
-    if (error.code === '23505') { // unique_violation
+    if (error) { // unique_violation
         return NextResponse.json(
             { success: false, error: 'User with this email or employee ID already exists.' },
             { status: 409 }

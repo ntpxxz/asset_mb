@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { softwareService } from '@/lib/data-store';
 
 interface AddSoftwareFormProps {
   onClose: () => void;

@@ -52,16 +52,47 @@ export default function SoftwareViewPage() {
   const [software, setSoftware] = useState<SoftwareLicense | null>(null);
   const [editingSoftware, setEditingSoftware] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (params.id) {
-      const softwareData = softwareService.getById(params.id as string);
-      if (softwareData) {
-        setSoftware(softwareData);
-      }
-      setLoading(false);
+      fetchSoftware(params.id as string)
     }
   }, [params.id]);
+
+  const fetchSoftware = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/software/${id}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch asset');
+      }
+      
+      if (result.success && result.data) {
+        // Convert date strings to YYYY-MM-DD format for HTML date inputs
+        const data = { ...result.data };
+        if (data.purchaseDate) {
+          data.purchaseDate = new Date(data.purchaseDate).toISOString().split('T')[0];
+        }
+        if (data.expiryDate) {
+          data.expiryDate = new Date(data.expiryDate).toISOString().split('T')[0];
+        }
+        setSoftware(data);
+      } else {
+        setError('Software not found');
+      }
+    } catch (err) {
+      console.error('Error fetching software:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load software');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleDelete = () => {
     if (software && confirm('Are you sure you want to delete this software license?')) {
