@@ -2,48 +2,54 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { z } from 'zod';
 
-// Zod schema for validation (all fields optional for updates, with null support)
+// Zod schema for updates
 const assetUpdateSchema = z.object({
-  asset_tag: z.string().min(1, "Asset tag is required").optional().nullable(),
-  type: z.string().optional().nullable(),
-  manufacturer: z.string().optional().nullable(),
-  model: z.string().optional().nullable(),
-  serialnumber: z.string().min(1, "Serial number is required").optional().nullable(),
-  purchasedate: z.string().optional().nullable(),
-  purchaseprice: z.union([z.number(), z.string()]).optional().nullable().transform((val) => {
+  asset_tag: z.string().min(1, "Asset tag cannot be empty").optional(),
+  type: z.enum(['laptop','desktop','monitor','printer','phone','tablet','server','router','switch','firewall','storage','projector','camera','other']).optional(),
+  manufacturer: z.string().min(1, "Manufacturer cannot be empty").optional(),
+  model: z.string().min(1, "Model cannot be empty").optional(),
+  serialnumber: z.string().min(1, "Serial number cannot be empty").optional(),
+  purchasedate: z.string().nullable().optional(),
+  purchaseprice: z.union([z.number(), z.string()]).nullable().optional().transform((val) => {
     if (val === null || val === undefined || val === '') return null;
-    return typeof val === 'string' ? parseFloat(val) : val;
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return isNaN(num) ? null : num;
   }),
-  supplier: z.string().optional().nullable(),
-  warrantyexpiry: z.string().optional().nullable(),
-  assigneduser: z.string().optional().nullable(),
-  location: z.string().optional().nullable(),
-  department: z.string().optional().nullable(),
-  status: z.string().optional().nullable(),
-  operatingsystem: z.string().optional().nullable(),
-  processor: z.string().optional().nullable(),
-  memory: z.string().optional().nullable(),
-  storage: z.string().optional().nullable(),
-  hostname: z.string().optional().nullable(),
-  ipaddress: z.string().optional().nullable(),
-  macaddress: z.string().optional().nullable(),
-  patchstatus: z.string().optional().nullable(),
-  lastpatch_check: z.string().optional().nullable(),
-  isLoanable: z.boolean().optional().nullable(),
-  condition: z.enum(['new','good','fair','poor','broken']).optional().nullable(),
-  description: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-}).partial();
+  supplier: z.string().nullable().optional(),
+  warrantyexpiry: z.string().nullable().optional(),
+  assigneduser: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  status: z.enum(['in-stock','in-use','under-repair','retired']).optional(),
+  operatingsystem: z.string().nullable().optional(),
+  processor: z.string().nullable().optional(),
+  memory: z.string().nullable().optional(),
+  storage: z.string().nullable().optional(),
+  hostname: z.string().nullable().optional(),
+  ipaddress: z.string().nullable().optional(),
+  macaddress: z.string().nullable().optional(),
+  patchstatus: z.enum(['up-to-date','needs-review','update-pending']).optional(),
+  lastpatch_check: z.string().nullable().optional(),
+  isloanable: z.boolean().optional(),
+  condition: z.enum(['new','good','fair','poor','broken']).optional(),
+  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+}).strict();
 
-// Helper function to clean data - remove null/empty values and convert empty strings to null
+// Helper function to validate asset ID
+function validateAssetId(id: string): boolean {
+  // More permissive validation - allows alphanumeric, underscore, dash
+  // This supports IDs like: "asset001", "AST-123", "uuid-format", "123", etc.
+  return /^[a-zA-Z0-9_-]+$/.test(id) && id.length > 0 && id.length <= 100;
+}
+
+// Helper function to clean data
 function cleanUpdateData(data: any) {
   const cleaned: any = {};
   
   Object.entries(data).forEach(([key, value]) => {
-    // Skip undefined values
     if (value === undefined) return;
     
-    // Convert empty strings to null for optional fields
     if (value === '') {
       cleaned[key] = null;
     } else {
@@ -61,96 +67,262 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const result = await pool.query('SELECT * FROM assets WHERE id = $1', [id]);
+    console.log('GET /api/assets/[id] - Loading asset with ID:', id);
+    
+    // Validate ID format
+    if (!validateAssetId(id)) {
+      console.log('Invalid asset ID format:', id);
+      return NextResponse.json(
+        { success: false, error: 'Invalid asset ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Try different ID fields in case database uses different column names
+    // First try primary key 'id'
+    let result = await pool.query('SELECT * FROM assets WHERE id = $1', [id]);
+    
+    // If no result, try asset_tag field
+    if (result.rowCount === 0) {
+      result = await pool.query('SELECT * FROM assets WHERE asset_tag = $1', [id]);
+    }
+    
+    // If still no result, try other potential ID fields
+    if (result.rowCount === 0) {
+      result = await pool.query(`
+        SELECT * FROM assets 
+        WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1
+        LIMIT 1
+      `, [id]);
+    }
+    
+    console.log('Database query result:', { rowCount: result.rowCount });
     
     if (result.rowCount === 0) {
+      console.log('Asset not found in database:', id);
       return NextResponse.json(
         { success: false, error: 'Asset not found' },
         { status: 404 }
       );
     }
 
+    const asset = result.rows[0];
+    console.log('Successfully loaded asset:', { id: asset.id, asset_tag: asset.asset_tag });
+
     return NextResponse.json({
       success: true,
-      data: result.rows[0]
+      data: asset,
+      message: `Asset ${asset.asset_tag} loaded successfully`
     });
-  } catch (error) {
-    console.error(`Failed to fetch asset:`, error);
+  } catch (error: any) {
+    console.error('Failed to fetch asset:', error);
     return NextResponse.json(
-      { success: false, error: `Failed to fetch asset` },
+      { 
+        success: false, 
+        error: 'Failed to fetch asset',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      },
       { status: 500 }
     );
   }
 }
 
+// PUT /api/assets/[id] - Update asset
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const assetId = params.id;
-    const body = await request.json();
-
-    // Get the keys from the request body to build the SET clauses
-    const updateFields = Object.keys(body);
-    if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    const { id: assetId } = await params;
+    
+    // Validate ID format
+    if (!validateAssetId(assetId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid asset ID format' },
+        { status: 400 }
+      );
     }
 
-    // Dynamically create the "col = $1, col2 = $2" part of the query
-    // This makes the query adaptable to any fields passed in the request
-    const setClauses = updateFields
-      .map((key, index) => `"${key}" = $${index + 1}`)
-      .join(', ');
+    const body = await request.json();
+    console.log('PUT /api/assets/[id] - Received update data:', body);
 
-    // Create the array of values to be safely passed to the query
-    // The order of values must match the order of the columns in setClauses
-    const queryParams = Object.values(body);
+    // Validate request body
+    const validationResult = assetUpdateSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message,
+        code: err.code
+      }));
+      
+      console.log('Validation errors:', errors);
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Validation failed',
+          details: errors
+        },
+        { status: 400 }
+      );
+    }
 
-    // --- FIX IS HERE ---
-    // 1. The asset ID from the URL must be added to the parameters array.
-    queryParams.push(assetId);
+    const cleanedData = cleanUpdateData(validationResult.data);
+    
+    if (Object.keys(cleanedData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
 
-    // 2. The WHERE clause needs to use a placeholder ($) that corresponds to the
-    //    position of the asset ID in the queryParams array.
-    //    We use queryParams.length because the assetId was just pushed,
-    //    making it the last item.
+    // Find the asset using flexible search
+    let existsResult = await pool.query('SELECT id, asset_tag FROM assets WHERE id = $1', [assetId]);
+    
+    if (existsResult.rowCount === 0) {
+      // Try alternative search methods
+      existsResult = await pool.query('SELECT id, asset_tag FROM assets WHERE asset_tag = $1', [assetId]);
+    }
+    
+    if (existsResult.rowCount === 0) {
+      existsResult = await pool.query(`
+        SELECT id, asset_tag FROM assets 
+        WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1
+        LIMIT 1
+      `, [assetId]);
+    }
+    
+    if (existsResult.rowCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Asset not found' },
+        { status: 404 }
+      );
+    }
+
+    const realAssetId = existsResult.rows[0].id; // Use the actual database ID
+
+    // Check for duplicates if updating unique fields
+    if (cleanedData.asset_tag || cleanedData.serialnumber) {
+      let duplicateQuery = 'SELECT id, asset_tag, serialnumber FROM assets WHERE id != $1 AND (';
+      const duplicateParams = [realAssetId];
+      const conditions = [];
+      
+      if (cleanedData.asset_tag) {
+        conditions.push(`asset_tag = $${duplicateParams.length + 1}`);
+        duplicateParams.push(cleanedData.asset_tag);
+      }
+      
+      if (cleanedData.serialnumber) {
+        conditions.push(`serialnumber = $${duplicateParams.length + 1}`);
+        duplicateParams.push(cleanedData.serialnumber);
+      }
+      
+      duplicateQuery += conditions.join(' OR ') + ')';
+      
+      const duplicateResult = await pool.query(duplicateQuery, duplicateParams);
+      if (duplicateResult.rowCount > 0) {
+        const duplicate = duplicateResult.rows[0];
+        return NextResponse.json(
+          { 
+            success: false,
+            error: `Duplicate value detected. Asset tag "${duplicate.asset_tag}" or serial number already exists.`
+          }, 
+          { status: 409 }
+        );
+      }
+    }
+
+    // Build dynamic update query
+    const updateFields = Object.keys(cleanedData);
+    const setClauses = updateFields.map((field, index) => `${field} = $${index + 1}`);
+    const queryParams = Object.values(cleanedData);
+    queryParams.push(realAssetId);
+
     const query = `
       UPDATE assets 
-      SET ${setClauses} 
+      SET ${setClauses.join(', ')}, updated_at = NOW()
       WHERE id = $${queryParams.length} 
       RETURNING *;
     `;
 
-    console.log('Executing Query:', query);
+    console.log('Executing Update Query:', query);
     console.log('With Parameters:', queryParams);
 
-    // Pass the complete query and all parameters to the pool
     const result = await pool.query(query, queryParams);
 
     if (result.rowCount === 0) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: 'Update failed - no rows affected' },
+        { status: 500 }
+      );
     }
 
-    // Return the updated asset data
-    return NextResponse.json(result.rows[0], { status: 200 });
+    const updatedAsset = result.rows[0];
+    console.log('Successfully updated asset:', { 
+      id: updatedAsset.id, 
+      asset_tag: updatedAsset.asset_tag,
+      fieldsUpdated: updateFields
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedAsset,
+      message: `Asset "${updatedAsset.asset_tag}" updated successfully`,
+      fieldsUpdated: updateFields,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error: any) {
     console.error('Failed to update asset:', error);
-    // Return a more detailed error message in the response for debugging
+    
+    // Handle specific PostgreSQL errors
+    if (error.code === '42703') {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Database schema error',
+          details: process.env.NODE_ENV === 'development' ? `Column not found: ${error.message}` : 'Invalid field'
+        }, 
+        { status: 400 }
+      );
+    }
+    
+    if (error.code === '23505') {
+      const constraintMatch = error.detail?.match(/Key \(([^)]+)\)=/);
+      const field = constraintMatch ? constraintMatch[1] : 'field';
+      
+      return NextResponse.json(
+        { 
+          success: false,
+          error: `Duplicate ${field} detected. This value already exists.`
+        }, 
+        { status: 409 }
+      );
+    }
+
+    if (error.code === '23502') {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: `Required field "${error.column}" cannot be null.`
+        }, 
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { 
-        message: 'Failed to update asset', 
-        error: error.message, // Send back the actual db error message
-        code: error.code,     // and code for better context.
-        hint: error.hint
+        success: false,
+        error: 'Failed to update asset',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       }, 
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/assets/[id] - Delete asset with related records
+// DELETE /api/assets/[id] - Delete asset
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -159,12 +331,33 @@ export async function DELETE(
   
   try {
     const { id } = await params;
+    console.log('DELETE /api/assets/[id] - Deleting asset with ID:', id);
+    
+    // Validate ID format
+    if (!validateAssetId(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid asset ID format' },
+        { status: 400 }
+      );
+    }
     
     // Start transaction
     await client.query('BEGIN');
     
-    // First check if asset exists
-    const checkResult = await client.query('SELECT * FROM assets WHERE id = $1', [id]);
+    // Find the asset using flexible search
+    let checkResult = await client.query('SELECT * FROM assets WHERE id = $1', [id]);
+    
+    if (checkResult.rowCount === 0) {
+      checkResult = await client.query('SELECT * FROM assets WHERE asset_tag = $1', [id]);
+    }
+    
+    if (checkResult.rowCount === 0) {
+      checkResult = await client.query(`
+        SELECT * FROM assets 
+        WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1
+        LIMIT 1
+      `, [id]);
+    }
     
     if (checkResult.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -174,48 +367,67 @@ export async function DELETE(
       );
     }
     
-    // Delete related records first (adjust table names based on your schema)
-    // Delete loan records
-    await client.query('DELETE FROM asset_loans WHERE asset_id = $1', [id]);
+    const asset = checkResult.rows[0];
+    const realAssetId = asset.id;
     
-    // Delete maintenance records
-    await client.query('DELETE FROM asset_maintenance WHERE asset_id = $1', [id]);
+    // Delete related records in the correct order
+    const relatedTables = [
+      'asset_loans',
+      'asset_maintenance', 
+      'asset_history',
+      'asset_assignments'
+    ];
     
-    // Delete any other related records
-    // await client.query('DELETE FROM asset_history WHERE asset_id = $1', [id]);
+    for (const table of relatedTables) {
+      try {
+        const deleteResult = await client.query(
+          `DELETE FROM ${table} WHERE asset_id = $1`, 
+          [realAssetId]
+        );
+        console.log(`Deleted ${deleteResult.rowCount} records from ${table}`);
+      } catch (e: any) {
+        console.log(`No ${table} table or records:`, e.message);
+      }
+    }
     
     // Finally delete the asset
-    const result = await client.query('DELETE FROM assets WHERE id = $1 RETURNING *;', [id]);
+    const result = await client.query('DELETE FROM assets WHERE id = $1 RETURNING *;', [realAssetId]);
     
     // Commit transaction
     await client.query('COMMIT');
     
+    console.log('Successfully deleted asset:', { 
+      id: asset.id, 
+      asset_tag: asset.asset_tag 
+    });
+    
     return NextResponse.json({
       success: true,
-      data: result.rows[0],
-      message: 'Asset and all related records deleted successfully'
+      data: asset,
+      message: `Asset "${asset.asset_tag}" and all related records deleted successfully`
     });
     
   } catch (error: any) {
-    // Rollback transaction on error
     await client.query('ROLLBACK');
-    console.error(`Failed to delete asset:`, error);
+    console.error('Failed to delete asset:', error);
     
-    // Check for PostgreSQL foreign key constraint violation
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === '23503') {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Cannot delete asset because it has related records that cannot be automatically removed. Please contact administrator.' 
-          },
-          { status: 409 }
-        );
-      }
+    if (error.code === '23503') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Cannot delete asset because it has related records that cannot be automatically removed.',
+          hint: 'Check for dependencies in other modules'
+        },
+        { status: 409 }
+      );
     }
     
     return NextResponse.json(
-      { success: false, error: `Failed to delete asset: ${error.message || 'Unknown error'}` },
+      { 
+        success: false, 
+        error: 'Failed to delete asset',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      },
       { status: 500 }
     );
   } finally {

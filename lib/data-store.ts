@@ -3,34 +3,63 @@
 
 export interface HardwareAsset {
   id: string;
-  assetTag: string;
+  asset_tag: string;
   type: string;
   manufacturer: string;
   model: string;
-  serialNumber: string;
-  purchaseDate: string;
-  purchasePrice: string;
+  serialnumber: string;
+  purchasedate: string;
+  purchaseprice: string;
   supplier: string;
-  warrantyExpiry: string;
-  assignedUser: string;
+  warrantyexpiry: string;
+  assigneduser: string;
   location: string;
   department: string;
   status: 'in-stock' | 'in-use' | 'under-repair' | 'retired';
-  operatingSystem: string;
+  operatingsystem: string;
   processor: string;
   memory: string;
   storage: string;
   hostname: string;
-  ipAddress: string;
-  macAddress: string;
-  patchStatus: 'up-to-date' | 'needs-review' | 'update-pending';
-  lastPatchCheck: string;
-  isLoanable: boolean;
+  ipaddress: string;
+  macaddress: string;
+  patchstatus: 'up-to-date' | 'needs-review' | 'update-pending';
+  lastpatch_check: string;
+  isloanable: boolean;
   condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
   description: string;
   notes: string;
   createdAt: string;
   updatedAt: string;
+}
+export interface AssetFormData {
+  id?: string;
+  asset_tag?: string;
+  type?: string;
+  manufacturer?: string;
+  model?: string;
+  serialnumber?: string;
+  purchasedate?: string;
+  purchaseprice?: number | null;
+  supplier?: string;
+  warrantyexpiry?: string;
+  assigneduser?: string;
+  location?: string;
+  department?: string;
+  status?: string;
+  operatingsystem?: string;
+  processor?: string;
+  memory?: string;
+  storage?: string;
+  hostname?: string;
+  ipaddress?: string;
+  macaddress?: string;
+  patchstatus?: string;
+  lastpatch_check?: string;
+  isloanable?: boolean;
+  condition?: string;
+  description?: string;
+  notes?: string;
 }
 
 export interface SoftwareLicense {
@@ -142,7 +171,7 @@ export const hardwareService = {
   create: (data: Omit<HardwareAsset, 'id' | 'createdAt' | 'updatedAt'>): HardwareAsset => {
     const asset: HardwareAsset = {
       ...data,
-      id: data.assetTag || generateId('AST'),
+      id: data.asset_tag || generateId('AST'),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -173,8 +202,8 @@ export const hardwareService = {
   search: (query: string): HardwareAsset[] => {
     const lowercaseQuery = query.toLowerCase();
     return hardwareAssets.filter(asset =>
-      asset.assetTag.toLowerCase().includes(lowercaseQuery) ||
-      asset.serialNumber.toLowerCase().includes(lowercaseQuery) ||
+      asset.asset_tag.toLowerCase().includes(lowercaseQuery) ||
+      asset.serialnumber.toLowerCase().includes(lowercaseQuery) ||
       asset.manufacturer.toLowerCase().includes(lowercaseQuery) ||
       asset.model.toLowerCase().includes(lowercaseQuery)
     );
@@ -283,7 +312,7 @@ export const borrowService = {
     borrowRecords.push(record);
     
     // Update asset status
-    hardwareService.update(assetId, { status: 'in-use', assignedUser: borrowerId });
+    hardwareService.update(assetId, { status: 'in-use', assigneduser: borrowerId });
     
     return record;
   },
@@ -300,7 +329,7 @@ export const borrowService = {
     };
     
     // Update asset status
-    hardwareService.update(borrowRecords[index].assetId, { status: 'in-stock', assignedUser: '' });
+    hardwareService.update(borrowRecords[index].assetId, { status: 'in-stock', assigneduser: '' });
     
     return borrowRecords[index];
   },
@@ -350,14 +379,14 @@ export function getUpcomingWarranties() {
   
   return hardwareAssets
     .filter(asset => {
-      if (!asset.warrantyExpiry) return false;
-      const warrantyDate = new Date(asset.warrantyExpiry);
+      if (!asset.warrantyexpiry) return false;
+      const warrantyDate = new Date(asset.warrantyexpiry);
       return warrantyDate <= thirtyDaysFromNow && warrantyDate >= today;
     })
     .map(asset => ({
-      assetTag: asset.assetTag,
+      asset_tag: asset.asset_tag,
       model: asset.model,
-      warrantyExpiry: asset.warrantyExpiry,
-      daysLeft: Math.ceil((new Date(asset.warrantyExpiry).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+      warrantyExpiry: asset.warrantyexpiry,
+      daysLeft: Math.ceil((new Date(asset.warrantyexpiry).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
     }));
 }

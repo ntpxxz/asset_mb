@@ -23,12 +23,12 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Hardware', href: '/assets', icon: Package },
   { name: 'Software', href: '/software', icon: Shield },
-  { name: 'Borrowing', href: '/borrowing', icon: Activity },
-  { name: 'Patches', href: '/patches', icon: RefreshCw },
-  { name: 'Users', href: '/users', icon: Users },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings, classname:'hidden'},
-  { name: 'Help', href: '/help', icon: HelpCircle },
+  //{ name: 'Borrowing', href: '/borrowing', icon: Activity },
+  //{ name: 'Patches', href: '/patches', icon: RefreshCw },
+  //{ name: 'Users', href: '/users', icon: Users },
+  //{ name: 'Reports', href: '/reports', icon: BarChart3 },
+  //{ name: 'Settings', href: '/settings', icon: Settings, classname:'hidden'},
+  //{ name: 'Help', href: '/help', icon: HelpCircle },
 ];
 
 export function Sidebar() {
