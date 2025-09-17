@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { softwareApi } from '@/lib/api-client';
+import type { SoftwareFormData } from "@/lib/data-store";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -59,7 +60,7 @@ const getLicenseTypeBadge = (type: string) => {
 };
 
 interface SoftwareTableProps {
-  initialSoftware: any[];
+  initialSoftware: SoftwareFormData[];
 }
 
 export function SoftwareTable({ initialSoftware }: SoftwareTableProps) {
@@ -67,34 +68,68 @@ export function SoftwareTable({ initialSoftware }: SoftwareTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [software, setSoftware] = useState(initialSoftware);
+  const [software, setSoftware] = useState<SoftwareFormData[]>(initialSoftware ?? []);
+
 
   const loadSoftware = async () => {
-    const response = await softwareApi.getAll();
-    if (response.success && response.data) {
-      setSoftware(response.data);
+    try {
+      const response = await softwareApi.getAll();
+      if (response.success && Array.isArray(response.data)) {
+        setSoftware(response.data as SoftwareFormData[]);
+      } else {
+        console.error('softwareApi.getAll() returned unexpected shape', response);
+        setSoftware([]);
+      }      
+    } catch (error) {
+      console.error('Failed to load software:', error);
     }
-  }
+  };
 
   const handleDelete = async (softwareId: string) => {
     if (confirm('Are you sure you want to delete this software license?')) {
-      const response = await softwareApi.delete(softwareId);
-      if (response.success) {
-        loadSoftware();
-      } else {
-        alert('Failed to delete software license: ' + response.error);
+      try {
+        const response = await softwareApi.delete(softwareId);
+        if (response.success) {
+          loadSoftware();
+        } else {
+          alert('Failed to delete software license: ' + response.error);
+        }
+      } catch (error) {
+        alert('Failed to delete software license');
+        console.error('Delete error:', error);
       }
     }
   };
 
   const filteredSoftware = software.filter(sw => {
-    const matchesSearch = sw.softwareName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         sw.publisher.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (sw.software_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (sw.publisher?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || sw.status === statusFilter;
-    const matchesType = typeFilter === 'all' || sw.licenseType === typeFilter;
+    const matchesType = typeFilter === 'all' || sw.licenses_type === typeFilter;
 
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  // Helper function to calculate percentage safely
+  const calculateUsagePercentage = (assigned: number, total: number): number => {
+    if (!total || total === 0) return 0;
+    return Math.round((assigned / total) * 100);
+  };
+
+  // Helper function to format date
+  const formatDate = (dateValue: string | null | undefined): string => {
+    if (!dateValue) return '';
+    // Handle different date formats
+    if (dateValue.includes('/')) {
+      return dateValue; // Already in DD/MM/YYYY format
+    }
+    if (dateValue.includes('-')) {
+      // Convert YYYY-MM-DD to DD/MM/YYYY
+      const [year, month, day] = dateValue.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return dateValue;
+  };
 
   return (
     <div className="space-y-6">
@@ -160,62 +195,77 @@ export function SoftwareTable({ initialSoftware }: SoftwareTableProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSoftware.map((sw) => (
-                  <TableRow key={sw.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Shield className="h-4 w-4 text-blue-600" />
+                {filteredSoftware.map((sw) => {
+                  const usagePercentage = calculateUsagePercentage(
+                    sw.licenses_assigned || 0, 
+                    sw.licenses_total || 0
+                  );
+                  
+                  return (
+                    <TableRow key={sw.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Shield className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{sw.software_name || 'N/A'}</p>
+                            <p className="text-sm text-gray-500">
+                              {sw.publisher || 'Unknown'} - {sw.version || 'N/A'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{sw.softwareName}</p>
-                          <p className="text-sm text-gray-500">{sw.publisher} - {sw.version}</p>
+                      </TableCell>
+                      <TableCell>{getLicenseTypeBadge(sw.licenses_type || 'unknown')}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span>
+                              {sw.licenses_assigned || 0} / {sw.licenses_total || 0}
+                            </span>
+                            <span>{usagePercentage}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${usagePercentage}%` }}
+                            ></div>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getLicenseTypeBadge(sw.licenseType)}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>{sw.licensesAssigned} / {sw.licensesTotal}</span>
-                          <span>{Math.round((sw.licensesAssigned / sw.licensesTotal) * 100)}%</span>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(sw.status!)}</TableCell>
+                      <TableCell>
+                        {/* Check both expiryDate and expirydate properties */}
+                        {(() => {
+                          const expirydate = (sw as any).expirydate || (sw as any).expirydate;
+                          return expirydate ? (
+                            <span className="text-sm">{formatDate(expirydate)}</span>
+                          ) : (
+                            <span className="text-sm text-gray-500">Perpetual</span>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/software/${sw.id}`)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/software/${sw.id}/edit`)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDelete(sw.id!)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${(sw.licensesAssigned / sw.licensesTotal) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(sw.status)}</TableCell>
-                    <TableCell>
-                      {sw.expiryDate ? (
-                        <span className="text-sm">{sw.expiryDate}</span>
-                      ) : (
-                        <span className="text-sm text-gray-500">Perpetual</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => router.push(`/software/${sw.id}`)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => router.push(`/software/${sw.id}/edit`)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDelete(sw.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

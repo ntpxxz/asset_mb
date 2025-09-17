@@ -3,15 +3,15 @@ import pool from '@/lib/db';
 import { z } from 'zod';
 
 const softwareSchema = z.object({
-  softwareName: z.string().min(1, "Software name is required"),
+  software_name: z.string().min(1, "Software name is required"),
   publisher: z.string().optional(),
   version: z.string().optional(),
-  licenseKey: z.string().min(1, "License key is required"),
-  licenseType: z.string().optional(),
-  purchaseDate: z.string().optional(),
-  expiryDate: z.string().optional(),
-  licensesTotal: z.coerce.number().int().optional(),
-  licensesAssigned: z.coerce.number().int().optional(),
+  license_key: z.string().min(1, "License key is required"),
+  licenses_type: z.string().optional(),
+  purchasedate: z.string().optional(),
+  expirydate: z.string().optional(),
+  licenses_total: z.coerce.number().int().optional(),
+  licenses_assigned: z.coerce.number().int().optional(),
   category: z.string().optional(),
   description: z.string().optional(),
   notes: z.string().optional(),
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const whereClauses: string[] = [];
 
   if (search) {
-    whereClauses.push(`("softwareName" ILIKE $${queryParams.length + 1} OR publisher ILIKE $${queryParams.length + 1})`);
+    whereClauses.push(`("software_name" ILIKE $${queryParams.length + 1} OR publisher ILIKE $${queryParams.length + 1})`);
     queryParams.push(`%${search}%`);
   }
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (type && type !== 'all') {
-    whereClauses.push(`"licenseType" = $${queryParams.length + 1}`);
+    whereClauses.push(`"licenses_type" = $${queryParams.length + 1}`);
     queryParams.push(type);
   }
 
@@ -79,27 +79,27 @@ export async function POST(request: NextRequest) {
     }
     
     const { 
-      softwareName, publisher, version, licenseKey, licenseType, purchaseDate, 
-      expiryDate, licensesTotal, licensesAssigned, category, description, notes, status 
+      software_name, publisher, version, license_key, licenses_type, purchasedate, 
+      expirydate, licenses_total, licenses_assigned, category, description, notes, status 
     } = validation.data;
 
     const id = `SW-${Date.now()}`;
-    const createdAt = new Date().toISOString();
-    const updatedAt = new Date().toISOString();
+    const created_at = new Date().toISOString();
+    const updated_at = new Date().toISOString();
 
     const query = `
       INSERT INTO software (
-        id, "softwareName", publisher, version, "licenseKey", "licenseType", "purchaseDate",
-        "expiryDate", "licensesTotal", "licensesAssigned", category, description, notes, status,
-        "createdAt", "updatedAt"
+        id, "software_name", publisher, version, "license_key", "licenses_type", "purchasedate",
+        "expirydate", "licenses_total", "licenses_assigned", category, description, notes, status,
+        "created_at", "updated_at"
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *;
     `;
     const queryParams = [
-      id, softwareName, publisher, version, licenseKey, licenseType, purchaseDate,
-      expiryDate, licensesTotal, licensesAssigned, category, description, notes, status,
-      createdAt, updatedAt
+      id, software_name, publisher, version, license_key, licenses_type, purchasedate,
+      expirydate, licenses_total, licenses_assigned, category, description, notes, status,
+      created_at, updated_at
     ];
     
     const result = await pool.query(query, queryParams);

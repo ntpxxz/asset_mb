@@ -46,10 +46,10 @@ async function fetchRecord(id: string) {
 // ------------------------------------------------------
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } =  await params;
     const url = new URL(request.url);
     const include = url.searchParams.get('include');
     const wantHistory = include?.split(',').includes('history');
@@ -104,10 +104,10 @@ export async function GET(
 // ------------------------------------------------------
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const validation = patchUpdateSchema.safeParse(body);
     if (!validation.success) {
@@ -138,7 +138,7 @@ export async function PUT(
     return NextResponse.json({ success: true, data: normalizeRecord(result.rows[0]), message: 'Patch record updated successfully' });
   } catch (error) {
     console.error(`PUT /api/patches/[id] failed:`, error);
-    return NextResponse.json({ success: false, error: `Failed to update patch record ${params.id}` }, { status: 500 });
+    return NextResponse.json({ success: false, error: `Failed to update patch record ${(await params).id}` }, { status: 500 });
   }
 }
 
@@ -146,21 +146,22 @@ export async function PUT(
 // DELETE /api/patches/[id] (delete history first to satisfy FK)
 // ------------------------------------------------------
 export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const client = await pool.connect();
   try {
+    const { id } = await params;
     await client.query('BEGIN');
-    await client.query('DELETE FROM asset_patch_history WHERE "patchId" = $1', [params.id]);
-    const result = await client.query('DELETE FROM asset_patches WHERE id = $1 RETURNING *;', [params.id]);
+    await client.query('DELETE FROM asset_patch_history WHERE "patchId" = $1', [id]);
+    const result = await client.query('DELETE FROM asset_patches WHERE id = $1 RETURNING *;', [id]);
     await client.query('COMMIT');
     if (result.rowCount === 0) return NextResponse.json({ success: false, error: 'Patch record not found' }, { status: 404 });
     return NextResponse.json({ success: true, data: normalizeRecord(result.rows[0]), message: 'Patch record deleted successfully' });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`DELETE /api/patches/[id] failed:`, error);
-    return NextResponse.json({ success: false, error: `Failed to delete patch record ${params.id}` }, { status: 500 });
+    return NextResponse.json({ success: false, error: `Failed to delete patch record, ${(await params).id}` }, { status: 500 });
   } finally {
     client.release();
   }

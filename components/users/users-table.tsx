@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { usersApi } from '@/lib/api-client';
+import { User } from '@/lib/data-store';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -47,7 +48,7 @@ const getStatusBadge = (status: string) => {
 };
 
 interface UsersTableProps {
-  initialUsers: any[];
+  initialUsers: User[];
 }
 
 export function UsersTable({ initialUsers }: UsersTableProps) {
@@ -55,12 +56,18 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<User[]>(initialUsers??[]);
 
   const loadUsers = async () => {
+    try {
     const response = await usersApi.getAll();
-    if (response.success && response.data) {
-      setUsers(response.data);
+    if (response.success && Array.isArray(response.data)) {
+      setUsers(response.data as User[]);
+    } else {
+      console.error('usersApi.getAll() returned unexpected shape', response);
+      setUsers([]);
+    }} catch (error) {
+      console.error('Failed to load users:', error);
     }
   }
 

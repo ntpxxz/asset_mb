@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { Suspense, useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ type User = {
   department?: string;
 };
 
-export default function CheckoutAssetPage() {
+function CheckoutAssetPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const assetIdFromUrl = useMemo(
@@ -447,3 +447,17 @@ export default function CheckoutAssetPage() {
     </div>
   );
 }
+export default function CheckoutAssetPage() {
+  return (
+  <Suspense
+  fallback={
+  <div className="flex items-center justify-center h-64">
+  <Loader2 className="h-8 w-8 animate-spin" />
+  <span className="ml-2">Loading checkout record...</span>
+  </div>
+  }
+  >
+  <CheckoutAssetPageInner />
+  </Suspense>
+  );
+  }

@@ -29,8 +29,8 @@ export interface HardwareAsset {
   condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
   description: string;
   notes: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 export interface AssetFormData {
   id?: string;
@@ -54,12 +54,39 @@ export interface AssetFormData {
   hostname?: string;
   ipaddress?: string;
   macaddress?: string;
-  patchstatus?: string;
+  patchstatus: string;
   lastpatch_check?: string;
   isloanable?: boolean;
   condition?: string;
   description?: string;
   notes?: string;
+}
+export interface SoftwareFormData {
+  id?: string;
+  software_name: string;
+  publisher?: string | null;
+  version?: string | null;
+  license_key?: string | null;
+  licenses_type?:
+    | 'per-user'
+    | 'per-device'
+    | 'subscription'
+    | 'perpetual'    
+    | null;
+  status?:
+    | 'active'
+    | 'inactive'
+    | 'expired'
+    | 'retired'
+    | 'trial'
+    | null;
+  purchasedate?: string | null;   // YYYY-MM-DD
+  expirydate?: string | null;     // YYYY-MM-DD
+  licenses_total?: number | null;
+  licenses_assigned?: number | null;
+  category?: string | null;
+  description?: string | null;
+  notes?: string | null;
 }
 
 export interface SoftwareLicense {
@@ -172,8 +199,8 @@ export const hardwareService = {
     const asset: HardwareAsset = {
       ...data,
       id: data.asset_tag || generateId('AST'),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     hardwareAssets.push(asset);
     return asset;
@@ -186,7 +213,7 @@ export const hardwareService = {
     hardwareAssets[index] = {
       ...hardwareAssets[index],
       ...data,
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     return hardwareAssets[index];
   },

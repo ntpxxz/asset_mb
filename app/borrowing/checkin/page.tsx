@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useEffect, useState, useMemo } from "react";
+import React, { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,56 +7,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, RotateCcw, Save, Loader2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// types
+/** ===== Types: ตรงกับฐานข้อมูล ===== **/
 type BorrowRecord = {
   id: string;
-  assetId: string;
-  borrowerId?: string;
+  asset_id: string;
   borrowername?: string;
   borrowercontact?: string;
   status: string;
-  checkoutDate?: string;
-  checkinDate?: string | null;
-  dueDate?: string | null;
+  checkout_date?: string;
+  checkin_date?: string | null;
+  due_date?: string | null;
   purpose?: string;
   notes?: string;
+
+  // asset info (อ่านจาก API ถ้ามี)
+  asset_tag?: string;
   assetName?: string;
-  assetTag?: string;
-  assetType?: string;
   assetManufacturer?: string;
   assetModel?: string;
-  assetSerial?: string;
-  assetDescription?: string;
-  assetStatus?: string;
-  assetLocation?: string;
-  assetCondition?: string;
 };
 
-export default function CheckinAssetPage() {
+function CheckinAssetPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const borrowIdFromUrl = useMemo(
-    () => String(searchParams.get("borrowId") ?? ""),
-    [searchParams]
-  );
+  const borrowIdFromUrl = useMemo(() => String(searchParams.get("borrowId") ?? ""), [searchParams]);
 
+  /** ===== Form state: ใช้ชื่อฟิลด์ตาม DB ===== **/
   const [formData, setFormData] = useState({
-    borrowerNameConfirmation: "", // New field for name confirmation
-    checkinDate: new Date().toISOString().split("T")[0],
+    returned_by_name: "",     // เดิม: borrowerNameConfirmation
+    checkin_date: new Date().toISOString().slice(0, 10),
     condition: "",
-    damageReported: false,
-    damageDescription: "",
-    maintenanceRequired: false,
-    maintenanceNotes: "",
+    damage_reported: false,
+    damage_description: "",
+    maintenance_required: false,
+    maintenance_notes: "",
     notes: "",
   });
 
@@ -67,7 +53,7 @@ export default function CheckinAssetPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [nameMatchError, setNameMatchError] = useState<string | null>(null);
 
-  // Load specific borrow record
+  /** ===== โหลดข้อมูลรายการยืม ===== **/
   useEffect(() => {
     const loadBorrowRecord = async () => {
       if (!borrowIdFromUrl) {
@@ -75,155 +61,104 @@ export default function CheckinAssetPage() {
         setLoadingRecord(false);
         return;
       }
-
       setLoadingRecord(true);
       try {
         const response = await fetch(`/api/borrowing/${borrowIdFromUrl}`);
         const result = await response.json();
-
         if (!response.ok || !result.success) {
-          throw new Error(
-            result.error || `Failed to load borrow record (${response.status})`
-          );
+          throw new Error(result.error || `Failed to load borrow record (${response.status})`);
         }
+        const record: BorrowRecord = result.data;
 
-        const record = result.data;
-
-        // Verify this is a checked-out record
-        if (
-          (record.status || "").toLowerCase().replace(/\s+/g, "-") !==
-          "checked-out"
-        ) {
-          throw new Error(
-            "This record is not currently checked out or has already been returned."
-          );
+        // ต้องอยู่สถานะ checked-out เท่านั้น
+        if ((record.status || "").toLowerCase().replace(/\s+/g, "-") !== "checked-out") {
+          throw new Error("This record is not currently checked out or has already been returned.");
         }
 
         setBorrowRecord(record);
         setSubmitError(null);
       } catch (error) {
         console.error("Load borrow record failed:", error);
-        setSubmitError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load checkout record."
-        );
+        setSubmitError(error instanceof Error ? error.message : "Failed to load checkout record.");
         setBorrowRecord(null);
       } finally {
         setLoadingRecord(false);
       }
     };
-
     loadBorrowRecord();
   }, [borrowIdFromUrl]);
 
-  // Validate name confirmation
+  /** ===== Utils ===== **/
+  // คืนรูปแบบ YYYY-MM-DD (ตัดเวลา/โซนเวลาออก)
+  const dateOnly = (v?: string | null) => {
+    if (!v) return "";
+    const s = String(v);
+    const t = s.indexOf("T");
+    if (t > 0) return s.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    return s;
+  };
+
   const validateNameConfirmation = (inputName: string) => {
     if (!borrowRecord?.borrowername || !inputName.trim()) {
       setNameMatchError(null);
       return false;
     }
-
     const originalName = borrowRecord.borrowername.toLowerCase().trim();
     const confirmedName = inputName.toLowerCase().trim();
-
-    // Check if names match (allowing for minor variations)
     const isMatch =
       originalName === confirmedName ||
       originalName.includes(confirmedName) ||
       confirmedName.includes(originalName);
 
     if (!isMatch) {
-      setNameMatchError(
-        "Name does not match the original borrower name. Please verify."
-      );
+      setNameMatchError("Name does not match the original borrower name. Please verify.");
       return false;
     } else {
       setNameMatchError(null);
       return true;
     }
   };
-  // แปลงสตริงวันที่ให้เหลือรูปแบบ YYYY-MM-DD
-  const dateOnly = (v?: string | null) => {
-    if (!v) return "";
-    const s = String(v);
-    // กรณีเป็น ISO "2025-09-03T12:34:56Z"
-    const t = s.indexOf("T");
-    if (t > 0) return s.slice(0, t);
-    // กรณีต้นฉบับมีเวลาแต่คั่นด้วยช่องว่าง และขึ้นต้นด้วย yyyy-mm-dd
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-    // พยายาม parse แล้ว format เอง (กัน timezone)
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const d2 = String(d.getDate()).padStart(2, "0");
-      return `${d2}-${m}-${y}`;
-    }
-    return s; // fallback
-  };
 
+  /** ===== Handlers ===== **/
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!borrowIdFromUrl) {
-      setSubmitError("No borrowId specified.");
-      return;
+    if (!borrowIdFromUrl) return setSubmitError("No borrowId specified.");
+    if (!borrowRecord) return setSubmitError("Borrow record not found or not checked-out.");
+    if (!formData.condition) return setSubmitError("Please assess the asset condition.");
+    if (!formData.returned_by_name.trim()) return setSubmitError("Please confirm the borrower's name.");
+    if (!validateNameConfirmation(formData.returned_by_name)) {
+      return setSubmitError("Please verify the borrower's name matches the original checkout record.");
     }
-
-    if (!borrowRecord) {
-      setSubmitError("Borrow record not found or not checked-out.");
-      return;
-    }
-
-    if (!formData.condition) {
-      setSubmitError("Please assess the asset condition.");
-      return;
-    }
-
-    if (!formData.borrowerNameConfirmation.trim()) {
-      setSubmitError("Please confirm the borrower's name.");
-      return;
-    }
-
-    // Validate name confirmation
-    if (!validateNameConfirmation(formData.borrowerNameConfirmation)) {
-      setSubmitError(
-        "Please verify the borrower's name matches the original checkout record."
-      );
-      return;
-    }
-
-    if (formData.damageReported && !formData.damageDescription.trim()) {
-      setSubmitError("Please describe the reported damage.");
-      return;
+    if (formData.damage_reported && !formData.damage_description.trim()) {
+      return setSubmitError("Please describe the reported damage.");
     }
 
     setSubmitting(true);
     setSubmitError(null);
 
     try {
+      // ส่งคีย์ตรงกับ DB
       const res = await fetch(`/api/borrowing/${borrowIdFromUrl}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "returned",
-          checkinDate: formData.checkinDate,
+          checkin_date: formData.checkin_date,
           condition: formData.condition,
-          damageReported: formData.damageReported,
-          damageDescription: formData.damageDescription || null,
-          maintenanceRequired: formData.maintenanceRequired,
-          maintenanceNotes: formData.maintenanceRequired
-            ? formData.maintenanceNotes || null
-            : null,
-          location: formData.location || null,
+          damage_reported: formData.damage_reported,
+          damage_description: formData.damage_reported ? formData.damage_description || null : null,
+          maintenance_required: formData.maintenance_required,
+          maintenance_notes: formData.maintenance_required ? formData.maintenance_notes || null : null,
           notes: formData.notes || null,
-          returnedByName: formData.borrowerNameConfirmation.trim(), // Include confirmed name
+          returned_by_name: formData.returned_by_name.trim(),
         }),
       });
 
       const json = await res.json().catch(() => ({}));
-
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || `Check-in failed (${res.status})`);
       }
@@ -236,22 +171,16 @@ export default function CheckinAssetPage() {
     }
   };
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-
-    // Clear name match error when user types
-    if (field === "borrowerNameConfirmation" && nameMatchError) {
-      setNameMatchError(null);
-    }
+    if (field === "returned_by_name" && nameMatchError) setNameMatchError(null);
   };
 
-  // Handle name confirmation blur event
   const handleNameConfirmationBlur = () => {
-    if (formData.borrowerNameConfirmation.trim()) {
-      validateNameConfirmation(formData.borrowerNameConfirmation);
-    }
+    if (formData.returned_by_name.trim()) validateNameConfirmation(formData.returned_by_name);
   };
 
+  /** ===== Render ===== **/
   if (loadingRecord) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -286,9 +215,7 @@ export default function CheckinAssetPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Borrow Record Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Checkout Record Information
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Checkout Record Information</h3>
 
               {borrowRecord ? (
                 <div className="space-y-2">
@@ -301,146 +228,94 @@ export default function CheckinAssetPage() {
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">Status</div>
-                        <div className="font-medium text-green-600">
-                          Checked Out
-                        </div>
+                        <div className="font-medium text-green-600">Checked Out</div>
                       </div>
                     </div>
 
                     <div className="mt-4">
-                      <div className="text-xs text-gray-500">
-                        Asset Information
-                      </div>
+                      <div className="text-xs text-gray-500">Asset Information</div>
                       <div className="font-medium">
-                        {borrowRecord.assetTag ??
+                        {borrowRecord.asset_tag ??
                           borrowRecord.assetName ??
-                          [
-                            borrowRecord.assetManufacturer,
-                            borrowRecord.assetModel,
-                          ]
-                            .filter(Boolean)
-                            .join(" ") ??
-                          borrowRecord.assetId ??
+                          [borrowRecord.assetManufacturer, borrowRecord.assetModel].filter(Boolean).join(" ") ??
+                          borrowRecord.asset_id ??
                           "Unknown Asset"}
                       </div>
-                      {(borrowRecord.assetManufacturer ||
-                        borrowRecord.assetModel) && (
-                        <div className="text-sm">
-                          {borrowRecord.assetManufacturer}{" "}
-                          {borrowRecord.assetModel}
-                        </div>
+                      {(borrowRecord.assetManufacturer || borrowRecord.assetModel) && (
+                        <div className="text-sm">{borrowRecord.assetManufacturer} {borrowRecord.assetModel}</div>
                       )}
-                      <div className="text-sm text-gray-500">
-                        ID: {borrowRecord.assetId}
-                      </div>
+                      <div className="text-sm text-gray-500">ID: {borrowRecord.asset_id}</div>
                     </div>
 
                     <div className="mt-4">
                       <div className="text-xs text-gray-500">Borrower</div>
-                      <div className="font-medium">
-                        {borrowRecord.borrowername || "—"}
-                      </div>
+                      <div className="font-medium">{borrowRecord.borrowername || "—"}</div>
                       {borrowRecord.borrowercontact && (
-                        <div className="text-sm text-gray-500">
-                          {borrowRecord.borrowercontact}
-                        </div>
+                        <div className="text-sm text-gray-500">{borrowRecord.borrowercontact}</div>
                       )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div>
-                        <div className="text-xs text-gray-500">
-                          Checked out on
-                        </div>
-                        <div className="font-medium">
-                          {dateOnly(borrowRecord.checkoutDate || "—")}
-                        </div>
+                        <div className="text-xs text-gray-500">Checked out on</div>
+                        <div className="font-medium">{dateOnly(borrowRecord.checkout_date || "—")}</div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">Due date</div>
                         <div
                           className={`font-medium ${
-                            borrowRecord.dueDate &&
-                            new Date(borrowRecord.dueDate) < new Date()
-                              ? "text-red-600"
-                              : ""
+                            borrowRecord.due_date && new Date(borrowRecord.due_date) < new Date() ? "text-red-600" : ""
                           }`}
                         >
-                          {borrowRecord.dueDate
-                            ? dateOnly(borrowRecord.dueDate)
-                            : "No due date"}
-                          {borrowRecord.dueDate &&
-                            new Date(borrowRecord.dueDate) < new Date() &&
-                            " (OVERDUE)"}
+                          {borrowRecord.due_date ? dateOnly(borrowRecord.due_date) : "No due date"}
+                          {borrowRecord.due_date && new Date(borrowRecord.due_date) < new Date() && " (OVERDUE)"}
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-4">
                       <div className="text-xs text-gray-500">Purpose</div>
-                      <div className="font-medium">
-                        {borrowRecord.purpose || "—"}
-                      </div>
+                      <div className="font-medium">{borrowRecord.purpose || "—"}</div>
                     </div>
 
                     {borrowRecord.notes && (
                       <div className="mt-4">
-                        <div className="text-xs text-gray-500">
-                          Checkout notes
-                        </div>
-                        <div className="font-medium whitespace-pre-wrap break-words">
-                          {borrowRecord.notes}
-                        </div>
+                        <div className="text-xs text-gray-500">Checkout notes</div>
+                        <div className="font-medium whitespace-pre-wrap break-words">{borrowRecord.notes}</div>
                       </div>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-red-600">
-                  {submitError || "Unable to load checkout record"}
-                </div>
+                <div className="text-center py-8 text-red-600">{submitError || "Unable to load checkout record"}</div>
               )}
 
               {/* Name Confirmation Field */}
               {borrowRecord && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="borrower-name-confirmation">
-                      Confirm Borrower Name *
-                    </Label>
+                    <Label htmlFor="returned_by_name">Confirm Borrower Name *</Label>
                     <Input
-                      id="borrower-name-confirmation"
-                      placeholder={`Enter borrower's name to confirm (Original: ${
-                        borrowRecord.borrowername || "Unknown"
-                      })`}
-                      value={formData.borrowerNameConfirmation}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "borrowerNameConfirmation",
-                          e.target.value
-                        )
-                      }
+                      id="returned_by_name"
+                      placeholder={`Enter borrower's name to confirm (Original: ${borrowRecord.borrowername || "Unknown"})`}
+                      value={formData.returned_by_name}
+                      onChange={(e) => handleInputChange("returned_by_name", e.target.value)}
                       onBlur={handleNameConfirmationBlur}
                       required
                       className={nameMatchError ? "border-red-500" : ""}
                     />
-                    {nameMatchError && (
-                      <p className="text-sm text-red-600">{nameMatchError}</p>
-                    )}
+                    {nameMatchError && <p className="text-sm text-red-600">{nameMatchError}</p>}
                     <p className="text-sm text-gray-500">
-                      Please enter the borrower name exactly as it appears in
-                      the original checkout record.
+                      Please enter the borrower name exactly as it appears in the original checkout record.
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="checkinDate">Check-in Date *</Label>
+                    <Label htmlFor="checkin_date">Check-in Date *</Label>
                     <Input
-                      id="checkinDate"
+                      id="checkin_date"
                       type="date"
-                      value={formData.checkinDate}
-                      onChange={(e) =>
-                        handleInputChange("checkinDate", e.target.value)
-                      }
+                      value={formData.checkin_date}
+                      onChange={(e) => handleInputChange("checkin_date", e.target.value)}
                       required
                     />
                   </div>
@@ -450,32 +325,17 @@ export default function CheckinAssetPage() {
 
             {/* Condition Assessment */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Condition Assessment
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Condition Assessment</h3>
               <div className="space-y-2">
                 <Label htmlFor="condition">Asset Condition *</Label>
-                <Select
-                  value={formData.condition}
-                  onValueChange={(value) =>
-                    handleInputChange("condition", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Assess asset condition" />
-                  </SelectTrigger>
+                <Select value={formData.condition} onValueChange={(value) => handleInputChange("condition", value)}>
+                  <SelectTrigger><SelectValue placeholder="Assess asset condition" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="excellent">
-                      Excellent - Like new
-                    </SelectItem>
+                    <SelectItem value="excellent">Excellent - Like new</SelectItem>
                     <SelectItem value="good">Good - Minor wear</SelectItem>
                     <SelectItem value="fair">Fair - Noticeable wear</SelectItem>
-                    <SelectItem value="poor">
-                      Poor - Significant wear
-                    </SelectItem>
-                    <SelectItem value="damaged">
-                      Damaged - Needs repair
-                    </SelectItem>
+                    <SelectItem value="poor">Poor - Significant wear</SelectItem>
+                    <SelectItem value="damaged">Damaged - Needs repair</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -483,29 +343,21 @@ export default function CheckinAssetPage() {
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="damage-reported"
-                    checked={formData.damageReported}
-                    onCheckedChange={(checked) =>
-                      handleInputChange("damageReported", checked as boolean)
-                    }
+                    id="damage_reported"
+                    checked={formData.damage_reported}
+                    onCheckedChange={(checked) => handleInputChange("damage_reported", checked as boolean)}
                   />
-                  <Label htmlFor="damage-reported">
-                    Report damage or issues
-                  </Label>
+                  <Label htmlFor="damage_reported">Report damage or issues</Label>
                 </div>
 
-                {formData.damageReported && (
+                {formData.damage_reported && (
                   <div className="space-y-2 ml-6">
-                    <Label htmlFor="damage-description">
-                      Damage Description *
-                    </Label>
+                    <Label htmlFor="damage_description">Damage Description *</Label>
                     <Textarea
-                      id="damage-description"
+                      id="damage_description"
                       placeholder="Describe any damage, missing parts, or issues..."
-                      value={formData.damageDescription}
-                      onChange={(e) =>
-                        handleInputChange("damageDescription", e.target.value)
-                      }
+                      value={formData.damage_description}
+                      onChange={(e) => handleInputChange("damage_description", e.target.value)}
                       rows={3}
                     />
                   </div>
@@ -513,30 +365,21 @@ export default function CheckinAssetPage() {
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="maintenance-required"
-                    checked={formData.maintenanceRequired}
-                    onCheckedChange={(checked) =>
-                      handleInputChange(
-                        "maintenanceRequired",
-                        checked as boolean
-                      )
-                    }
+                    id="maintenance_required"
+                    checked={formData.maintenance_required}
+                    onCheckedChange={(checked) => handleInputChange("maintenance_required", checked as boolean)}
                   />
-                  <Label htmlFor="maintenance-required">
-                    Maintenance required
-                  </Label>
+                  <Label htmlFor="maintenance_required">Maintenance required</Label>
                 </div>
 
-                {formData.maintenanceRequired && (
+                {formData.maintenance_required && (
                   <div className="space-y-2 ml-6">
-                    <Label htmlFor="maintenance-notes">Maintenance Notes</Label>
+                    <Label htmlFor="maintenance_notes">Maintenance Notes</Label>
                     <Textarea
-                      id="maintenance-notes"
+                      id="maintenance_notes"
                       placeholder="Describe required maintenance work..."
-                      value={formData.maintenanceNotes}
-                      onChange={(e) =>
-                        handleInputChange("maintenanceNotes", e.target.value)
-                      }
+                      value={formData.maintenance_notes}
+                      onChange={(e) => handleInputChange("maintenance_notes", e.target.value)}
                       rows={2}
                     />
                   </div>
@@ -546,9 +389,7 @@ export default function CheckinAssetPage() {
 
             {/* Additional Notes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Additional Information
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
               <div className="space-y-2">
                 <Label htmlFor="notes">Check-in Notes</Label>
                 <Textarea
@@ -569,29 +410,19 @@ export default function CheckinAssetPage() {
                   Check-in Summary
                 </h4>
                 <div className="space-y-1 text-sm text-green-800">
-                  <p>Asset: {borrowRecord.assetTag || borrowRecord.assetId}</p>
+                  <p>Asset: {borrowRecord.asset_tag || borrowRecord.asset_id}</p>
                   <p>Borrower: {borrowRecord.borrowername}</p>
-                  <p>Return Date: {formData.checkinDate}</p>
+                  <p>Return Date: {formData.checkin_date}</p>
                   <p>Condition: {formData.condition || "Not assessed"}</p>
-                  <p>
-                    Damage Reported: {formData.damageReported ? "Yes" : "No"}
-                  </p>
-                  <p>
-                    Maintenance Required:{" "}
-                    {formData.maintenanceRequired ? "Yes" : "No"}
-                  </p>
+                  <p>Damage Reported: {formData.damage_reported ? "Yes" : "No"}</p>
+                  <p>Maintenance Required: {formData.maintenance_required ? "Yes" : "No"}</p>
                 </div>
               </div>
             )}
 
-            {/* Form Actions */}
+            {/* Actions */}
             <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={submitting}
-              >
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={submitting}>
                 Cancel
               </Button>
               <Button
@@ -600,10 +431,9 @@ export default function CheckinAssetPage() {
                   submitting ||
                   !borrowRecord ||
                   !formData.condition ||
-                  !formData.borrowerNameConfirmation.trim() ||
+                  !formData.returned_by_name.trim() ||
                   !!nameMatchError
                 }
-                onClick={handleSubmit}
               >
                 {submitting ? (
                   <>
@@ -630,3 +460,17 @@ export default function CheckinAssetPage() {
     </div>
   );
 }
+export default function CheckinAssetPage() {
+  return (
+  <Suspense
+  fallback={
+  <div className="flex items-center justify-center h-64">
+  <Loader2 className="h-8 w-8 animate-spin" />
+  <span className="ml-2">Loading checkout record...</span>
+  </div>
+  }
+  >
+  <CheckinAssetPageInner />
+  </Suspense>
+  );
+  }

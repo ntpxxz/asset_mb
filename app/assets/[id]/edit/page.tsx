@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Package } from 'lucide-react';
 import { AssetForm } from '../../components/forms/asset-form';
 import { Card, CardContent } from '@/components/ui/card';
+import { AssetFormData } from '@/lib/data-store';
+
 
 export default function EditAssetPage() {
   const router = useRouter();
   const params = useParams();
-  const [assetData, setAssetData] = useState(null);
+  const [assetData, setAssetData] = useState<AssetFormData | null>(null); // ✅ 2) บอกชนิดให้ state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,7 +138,7 @@ export default function EditAssetPage() {
       {/* Form */}
       <AssetForm
         mode="edit"
-        initialData={assetData}
+        initialData={assetData ? assetData : undefined}
         assetId={params.id as string}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

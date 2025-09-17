@@ -1,162 +1,170 @@
+// app/api/software/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { z } from 'zod';
 
-// Zod schema for validation (all fields optional for updates)
-const softwareUpdateSchema = z.object({
-  softwareName: z.string().min(1, "Software name is required").optional(),
-  publisher: z.string().optional(),
-  version: z.string().optional(),
-  licenseKey: z.string().min(1, "License key is required").optional(),
-  licenseType: z.string().optional(),
-  purchaseDate: z.string().optional(),
-  expiryDate: z.string().optional(),
-  licensesTotal: z.coerce.number().int().optional(),
-  licensesAssigned: z.coerce.number().int().optional(),
-  category: z.string().optional(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  status: z.string().optional(),
-}).partial();
+// ===== Helpers =====
+const CAMEL_TO_DB: Record<string, string> = {
+  softwareName: 'software_name',
+  publisher: 'publisher',
+  version: 'version',
+  licenseKey: 'license_key',
+  licenseType: 'licenses_type',
+  purchaseDate: 'purchasedate',
+  expiryDate: 'expirydate',
+  licensesTotal: 'licenses_total',
+  licensesAssigned: 'licenses_assigned',
+  category: 'category',
+  description: 'description',
+  notes: 'notes',
+  status: 'status',
+  updated_at: 'updated_at',
+};
 
-// Helper function to clean data - remove null/empty values and convert empty strings to null
-function cleanUpdateData(data: any) {
-  const cleaned: any = {};
-  
-  Object.entries(data).forEach(([key, value]) => {
-    // Skip undefined values
-    if (value === undefined) return;
-    
-    // Convert empty strings to null for optional fields
-    if (value === '') {
-      cleaned[key] = null;
-    } else {
-      cleaned[key] = value;
-    }
-  });
-  
-  return cleaned;
+const isDdMmYyyy = (s: string) => /^\d{2}\/\d{2}\/\d{4}$/.test(s);
+
+function toDateOnly(val: any): string | null {
+  if (!val) return null;
+  const s = String(val);
+  if (isDdMmYyyy(s)) {
+    const [dd, mm, yyyy] = s.split('/');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  // ISO -> date only
+  if (s.includes('T')) return s.split('T')[0];
+  // assume already YYYY-MM-DD
+  return s;
 }
 
-//
+function toInt(val: any): number | null {
+  if (val === '' || val === null || val === undefined) return null;
+  const n = typeof val === 'number' ? val : parseInt(String(val), 10);
+  return Number.isFinite(n) ? n : null;
+}
 
-// GET /api/software/[id] - Get single software license
+function toNull(val: any) {
+  return val === '' || val === '-' || val === undefined ? null : val;
+}
+
+// รับ body จากฟอร์ม แล้วคืน object ที่คีย์เป็นชื่อคอลัมน์จริงของ DB
+function buildUpdate(body: Record<string, any>) {
+  const update: Record<string, any> = {};
+  for (const [camel, dbCol] of Object.entries(CAMEL_TO_DB)) {
+    if (!(camel in body) && !(dbCol in body)) continue;
+    let v = body[camel] ?? body[dbCol];
+
+    if (dbCol === 'purchasedate' || dbCol === 'expirydate') v = toDateOnly(v);
+    else if (dbCol === 'licenses_total' || dbCol === 'licenses_assigned') v = toInt(v);
+    else if (dbCol === 'updated_at') v = v ? new Date(String(v)).toISOString() : new Date().toISOString();
+    else v = toNull(v);
+
+    update[dbCol] = v;
+  }
+
+  // ถ้าไม่ได้ส่ง updated_at มาจะตั้งให้เอง
+  if (!('updated_at' in update)) update.updated_at = new Date().toISOString();
+  return update;
+}
+
+function ok(data: any, status = 200) {
+  return NextResponse.json({ success: true, data }, { status });
+}
+function fail(error: string, status = 400) {
+  return NextResponse.json({ success: false, error }, { status });
+}
+
+// ===== Handlers =====
+
+// GET /api/software/:id
 export async function GET(
-  request: NextRequest,
+  _req: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } =  await params;
-    const result = await pool.query('SELECT * FROM software WHERE id = $1', [id]);
-    
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Software license not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error(`Failed to fetch software license:`, error);
-    return NextResponse.json(
-      { success: false, error: `Failed to fetch software license ` },
-      { status: 500 }
-    );
+    const { id } = await params;
+    const q = `
+      SELECT id, software_name, publisher, version, license_key, licenses_type,
+             purchasedate, expirydate, licenses_total, licenses_assigned,
+             category, description, notes, status, created_at, updated_at
+      FROM software
+      WHERE id = $1
+      LIMIT 1
+    `;
+    const { rows } = await pool.query(q, [id]);
+    if (!rows[0]) return fail('Software license not found', 404);
+    return ok(rows[0]);
+  } catch (e: any) {
+    console.error('[GET software/:id]', e);
+    return fail('Failed to fetch software license', 500);
   }
 }
 
-// PUT /api/software/[id] - Update software license
+// PATCH /api/software/:id  (partial update – ใช้กับฟอร์ม Edit)
+export async function PATCH(
+  req: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const update = buildUpdate(body);
+
+    // กติกา business: assigned > total ไม่ได้ (ถ้าส่งสองฟิลด์นี้มา)
+    if (
+      (update.licenses_assigned ?? null) !== null &&
+      (update.licenses_total ?? null) !== null &&
+      Number(update.licenses_assigned) > Number(update.licenses_total)
+    ) {
+      return fail('licenses_assigned cannot exceed licenses_total', 400);
+    }
+
+    if (Object.keys(update).length === 0) return fail('No fields to update', 400);
+
+    const cols = Object.keys(update);
+    const vals = Object.values(update);
+    const sets = cols.map((c, i) => `${c} = $${i + 1}`).join(', ');
+
+    const q = `
+      UPDATE software
+      SET ${sets}
+      WHERE id = $${cols.length + 1}
+      RETURNING id, software_name, publisher, version, license_key, licenses_type,
+                purchasedate, expirydate, licenses_total, licenses_assigned,
+                category, description, notes, status, created_at, updated_at
+    `;
+    const { rows } = await pool.query(q, [...vals, id]);
+    if (!rows[0]) return fail('Software license not found', 404);
+    return ok(rows[0]);
+  } catch (e: any) {
+    // จับ unique violation ฯลฯ ให้เป็นข้อความอ่านง่าย
+    const pgCode = e?.code;
+    if (pgCode === '23505') {
+      return fail('Software with this license key already exists.', 409);
+    }
+    console.error('[PATCH software/:id]', e);
+    return fail(`Failed to update software license`, 500);
+  }
+}
+
+// PUT /api/software/:id  → รองรับให้เรียกแบบเดิมได้ (จะใช้ logic เดียวกับ PATCH)
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  req: NextRequest, 
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
-    const body = await request.json();
-    const validation = softwareUpdateSchema.safeParse(body);
-
-    if (!validation.success) {
-        return NextResponse.json(
-            { success: false, error: 'Invalid input', details: validation.error.flatten() },
-            { status: 400 }
-        );
-    }
-    
-    const fields: { [key: string]: any } = validation.data;
-    if (Object.keys(fields).length === 0) {
-        return NextResponse.json(
-            { success: false, error: 'No fields to update' },
-            { status: 400 }
-        );
-    }
-
-    fields.updatedAt = new Date().toISOString();
-
-    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
-    const queryParams = Object.values(fields);
-    queryParams.push(id);
-    
-    const query = `UPDATE software SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`;
-    
-    const result = await pool.query(query, queryParams);
-
-    if (result.rowCount === 0) {
-        return NextResponse.json(
-            { success: false, error: 'Software license not found' },
-            { status: 404 }
-        );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: result.rows[0],
-      message: 'Software license updated successfully'
-    });
-  } catch (error:unknown) {
-    console.error(`Failed to update software license ${params.id}:`, error);
-    if (error) { // unique_violation
-        return NextResponse.json(
-            { success: false, error: 'Software with this license key already exists.' },
-            { status: 409 }
-        );
-    }
-    return NextResponse.json(
-      { success: false, error: `Failed to update software license ${params.id}` },
-      { status: 500 }
-    );
-  }
+  return PATCH(req, ctx);
 }
 
-// DELETE /api/software/[id] - Delete software license
+// DELETE /api/software/:id
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _req: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
-    const result = await pool.query('DELETE FROM software WHERE id = $1 RETURNING *;', [id]);
-    
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Software license not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: result.rows[0],
-      message: 'Software license deleted successfully'
-    });
-  } catch (error) {
-    console.error(`Failed to delete software license ${params.id}:`, error);
-    return NextResponse.json(
-      { success: false, error: `Failed to delete software license ${params.id}` },
-      { status: 500 }
-    );
+    const { id } = await params;
+    const { rows } = await pool.query('DELETE FROM software WHERE id = $1 RETURNING id', [id]);
+    if (!rows[0]) return fail('Software license not found', 404);
+    return ok(null);
+  } catch (e: any) {
+    console.error('[DELETE software/:id]', e);
+    return fail(`Failed to delete software license`, 500);
   }
 }

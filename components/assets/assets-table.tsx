@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { hardwareApi, usersApi } from '@/lib/api-client';
+import { AssetFormData } from '@/lib/data-store';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -70,7 +71,7 @@ const getAssetIcon = (type: string) => {
 };
 
 interface AssetsTableProps {
-  initialAssets: any[];
+  initialAssets: AssetFormData[];
   initialUsers: any[];
 }
 
@@ -79,15 +80,23 @@ export function AssetsTable({ initialAssets, initialUsers }: AssetsTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [assets, setAssets] = useState(initialAssets);
+  const [assets, setAssets] = useState<AssetFormData[]>(initialAssets?? []);
   const [users, setUsers] = useState(initialUsers);
 
   const loadAssets = async () => {
-    const response = await hardwareApi.getAll();
-    if (response.success && response.data) {
-      setAssets(response.data);
+    try{
+      const response = await hardwareApi.getAll();
+      if (response.success && Array.isArray(response.data)) {
+        setAssets(response.data as AssetFormData[]);
+      } else {
+        console.error('softwareApi.getAll() returned unexpected shape', response);
+        setAssets([]);
+      }      
+    } catch (error) {
+      console.error('Failed to load software:', error);
     }
-  }
+  };
+   
 
   const handleDelete = async (assetId: string) => {
     if (confirm('Are you sure you want to delete this asset?')) {
@@ -106,9 +115,9 @@ export function AssetsTable({ initialAssets, initialUsers }: AssetsTableProps) {
   };
 
   const filteredAssets = assets.filter(asset => {
-    const matchesSearch = asset.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         getUserName(asset.assignedUser).toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         asset.serialnumber!.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         getUserName(asset.assigneduser!).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || asset.type === categoryFilter;
 
@@ -187,7 +196,7 @@ export function AssetsTable({ initialAssets, initialUsers }: AssetsTableProps) {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const Icon = getAssetIcon(asset.type);
+                  const Icon = getAssetIcon(asset.type!);
                   return (
                     <TableRow key={asset.id}>
                       <TableCell>
@@ -201,11 +210,11 @@ export function AssetsTable({ initialAssets, initialUsers }: AssetsTableProps) {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">{asset.serialNumber}</TableCell>
-                      <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                      <TableCell>{getUserName(asset.assignedUser)}</TableCell>
+                      <TableCell className="font-mono text-sm">{asset.serialnumber}</TableCell>
+                      <TableCell>{getStatusBadge(asset.status!)}</TableCell>
+                      <TableCell>{getUserName(asset.assigneduser!)}</TableCell>
                       <TableCell>{asset.location}</TableCell>
-                      <TableCell className="font-medium">${asset.purchasePrice}</TableCell>
+                      <TableCell className="font-medium">${asset.purchaseprice}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => router.push(`/assets/${asset.id}`)}>
@@ -218,7 +227,7 @@ export function AssetsTable({ initialAssets, initialUsers }: AssetsTableProps) {
                             variant="ghost"
                             size="sm"
                             className="text-red-600 hover:text-red-700"
-                            onClick={() => handleDelete(asset.id)}
+                            onClick={() => handleDelete(asset.id!)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

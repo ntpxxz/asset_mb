@@ -102,7 +102,7 @@ export function AssetForm({ mode, initialData, assetId, onSubmit, onCancel, load
     ...initialData
   });
 
-  const [originalData, setOriginalData] = useState<AssetFormData>({});
+  const [originalData, setOriginalData] = useState<AssetFormData>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);

@@ -83,7 +83,7 @@ export default function UserViewPage() {
       const result = await response.json();
       
       if (response.ok && result.success && result.data) {
-        const assignedAssets = result.data.filter((asset: HardwareAsset) => asset.assignedUser === userId);
+        const assignedAssets = result.data.filter((asset: HardwareAsset) => asset.assigneduser === userId);
         setUserAssets(assignedAssets);
       }
     } catch (err) {

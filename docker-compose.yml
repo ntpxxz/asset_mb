@@ -1,31 +1,23 @@
 services:
   nextjs-app:
     build:
-      context: ./
+      context: .
       dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3092"
+      POSTGRES_SSL: "false"
+      DATABASE_URL: "postgresql://rootpg:123456@pg-main:5432/asset_management" 
     ports:
       - "3092:3092"
-    working_dir: /app
-    environment:
-      DATABASE_URL:  postgresql://rootpg:123456@pg-main:5432/service_management
-      POSTGRES_SSL: "false"
-      NODE_ENV: production
-    env_file:
-      - ./.env.local
-    command: npm run start
     networks:
-      - db-net
-    depends_on:
-      wait-for-db:
-        condition: service_completed_successfully   
+      - app-net      
+      - db-net       
     restart: unless-stopped
-  
-  wait-for-db:
-    image: postgres:15
-    command: sh -c 'until pg_isready -h pg-main -p 5432 -U rootpg; do echo "waiting for pg-main..."; sleep 2; done'
-    networks:
-      - db-net
-    restart: "no"  
+
 networks:
+  app-net:
+    driver: bridge
   db-net:
-    external: true
+    external: true   

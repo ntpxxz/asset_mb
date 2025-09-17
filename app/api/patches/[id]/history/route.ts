@@ -17,7 +17,10 @@ function normalizeHistoryRow(r: any) {
 }
 
 // GET /api/patches/[id]/history → list history entries
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const rows = await pool.query(
       `SELECT id, "patchId", "patchName", version, description,
@@ -26,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
        FROM asset_patch_history
        WHERE "patchId" = $1
        ORDER BY COALESCE("installDate","scheduledDate","createdAt") DESC`,
-      [params.id]
+      [(await params).id]
     );
     return NextResponse.json({ success: true, data: rows.rows.map(normalizeHistoryRow) });
   } catch (err: any) {
@@ -36,9 +39,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 // POST /api/patches/[id]/history → create new history entry for patch
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST( request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     const { patchName, version, description, patchType, severity, status, installDate, scheduledDate, size, kbNumber, cveIds, notes } = body || {};
 
     // keep TEXT in DB; if array provided, serialize JSON
@@ -56,7 +61,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
        RETURNING id`,
       [
         `HIST-${Date.now()}`,
-        params.id,
+        (await params).id,
         patchName,
         version,
         description,
