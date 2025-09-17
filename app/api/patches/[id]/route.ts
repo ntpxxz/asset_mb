@@ -1,127 +1,168 @@
 import { NextRequest, NextResponse } from 'next/server';
+import pool from '@/lib/db';
+import { z } from 'zod';
 
-// This would be imported from a shared data file in a real app
-let patchRecords = [
-  {
-    id: 'PATCH-001',
-    assetId: 'AST-001',
-    patchStatus: 'up-to-date',
-    lastPatchCheck: '2024-01-15',
-    operatingSystem: 'macOS Ventura 13.6',
-    vulnerabilities: 0,
-    pendingUpdates: 0,
-    criticalUpdates: 0,
-    securityUpdates: 0,
-    notes: 'All security patches applied',
-    nextCheckDate: '2024-02-15',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T14:30:00Z',
-  },
-  {
-    id: 'PATCH-002',
-    assetId: 'AST-002',
-    patchStatus: 'needs-review',
-    lastPatchCheck: '2023-12-20',
-    operatingSystem: 'Windows 11 Pro',
-    vulnerabilities: 3,
-    pendingUpdates: 5,
-    criticalUpdates: 1,
-    securityUpdates: 2,
-    notes: 'Requires manual review for critical updates',
-    nextCheckDate: '2024-01-20',
-    createdAt: '2023-12-20T16:00:00Z',
-    updatedAt: '2024-01-10T09:00:00Z',
-  },
-];
+// ---------------------------
+// Validation (partial update)
+// ---------------------------
+const patchUpdateSchema = z.object({
+  assetId: z.string().min(1, 'Asset ID is required').optional(),
+  patchStatus: z.string().optional(),
+  lastPatchCheck: z.string().optional(),
+  operatingSystem: z.string().optional(),
+  vulnerabilities: z.coerce.number().int().optional(),
+  pendingUpdates: z.coerce.number().int().optional(),
+  criticalUpdates: z.coerce.number().int().optional(),
+  securityUpdates: z.coerce.number().int().optional(),
+  notes: z.string().optional(),
+  nextCheckDate: z.string().optional(),
+}).partial();
 
-// GET /api/patches/[id] - Get single patch record
+// ---------------------------
+// Helpers
+// ---------------------------
+const toISO = (v: any) => { try { return v ? new Date(v).toISOString() : null; } catch { return null; } };
+const normalizeRecord = (r: any) => ({
+  ...r,
+  lastPatchCheck: toISO(r.lastPatchCheck),
+  nextCheckDate: toISO(r.nextCheckDate),
+  createdAt: toISO(r.createdAt),
+  updatedAt: toISO(r.updatedAt),
+});
+
+async function fetchRecord(id: string) {
+  return pool.query(
+    `SELECT id, "assetId", "patchStatus", "lastPatchCheck", "operatingSystem",
+            vulnerabilities, "pendingUpdates", "criticalUpdates", "securityUpdates",
+            notes, "nextCheckDate", "createdAt", "updatedAt"
+     FROM asset_patches WHERE id = $1`,
+    [id]
+  );
+}
+
+// ------------------------------------------------------
+// GET /api/patches/[id]
+//   - supports ?include=history to bundle history (optional)
+// ------------------------------------------------------
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const record = patchRecords.find(r => r.id === params.id);
-    
-    if (!record) {
-      return NextResponse.json(
-        { success: false, error: 'Patch record not found' },
-        { status: 404 }
-      );
-    }
+    const { id } =  await params;
+    const url = new URL(request.url);
+    const include = url.searchParams.get('include');
+    const wantHistory = include?.split(',').includes('history');
 
-    return NextResponse.json({
-      success: true,
-      data: record
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch patch record' },
-      { status: 500 }
+    // 1) record
+    const rec = await fetchRecord(id);
+    if (rec.rowCount === 0) {
+      return NextResponse.json({ success: false, error: 'Patch record not found' }, { status: 404 });
+    }
+    const record = normalizeRecord(rec.rows[0]);
+
+    if (!wantHistory) return NextResponse.json({ success: true, data: record });
+
+    // 2) optional history bundle
+    const hist = await pool.query(
+      `SELECT id, "patchId", "patchName", version, description,
+              "patchType", severity, status, "installDate", "scheduledDate",
+              size, "kbNumber", "cveIds", notes, "createdAt"
+       FROM asset_patch_history
+       WHERE "patchId" = $1
+       ORDER BY COALESCE("installDate","scheduledDate","createdAt") DESC`,
+      [id]
     );
+
+    const history = hist.rows.map((r: any) => ({
+      ...r,
+      installDate: toISO(r.installDate),
+      scheduledDate: toISO(r.scheduledDate),
+      createdAt: toISO(r.createdAt),
+      // normalize cveIds: TEXT(JSON/CSV) -> array (UI-friendly)
+      cveIds: (() => {
+        if (r.cveIds == null) return undefined;
+        if (Array.isArray(r.cveIds)) return r.cveIds.map(String);
+        if (typeof r.cveIds === 'string') {
+          const s = r.cveIds.trim();
+          if (s.startsWith('[') && s.endsWith(']')) { try { return JSON.parse(s); } catch { return undefined; } }
+          if (s) return s.split(',').map((x: string) => x.trim()).filter(Boolean);
+        }
+        return undefined;
+      })(),
+    }));
+
+    return NextResponse.json({ success: true, data: record, history });
+  } catch (error) {
+    console.error('GET /api/patches/[id] failed:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch patch record' }, { status: 500 });
   }
 }
 
-// PUT /api/patches/[id] - Update patch record
+// ------------------------------------------------------
+// PUT /api/patches/[id]  (partial update)
+// ------------------------------------------------------
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const recordIndex = patchRecords.findIndex(r => r.id === params.id);
-    
-    if (recordIndex === -1) {
+    const validation = patchUpdateSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Patch record not found' },
-        { status: 404 }
+        { success: false, error: 'Invalid input', details: validation.error.flatten() },
+        { status: 400 }
       );
     }
 
-    patchRecords[recordIndex] = {
-      ...patchRecords[recordIndex],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
+    const fields: Record<string, any> = validation.data;
+    if (Object.keys(fields).length === 0) {
+      return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: patchRecords[recordIndex],
-      message: 'Patch record updated successfully'
-    });
+    if (fields.lastPatchCheck) fields.lastPatchCheck = new Date(fields.lastPatchCheck);
+    if (fields.nextCheckDate) fields.nextCheckDate = new Date(fields.nextCheckDate);
+    fields.updatedAt = new Date();
+
+    const setClauses = Object.keys(fields)
+      .map((key, index) => `"${key}" = $${index + 1}`)
+      .join(', ');
+    const queryParams = Object.values(fields);
+    queryParams.push(id);
+
+    const result = await pool.query(`UPDATE asset_patches SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`, queryParams);
+    if (result.rowCount === 0) return NextResponse.json({ success: false, error: 'Patch record not found' }, { status: 404 });
+
+    return NextResponse.json({ success: true, data: normalizeRecord(result.rows[0]), message: 'Patch record updated successfully' });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to update patch record' },
-      { status: 500 }
-    );
+    console.error(`PUT /api/patches/[id] failed:`, error);
+    return NextResponse.json({ success: false, error: `Failed to update patch record ${(await params).id}` }, { status: 500 });
   }
 }
 
-// DELETE /api/patches/[id] - Delete patch record
+// ------------------------------------------------------
+// DELETE /api/patches/[id] (delete history first to satisfy FK)
+// ------------------------------------------------------
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const client = await pool.connect();
   try {
-    const recordIndex = patchRecords.findIndex(r => r.id === params.id);
-    
-    if (recordIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Patch record not found' },
-        { status: 404 }
-      );
-    }
-
-    const deletedRecord = patchRecords.splice(recordIndex, 1)[0];
-
-    return NextResponse.json({
-      success: true,
-      data: deletedRecord,
-      message: 'Patch record deleted successfully'
-    });
+    const { id } = await params;
+    await client.query('BEGIN');
+    await client.query('DELETE FROM asset_patch_history WHERE "patchId" = $1', [id]);
+    const result = await client.query('DELETE FROM asset_patches WHERE id = $1 RETURNING *;', [id]);
+    await client.query('COMMIT');
+    if (result.rowCount === 0) return NextResponse.json({ success: false, error: 'Patch record not found' }, { status: 404 });
+    return NextResponse.json({ success: true, data: normalizeRecord(result.rows[0]), message: 'Patch record deleted successfully' });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete patch record' },
-      { status: 500 }
-    );
+    await client.query('ROLLBACK');
+    console.error(`DELETE /api/patches/[id] failed:`, error);
+    return NextResponse.json({ success: false, error: `Failed to delete patch record, ${(await params).id}` }, { status: 500 });
+  } finally {
+    client.release();
   }
 }

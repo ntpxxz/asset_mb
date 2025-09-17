@@ -3,34 +3,90 @@
 
 export interface HardwareAsset {
   id: string;
-  assetTag: string;
+  asset_tag: string;
   type: string;
   manufacturer: string;
   model: string;
-  serialNumber: string;
-  purchaseDate: string;
-  purchasePrice: string;
+  serialnumber: string;
+  purchasedate: string;
+  purchaseprice: string;
   supplier: string;
-  warrantyExpiry: string;
-  assignedUser: string;
+  warrantyexpiry: string;
+  assigneduser: string;
   location: string;
   department: string;
   status: 'in-stock' | 'in-use' | 'under-repair' | 'retired';
-  operatingSystem: string;
+  operatingsystem: string;
   processor: string;
   memory: string;
   storage: string;
   hostname: string;
-  ipAddress: string;
-  macAddress: string;
-  patchStatus: 'up-to-date' | 'needs-review' | 'update-pending';
-  lastPatchCheck: string;
-  isLoanable: boolean;
-  condition: string;
+  ipaddress: string;
+  macaddress: string;
+  patchstatus: 'up-to-date' | 'needs-review' | 'update-pending';
+  lastpatch_check: string;
+  isloanable: boolean;
+  condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
   description: string;
   notes: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface AssetFormData {
+  id?: string;
+  asset_tag?: string;
+  type?: string;
+  manufacturer?: string;
+  model?: string;
+  serialnumber?: string;
+  purchasedate?: string;
+  purchaseprice?: number | null;
+  supplier?: string;
+  warrantyexpiry?: string;
+  assigneduser?: string;
+  location?: string;
+  department?: string;
+  status?: string;
+  operatingsystem?: string;
+  processor?: string;
+  memory?: string;
+  storage?: string;
+  hostname?: string;
+  ipaddress?: string;
+  macaddress?: string;
+  patchstatus: string;
+  lastpatch_check?: string;
+  isloanable?: boolean;
+  condition?: string;
+  description?: string;
+  notes?: string;
+}
+export interface SoftwareFormData {
+  id?: string;
+  software_name: string;
+  publisher?: string | null;
+  version?: string | null;
+  license_key?: string | null;
+  licenses_type?:
+    | 'per-user'
+    | 'per-device'
+    | 'subscription'
+    | 'perpetual'    
+    | null;
+  status?:
+    | 'active'
+    | 'inactive'
+    | 'expired'
+    | 'retired'
+    | 'trial'
+    | null;
+  purchasedate?: string | null;   // YYYY-MM-DD
+  expirydate?: string | null;     // YYYY-MM-DD
+  licenses_total?: number | null;
+  licenses_assigned?: number | null;
+  category?: string | null;
+  description?: string | null;
+  notes?: string | null;
 }
 
 export interface SoftwareLicense {
@@ -84,112 +140,44 @@ export interface BorrowRecord {
   updatedAt: string;
 }
 
+export interface PatchRecord {
+  id: string;
+  assetId: string;
+  patchStatus: string;
+  lastPatchCheck: string;
+  operatingSystem: string;
+  vulnerabilities: number;
+  pendingUpdates: number;
+  criticalUpdates: number;
+  securityUpdates: number;
+  notes?: string;
+  nextCheckDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface PatchHistoryRecord {
+  id: string;
+  patchId: string;
+  patchName: string;
+  version: string;
+  description: string;
+  patchType: "security" | "critical" | "feature" | "bugfix" | string;
+  severity: "low" | "medium" | "high" | "critical" | string;
+  status: "installed" | "failed" | "pending" | "scheduled" | string;
+  installDate?: string; // ISO
+  scheduledDate?: string; // ISO
+  size?: string;
+  kbNumber?: string;
+  cveIds?: string[]; // normalized to array in UI
+  notes?: string;
+  createdAt: string; // ISO
+}
 // In-memory storage
-let hardwareAssets: HardwareAsset[] = [
-  {
-    id: 'AST-001',
-    assetTag: 'AST-001',
-    type: 'laptop',
-    manufacturer: 'Apple',
-    model: 'MacBook Pro 16"',
-    serialNumber: 'MBP16-2023-001',
-    purchaseDate: '2023-01-15',
-    purchasePrice: '2499',
-    supplier: 'Apple Store',
-    warrantyExpiry: '2026-01-15',
-    assignedUser: 'USR-001',
-    location: 'ny-office',
-    department: 'engineering',
-    status: 'in-use',
-    operatingSystem: 'macOS Ventura 13.6',
-    processor: 'Apple M2 Pro',
-    memory: '16GB',
-    storage: '512GB SSD',
-    hostname: 'MBPRO-JS-001',
-    ipAddress: '192.168.1.101',
-    macAddress: '00:1B:44:11:3A:B7',
-    patchStatus: 'up-to-date',
-    lastPatchCheck: '2024-01-15',
-    isLoanable: false,
-    condition: 'excellent',
-    description: 'Primary development laptop',
-    notes: 'Configured with development tools',
-    createdAt: '2023-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T14:30:00Z',
-  },
-  {
-    id: 'AST-002',
-    assetTag: 'AST-002',
-    type: 'desktop',
-    manufacturer: 'Dell',
-    model: 'OptiPlex 7090',
-    serialNumber: 'DELL-7090-002',
-    purchaseDate: '2023-02-20',
-    purchasePrice: '1299',
-    supplier: 'CDW',
-    warrantyExpiry: '2026-02-20',
-    assignedUser: '',
-    location: 'it-storage',
-    department: '',
-    status: 'in-stock',
-    operatingSystem: 'Windows 11 Pro',
-    processor: 'Intel i7-11700',
-    memory: '16GB DDR4',
-    storage: '512GB NVMe SSD',
-    hostname: '',
-    ipAddress: '',
-    macAddress: '',
-    patchStatus: 'needs-review',
-    lastPatchCheck: '2023-12-20',
-    isLoanable: true,
-    condition: 'good',
-    description: 'Standard office desktop',
-    notes: 'Available for assignment',
-    createdAt: '2023-02-20T09:00:00Z',
-    updatedAt: '2023-12-20T16:00:00Z',
-  },
-];
+let hardwareAssets: HardwareAsset[] = [];
 
-let softwareLicenses: SoftwareLicense[] = [
-  {
-    id: 'SW-001',
-    softwareName: 'Microsoft Office 365',
-    publisher: 'Microsoft',
-    version: '2023',
-    licenseKey: 'XXXXX-XXXXX-XXXXX-XXXXX',
-    licenseType: 'subscription',
-    purchaseDate: '2023-01-01',
-    expiryDate: '2024-01-01',
-    licensesTotal: 150,
-    licensesAssigned: 142,
-    category: 'productivity',
-    description: 'Office productivity suite',
-    notes: 'Enterprise subscription',
-    status: 'active',
-    createdAt: '2023-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-];
+let softwareLicenses: SoftwareLicense[] = [];
 
-let users: User[] = [
-  {
-    id: 'USR-001',
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@company.com',
-    phone: '+1 (555) 123-4567',
-    department: 'engineering',
-    role: 'Senior Developer',
-    location: 'ny-office',
-    employeeId: 'EMP-001',
-    manager: 'MGR-001',
-    startDate: '2022-01-15',
-    status: 'active',
-    assetsCount: 1,
-    createdAt: '2022-01-15T00:00:00Z',
-    updatedAt: '2024-01-15T00:00:00Z',
-  },
-];
+let users: User[] = [];
 
 let borrowRecords: BorrowRecord[] = [];
 
@@ -210,9 +198,9 @@ export const hardwareService = {
   create: (data: Omit<HardwareAsset, 'id' | 'createdAt' | 'updatedAt'>): HardwareAsset => {
     const asset: HardwareAsset = {
       ...data,
-      id: data.assetTag || generateId('AST'),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      id: data.asset_tag || generateId('AST'),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     hardwareAssets.push(asset);
     return asset;
@@ -225,7 +213,7 @@ export const hardwareService = {
     hardwareAssets[index] = {
       ...hardwareAssets[index],
       ...data,
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     return hardwareAssets[index];
   },
@@ -241,8 +229,8 @@ export const hardwareService = {
   search: (query: string): HardwareAsset[] => {
     const lowercaseQuery = query.toLowerCase();
     return hardwareAssets.filter(asset =>
-      asset.assetTag.toLowerCase().includes(lowercaseQuery) ||
-      asset.serialNumber.toLowerCase().includes(lowercaseQuery) ||
+      asset.asset_tag.toLowerCase().includes(lowercaseQuery) ||
+      asset.serialnumber.toLowerCase().includes(lowercaseQuery) ||
       asset.manufacturer.toLowerCase().includes(lowercaseQuery) ||
       asset.model.toLowerCase().includes(lowercaseQuery)
     );
@@ -351,7 +339,7 @@ export const borrowService = {
     borrowRecords.push(record);
     
     // Update asset status
-    hardwareService.update(assetId, { status: 'in-use', assignedUser: borrowerId });
+    hardwareService.update(assetId, { status: 'in-use', assigneduser: borrowerId });
     
     return record;
   },
@@ -368,7 +356,7 @@ export const borrowService = {
     };
     
     // Update asset status
-    hardwareService.update(borrowRecords[index].assetId, { status: 'in-stock', assignedUser: '' });
+    hardwareService.update(borrowRecords[index].assetId, { status: 'in-stock', assigneduser: '' });
     
     return borrowRecords[index];
   },
@@ -418,14 +406,14 @@ export function getUpcomingWarranties() {
   
   return hardwareAssets
     .filter(asset => {
-      if (!asset.warrantyExpiry) return false;
-      const warrantyDate = new Date(asset.warrantyExpiry);
+      if (!asset.warrantyexpiry) return false;
+      const warrantyDate = new Date(asset.warrantyexpiry);
       return warrantyDate <= thirtyDaysFromNow && warrantyDate >= today;
     })
     .map(asset => ({
-      assetTag: asset.assetTag,
+      asset_tag: asset.asset_tag,
       model: asset.model,
-      warrantyExpiry: asset.warrantyExpiry,
-      daysLeft: Math.ceil((new Date(asset.warrantyExpiry).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+      warrantyExpiry: asset.warrantyexpiry,
+      daysLeft: Math.ceil((new Date(asset.warrantyexpiry).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
     }));
 }

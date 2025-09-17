@@ -14,7 +14,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  X
 } from 'lucide-react';
 import {
   Table,
@@ -31,7 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { hardwareService, userService, HardwareAsset } from '@/lib/data-store';
+import { useRouter } from 'next/navigation';
+
+import { PatchRecord } from '@/lib/data-store'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -57,43 +61,83 @@ const getVulnerabilityBadge = (count: number) => {
 };
 
 export default function PatchesPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [patchData, setPatchData] = useState<any[]>([]);
+  const [patchData, setPatchData] = useState<PatchRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [statusFilter]);
 
-  const loadData = () => {
-    const assets = hardwareService.getAll();
-    const users = userService.getAll();
-    
-    const patchInfo = assets.map(asset => {
-      const user = users.find(u => u.id === asset.assignedUser);
-      return {
-        assetId: asset.id,
-        assetName: `${asset.manufacturer} ${asset.model}`,
-        assignedUser: user ? `${user.firstName} ${user.lastName}` : 'Unassigned',
-        operatingSystem: asset.operatingSystem || 'Not specified',
-        patchStatus: asset.patchStatus,
-        lastChecked: asset.lastPatchCheck || 'Never',
-        location: asset.location,
-        vulnerabilities: Math.floor(Math.random() * 10), // Mock vulnerability count
-      };
-    });
-    
-    setPatchData(patchInfo);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+
+      const response = await fetch(`/api/patches?${params.toString()}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch patch data');
+      }
+
+      if (result.success) {
+        setPatchData(result.data || []);
+      } else {
+        throw new Error(result.error || 'Failed to load patch data');
+      }
+    } catch (err) {
+      console.error('Error loading patch data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load patch data');
+      
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredAssets = patchData.filter(asset => {
-    const matchesSearch = asset.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.assignedUser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.operatingSystem.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || asset.patchStatus === statusFilter;
+  const handleRefresh = () => {
+    loadData();
+  };
+
+  const handleViewDetails = (patch: PatchRecord) => {
+    router.push(`/patches/${patch.id}`);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Not set';
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const filteredAssets = patchData.filter(patch => {
+    const matchesSearch = patch.assetId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         patch.operatingSystem.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || patch.patchStatus === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate statistics
+  const stats = {
+    upToDate: patchData.filter(p => p.patchStatus === 'up-to-date').length,
+    needsReview: patchData.filter(p => p.patchStatus === 'needs-review').length,
+    updatePending: patchData.filter(p => p.patchStatus === 'update-pending').length,
+    totalVulnerabilities: patchData.reduce((sum, p) => sum + (p.vulnerabilities || 0), 0)
+  };
 
   return (
     <div className="space-y-6">
@@ -108,12 +152,28 @@ export default function PatchesPage() {
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>
-          <Button size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Bulk Update
+          <Button size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Error Loading Data</p>
+                <p className="text-sm text-red-600">{error}</p>
+                <p className="text-xs text-red-500 mt-1">Showing mock data for demonstration</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -125,7 +185,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Up-to-Date</p>
-                <p className="text-2xl font-bold">{patchData.filter(a => a.patchStatus === 'up-to-date').length}</p>
+                <p className="text-2xl font-bold">{stats.upToDate}</p>
               </div>
             </div>
           </CardContent>
@@ -138,7 +198,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Needs Review</p>
-                <p className="text-2xl font-bold">{patchData.filter(a => a.patchStatus === 'needs-review').length}</p>
+                <p className="text-2xl font-bold">{stats.needsReview}</p>
               </div>
             </div>
           </CardContent>
@@ -151,7 +211,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Update Pending</p>
-                <p className="text-2xl font-bold">{patchData.filter(a => a.patchStatus === 'update-pending').length}</p>
+                <p className="text-2xl font-bold">{stats.updatePending}</p>
               </div>
             </div>
           </CardContent>
@@ -164,7 +224,7 @@ export default function PatchesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Vulnerabilities</p>
-                <p className="text-2xl font-bold">{patchData.reduce((sum, a) => sum + a.vulnerabilities, 0)}</p>
+                <p className="text-2xl font-bold">{stats.totalVulnerabilities}</p>
               </div>
             </div>
           </CardContent>
@@ -179,7 +239,7 @@ export default function PatchesPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search by asset, user, or operating system..."
+                  placeholder="Search by asset ID or operating system..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -204,49 +264,88 @@ export default function PatchesPage() {
       {/* Patch Status Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Asset Patch Status ({filteredAssets.length})</CardTitle>
+          <CardTitle>
+            Asset Patch Status ({filteredAssets.length})
+            {loading && <span className="text-sm font-normal text-gray-500 ml-2">Loading...</span>}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Asset</TableHead>
+                  <TableHead>Asset ID</TableHead>
                   <TableHead>Operating System</TableHead>
                   <TableHead>Patch Status</TableHead>
                   <TableHead>Last Checked</TableHead>
                   <TableHead>Vulnerabilities</TableHead>
+                  <TableHead>Pending Updates</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssets.map((asset) => (
-                  <TableRow key={asset.assetId}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{asset.assetName}</p>
-                        <p className="text-sm text-gray-500">{asset.assignedUser} - {asset.location}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm">{asset.operatingSystem}</span>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(asset.patchStatus)}</TableCell>
-                    <TableCell>{asset.lastChecked}</TableCell>
-                    <TableCell>{getVulnerabilityBadge(asset.vulnerabilities)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          Check
-                        </Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Loading patch data...
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredAssets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      No patch records found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAssets.map((patch) => (
+                    <TableRow key={patch.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{patch.assetId}</p>
+                          <p className="text-sm text-gray-500">ID: {patch.id}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">{patch.operatingSystem}</span>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(patch.patchStatus)}</TableCell>
+                      <TableCell>{patch.lastPatchCheck}</TableCell>
+                      <TableCell>{getVulnerabilityBadge(patch.vulnerabilities)}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {patch.pendingUpdates > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              {patch.pendingUpdates} Total
+                            </Badge>
+                          )}
+                          {patch.criticalUpdates > 0 && (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              {patch.criticalUpdates} Critical
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewDetails(patch)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <RefreshCw className="h-4 w-4 mr-1" />
+                            Check
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

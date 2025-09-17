@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { borrowService } from '@/lib/data-store';
 
 interface CheckinAssetFormProps {
   onClose: () => void;

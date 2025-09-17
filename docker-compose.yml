@@ -1,0 +1,23 @@
+services:
+  nextjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3092"
+      POSTGRES_SSL: "false"
+      DATABASE_URL: "postgresql://rootpg:123456@pg-main:5432/asset_management" 
+    ports:
+      - "3092:3092"
+    networks:
+      - app-net      
+      - db-net       
+    restart: unless-stopped
+
+networks:
+  app-net:
+    driver: bridge
+  db-net:
+    external: true   
