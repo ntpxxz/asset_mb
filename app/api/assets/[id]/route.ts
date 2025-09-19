@@ -1,11 +1,16 @@
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { z } from 'zod';
 
-// Zod schema for updates
+
+
+// Zod schema for updates - updated to match data store constants
 const assetUpdateSchema = z.object({
   asset_tag: z.string().min(1, "Asset tag cannot be empty").optional(),
-  type: z.enum(['laptop','desktop','monitor','printer','phone','router','switch','firewall','storage','projector','camera','other']).optional(),
+  type: z.enum(['laptop','desktop','monitor','printer','phone','tablet','server','router','switch','firewall','storage','projector','camera','other']).optional(),
   manufacturer: z.string().min(1, "Manufacturer cannot be empty").optional(),
   model: z.string().min(1, "Model cannot be empty").optional(),
   serialnumber: z.string().min(1, "Serial number cannot be empty").optional(),
@@ -18,9 +23,9 @@ const assetUpdateSchema = z.object({
   supplier: z.string().nullable().optional(),
   warrantyexpiry: z.string().nullable().optional(),
   assigneduser: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
-  department: z.string().nullable().optional(),
-  status: z.enum(['in-stock','in-use','under-repair','retired']).optional(),
+  location: z.enum(['clean-room', 'white-room', 'spd-office', 'it-storage', 'warehouse', 'fdb-fan', 'remote']).nullable().optional(),
+  department: z.enum(['engineering', 'it', 'production']).nullable().optional(),
+  status: z.enum(['available', 'assigned', 'maintenance', 'retired']).nullable().optional(),
   operatingsystem: z.string().nullable().optional(),
   processor: z.string().nullable().optional(),
   memory: z.string().nullable().optional(),
@@ -28,10 +33,10 @@ const assetUpdateSchema = z.object({
   hostname: z.string().nullable().optional(),
   ipaddress: z.string().nullable().optional(),
   macaddress: z.string().nullable().optional(),
-  patchstatus: z.enum(['up-to-date','needs-review','update-pending']).optional(),
+  patchstatus: z.enum(['up-to-date','needs-review','update-pending']).nullable().optional(),
   lastpatch_check: z.string().nullable().optional(),
-  isloanable: z.boolean().optional(),
-  condition: z.enum(['new','good','fair','poor','broken']).optional(),
+  isloanable: z.boolean().optional(), // Keep this field name for form compatibility
+  condition: z.enum(['new','good','fair','poor','broken']).nullable().optional(),
   description: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 }).strict();
@@ -59,6 +64,7 @@ function cleanUpdateData(data: any) {
   
   return cleaned;
 }
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -98,10 +104,33 @@ export async function GET(
     }
 
     const asset = result.rows[0];
+    
+    // Clean up the asset data - no more field mapping needed since is_loanale is removed
+    const cleanAsset = {
+      ...asset,
+      // Set default value for isloanable since it's not in DB anymore
+      isloanable: false, // Default value since field is removed from DB
+    };
+
+    // Remove any unwanted fields
+    delete cleanAsset.delete_at; // Don't send soft delete field to frontend
+
+    console.log('=== ASSET DATA DEBUG ===');
+    console.log('Original asset data:', asset);
+    console.log('Clean asset data:', cleanAsset);
+    console.log('Field check:');
+    console.log('- type:', cleanAsset.type);
+    console.log('- status:', cleanAsset.status);
+    console.log('- location:', cleanAsset.location);
+    console.log('- department:', cleanAsset.department);
+    console.log('- condition:', cleanAsset.condition);
+    console.log('- patchstatus:', cleanAsset.patchstatus);
+    console.log('- isloanable:', cleanAsset.isloanable);
+
     return NextResponse.json({
       success: true,
-      data: asset,
-      message: `Asset ${asset.asset_tag} loaded successfully`,
+      data: cleanAsset,
+      message: `Asset ${cleanAsset.asset_tag} loaded successfully`,
     });
   } catch (error: any) {
     console.error('Failed to fetch asset:', error);
@@ -162,7 +191,10 @@ export async function PUT(
 
     const cleanedData = cleanUpdateData(validationResult.data);
     
-    if (Object.keys(cleanedData).length === 0) {
+    // Remove isloanable from the data since it's no longer in the database
+    const { isloanable, ...dbData } = cleanedData;
+    
+    if (Object.keys(dbData).length === 0) {
       return NextResponse.json(
         { success: false, error: 'No valid fields to update' },
         { status: 400 }
@@ -195,19 +227,19 @@ export async function PUT(
     const realAssetId = existsResult.rows[0].id; // Use the actual database ID
 
     // Check for duplicates if updating unique fields
-    if (cleanedData.asset_tag || cleanedData.serialnumber) {
+    if (dbData.asset_tag || dbData.serialnumber) {
       let duplicateQuery = 'SELECT id, asset_tag, serialnumber FROM assets WHERE id != $1 AND (';
       const duplicateParams = [realAssetId];
       const conditions = [];
       
-      if (cleanedData.asset_tag) {
+      if (dbData.asset_tag) {
         conditions.push(`asset_tag = $${duplicateParams.length + 1}`);
-        duplicateParams.push(cleanedData.asset_tag);
+        duplicateParams.push(dbData.asset_tag);
       }
       
-      if (cleanedData.serialnumber) {
+      if (dbData.serialnumber) {
         conditions.push(`serialnumber = $${duplicateParams.length + 1}`);
-        duplicateParams.push(cleanedData.serialnumber);
+        duplicateParams.push(dbData.serialnumber);
       }
       
       duplicateQuery += conditions.join(' OR ') + ')';
@@ -227,9 +259,9 @@ export async function PUT(
     }
 
     // Build dynamic update query
-    const updateFields = Object.keys(cleanedData);
+    const updateFields = Object.keys(dbData);
     const setClauses = updateFields.map((field, index) => `${field} = $${index + 1}`);
-    const queryParams = Object.values(cleanedData);
+    const queryParams = Object.values(dbData);
     queryParams.push(realAssetId);
 
     const query = `
@@ -252,16 +284,24 @@ export async function PUT(
     }
 
     const updatedAsset = result.rows[0];
+    
+    // Add back the isloanable field for form compatibility
+    const responseAsset = {
+      ...updatedAsset,
+      isloanable: false, // Default value since field is removed from DB
+    };
+    delete responseAsset.delete_at;
+    
     console.log('Successfully updated asset:', { 
-      id: updatedAsset.id, 
-      asset_tag: updatedAsset.asset_tag,
+      id: responseAsset.id, 
+      asset_tag: responseAsset.asset_tag,
       fieldsUpdated: updateFields
     });
 
     return NextResponse.json({
       success: true,
-      data: updatedAsset,
-      message: `Asset "${updatedAsset.asset_tag}" updated successfully`,
+      data: responseAsset,
+      message: `Asset "${responseAsset.asset_tag}" updated successfully`,
       fieldsUpdated: updateFields,
       timestamp: new Date().toISOString()
     });
@@ -321,7 +361,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const client = await pool.connect();
-    try {
+  try {
     const { id } = await params;
     console.log('DELETE /api/assets/[id] - Deleting asset with ID:', id);
     
@@ -362,7 +402,7 @@ export async function DELETE(
     const asset = checkResult.rows[0];
     const realAssetId = asset.id;
     
-    // ตรวจสอบว่าตารางมีอยู่จริงก่อนลบ
+    // Check if tables exist before deleting
     const checkTableExists = async (tableName: string): Promise<boolean> => {
       try {
         const result = await client.query(`
@@ -389,11 +429,11 @@ export async function DELETE(
     
     for (const tableName of relatedTables) {
       try {
-        // ตรวจสอบว่าตารางมีอยู่จริง
+        // Check if table exists
         const tableExists = await checkTableExists(tableName);
         
         if (tableExists) {
-          // ตรวจสอบว่าคอลัมน์ asset_id มีอยู่
+          // Check if asset_id column exists
           const columnCheck = await client.query(`
             SELECT EXISTS (
               SELECT FROM information_schema.columns 
@@ -416,10 +456,10 @@ export async function DELETE(
         }
       } catch (e: any) {
         console.error(`Error deleting from ${tableName}:`, e.message);
-        // ถ้าเกิดข้อผิดพลาดร้ายแรง ให้ rollback
+        // If it's a serious error (not table/column missing), rollback
         if (e.code && !['42P01', '42703'].includes(e.code)) {
           // 42P01 = table doesn't exist, 42703 = column doesn't exist
-          throw e; // Re-throw เฉพาะข้อผิดพลาดที่ร้ายแรง
+          throw e; // Re-throw only serious errors
         }
       }
     }

@@ -68,11 +68,7 @@ export interface SoftwareFormData {
   version?: string | null;
   license_key?: string | null;
   licenses_type?:
-    | 'per-user'
-    | 'per-device'
-    | 'subscription'
-    | 'perpetual'    
-    | null;
+    | 'perpetual' | 'subscription' | 'volume' | 'oem' | 'trial' | 'educational'| null;
   status?:
     | 'active'
     | 'inactive'

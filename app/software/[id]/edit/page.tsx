@@ -40,7 +40,7 @@ export default function EditSoftwarePage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/software/${id}`);
+      const response = await fetch(`/api/software/${id}`,{ cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {

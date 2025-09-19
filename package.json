@@ -6,7 +6,9 @@
       "dev": "next dev -p 3091",
       "build": "next build",
       "start": "next start -p 3092",
-      "lint": "next lint"
+      "lint": "next lint",
+      "db:seed:dev": "psql $DATABASE_URL -f database/seed_development.sql",
+      "dev:setup": "npm run db:migrate && npm run db:seed:dev && npm run dev"
     },
 
   "dependencies": {

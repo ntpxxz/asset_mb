@@ -26,10 +26,7 @@ function createPool() {
     });
   }
 
-  // 2) ไม่มี DATABASE_URL → ใช้ราย field
-  //    ค่าเริ่มต้น host:
-  //    - ใช้ POSTGRES_HOST ถ้ามี (แนะนำให้ตั้งใน Docker เป็น 'postgres')
-  //    - ถ้าไม่ตั้ง จะ fallback เป็น 'host.docker.internal' (ตรงกับเคสที่คุณบอกว่าใช้ได้)
+
   const host = process.env.POSTGRES_HOST ?? 'postgres'; // 'host.docker.internal';
 
   const isProd = process.env.NODE_ENV === 'production';
