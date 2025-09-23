@@ -39,14 +39,12 @@ import {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "in-use":
-      return <Badge className="bg-green-100 text-green-800">In Use</Badge>;
-    case "in-stock":
+    case "assigned":
+      return <Badge className="bg-green-100 text-green-800">Assigned</Badge>;
+    case "available":
       return <Badge className="bg-blue-100 text-blue-800">Available</Badge>;
-    case "under-repair":
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800">Under Repair</Badge>
-      );
+    case "maintenance":
+      return <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>;
     case "retired":
       return <Badge className="bg-gray-100 text-gray-800">Retired</Badge>;
     default:
@@ -82,110 +80,104 @@ export default function AssetsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   const [assets, setAssets] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAssets();
-  }, []);
+  // Pagination (server-side)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
-  const loadAssets = async () => {
+  // โหลดข้อมูลตามหน้า/ตัวกรอง
+  const loadAssets = async (page = 1) => {
     setLoading(true);
     setError(null);
-
     try {
-      console.log("Loading assets from API...");
-      const response = await fetch("/api/assets");
-      const result = await response.json();
+      const limit = itemsPerPage;
+      const offset = (page - 1) * itemsPerPage;
 
-      console.log("API Response:", result);
+      const qs = new URLSearchParams();
+      qs.set("limit", String(limit));
+      qs.set("offset", String(offset));
+      if (statusFilter !== "all") qs.set("status", statusFilter);
+      if (categoryFilter !== "all") qs.set("type", categoryFilter);
 
-      if (!response.ok) {
-        throw new Error(result.error || `HTTP ${response.status}`);
-      }
+      const res = await fetch(`/api/assets?${qs.toString()}`);
+      const json = await res.json();
 
-      if (result.success && result.data) {
-        console.log("Loaded assets:", result.data.length);
-        setAssets(result.data);
-      } else {
-        console.log("No assets data received");
-        setAssets([]);
-      }
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+
+      setAssets(Array.isArray(json.data) ? json.data : []);
+      setTotal(Number(json.total ?? json.count ?? (json.data ? json.data.length : 0)));
     } catch (err) {
-      console.error("Failed to load assets:", err);
-      setError(err instanceof Error ? err.message : "Failed to load assets");
       setAssets([]);
+      setTotal(0);
+      setError(err instanceof Error ? err.message : "Failed to load assets");
     } finally {
       setLoading(false);
     }
   };
 
+  // ครั้งแรก
+  useEffect(() => {
+    loadAssets(1);
+  }, []);
+
+  // เปลี่ยนตัวกรอง -> รีเซ็ตไปหน้า 1 แล้วโหลดใหม่
+  useEffect(() => {
+    setCurrentPage(1);
+    loadAssets(1);
+  }, [statusFilter, categoryFilter]);
+
+  // เปลี่ยนหน้า -> โหลดใหม่
+  useEffect(() => {
+    loadAssets(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
   const handleDelete = async (assetId: string) => {
     if (!confirm("Are you sure you want to delete this asset?")) return;
-
     try {
-      console.log("Deleting asset:", assetId);
-      const response = await fetch(`/api/assets/${assetId}`, {
-        method: "DELETE",
-      });
-
+      const response = await fetch(`/api/assets/${assetId}`, { method: "DELETE" });
       const result = await response.json();
-
       if (response.ok && result.success) {
-        console.log("Asset deleted successfully");
-        await loadAssets(); // Reload data
+        // reload หน้าปัจจุบัน
+        loadAssets(currentPage);
       } else {
         throw new Error(result.error || "Failed to delete asset");
       }
     } catch (err) {
-      console.error("Delete error:", err);
-      alert(
-        `Failed to delete asset: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
+      alert(`Failed to delete asset: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   };
 
-  const handleView = (asset: any) => {
-    console.log("Viewing asset:", asset.id);
-    router.push(`/assets/${asset.id}`);
-  };
+  const handleView = (asset: any) => router.push(`/assets/${asset.id}`);
+  const handleEdit = (asset: any) => router.push(`/assets/${asset.id}/edit`);
 
-  const handleEdit = (asset: any) => {
-    console.log("Editing asset:", asset.id);
-    router.push(`/assets/${asset.id}/edit`);
-  };
-
-  // Filter assets based on search and filters
+  // กรองเฉพาะ "ข้อมูลของหน้าปัจจุบัน" เพื่อ search ฝั่ง client
   const filteredAssets = assets.filter((asset) => {
-    // Safe property access with fallbacks
     const model = asset.model || "";
     const manufacturer = asset.manufacturer || "";
     const serialnumber = asset.serialnumber || "";
     const assigneduser = asset.assigneduser || "";
     const asset_tag = asset.asset_tag || "";
 
-    const searchFields = [
-      model,
-      manufacturer,
-      serialnumber,
-      assigneduser,
-      asset_tag,
-    ];
+    const searchFields = [model, manufacturer, serialnumber, assigneduser, asset_tag];
     const matchesSearch =
       searchTerm === "" ||
       searchFields.some((field) =>
         field.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-    const matchesStatus =
-      statusFilter === "all" || asset.status === statusFilter;
-    const matchesCategory =
-      categoryFilter === "all" || asset.type === categoryFilter;
+    const matchesStatus = statusFilter === "all" || asset.status === statusFilter;
+    const matchesCategory = categoryFilter === "all" || asset.type === categoryFilter;
 
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  // ไม่ slice อีก เพราะเซิร์ฟเวอร์หั่นให้แล้ว
+  const paginatedAssets = filteredAssets;
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
 
   if (loading) {
     return (
@@ -204,12 +196,10 @@ export default function AssetsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Hardware Assets</h1>
-          <p className="text-gray-600">
-            Manage your IT assets and track their lifecycle
-          </p>
+          <p className="text-gray-600">Manage your IT assets and track their lifecycle</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={loadAssets}>
+          <Button variant="outline" size="sm" onClick={() => loadAssets(currentPage)}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -231,12 +221,7 @@ export default function AssetsPage() {
             <div className="flex items-center text-red-700">
               <AlertCircle className="h-4 w-4 mr-2" />
               <span>{error}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-auto"
-                onClick={loadAssets}
-              >
+              <Button variant="outline" size="sm" className="ml-auto" onClick={() => loadAssets(currentPage)}>
                 Retry
               </Button>
             </div>
@@ -299,108 +284,110 @@ export default function AssetsPage() {
       {/* Assets Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Hardware Inventory ({filteredAssets.length} items)
-          </CardTitle>
+          <CardTitle>Hardware Inventory ({total} items)</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredAssets.length === 0 ? (
+          {paginatedAssets.length === 0 ? (
             <div className="text-center py-8">
               <Monitor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No assets found</p>
               {assets.length === 0 && !error && (
-                <Button
-                  className="mt-4"
-                  onClick={() => router.push("/assets/add")}
-                >
+                <Button className="mt-4" onClick={() => router.push("/assets/add")}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Your First Asset
                 </Button>
               )}
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Asset Tag</TableHead>
-                    <TableHead>Serial Number</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAssets.map((asset) => {
-                    const Icon = getAssetIcon(asset.type);
-                    return (
-                      <TableRow key={asset.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-gray-100 rounded-lg">
-                              <Icon className="h-4 w-4 text-gray-600" />
+            <div className="space-y-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Model</TableHead>
+                      <TableHead>Serial Number</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedAssets.map((asset) => {
+                      const Icon = getAssetIcon(asset.type);
+                      return (
+                        <TableRow key={asset.id}>
+                          <TableCell className="font-mono text-sm">
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-gray-100 rounded-lg">
+                                <Icon className="h-4 w-4 text-gray-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{asset.asset_tag || "-"}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">
-                                {asset.manufacturer} {asset.model}
-                              </p>
-                              <p className="text-sm text-gray-500 capitalize">
-                                {asset.type}
-                              </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <div>
+                                <p className="font-medium">{asset.manufacturer} {asset.model}</p>
+                                <p className="text-sm text-gray-500 capitalize">{asset.type}</p>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {asset.asset_tag || "-"}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {asset.serialnumber || "-"}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                        <TableCell>{asset.assigneduser || "-"}</TableCell>
-                        <TableCell>{asset.location || "-"}</TableCell>
-                        <TableCell className="font-medium">
-                          {asset.purchaseprice
-                            ? `$${asset.purchaseprice}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleView(asset)}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(asset)}
-                              title="Edit Asset"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => handleDelete(asset.id)}
-                              title="Delete Asset"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{asset.serialnumber || "-"}</TableCell>
+                          <TableCell>{getStatusBadge(asset.status)}</TableCell>
+                          <TableCell>{asset.assigneduser || "-"}</TableCell>
+                          <TableCell>{asset.location || "-"}</TableCell>
+                          <TableCell className="font-medium">
+                            {asset.purchaseprice ? `$${asset.purchaseprice}` : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleView(asset)} title="View Details">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(asset)} title="Edit Asset">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(asset.id)} title="Delete Asset">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination controls */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

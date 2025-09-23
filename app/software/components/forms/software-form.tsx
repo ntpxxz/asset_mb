@@ -357,7 +357,7 @@ function toInt(value: number | string | undefined | null): number | null {
         <SelectValue placeholder="Select status" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="active">Active</SelectItem>
+        <SelectItem value="s">Active</SelectItem>
         <SelectItem value="inactive">Inactive</SelectItem>
         <SelectItem value="expired">Expired</SelectItem>
         <SelectItem value="retired">Retired</SelectItem>

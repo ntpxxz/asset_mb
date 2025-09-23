@@ -1,88 +1,180 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, Save, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AssetFormData } from '@/lib/data-store';
+import { Package, Save, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 
-interface AssetFormProps {
-  mode: 'create' | 'edit' | 'duplicate';
-  initialData?: AssetFormData;
-  assetId?: string;
-  onSubmit: (data: AssetFormData) => Promise<{ success: boolean; error?: string }>;
-  onCancel: () => void;
-  loading?: boolean;
+/** ถ้ามี type ภายนอกอยู่แล้ว สามารถลบส่วนนี้ทิ้งได้ */
+type AssetFormData = {
+  asset_tag?: string;
+  type?: string;
+  manufacturer?: string;
+  model?: string;
+  serialnumber?: string;
+  purchasedate?: string;
+  purchaseprice?: number | string | null;
+  supplier?: string;
+  warrantyexpiry?: string;
+
+  assigneduser?: string; // รับ firstname หรือ employee_id (ฝั่ง API จะ map ให้เป็น employee_id)
+  location?: string;
+  department?: string;
+
+  status?: 'available' | 'assigned' | 'maintenance' | 'retired';
+  condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
+
+  operatingsystem?: string;
+  processor?: string;
+  memory?: string;
+  storage?: string;
+
+  hostname?: string;
+  ipaddress?: string;
+  macaddress?: string;
+
+  patchstatus?: 'up-to-date' | 'needs-review' | 'update-pending';
+  lastpatch_check?: string;
+
+  isloanable?: boolean;
+  description?: string;
+  notes?: string;
+
+  id?: string;
+};
+
+type Mode = 'create' | 'edit';
+interface Props {
+  mode?: Mode;
+  initialData?: Partial<AssetFormData> & { id?: string };
+  onSaved?: (asset: any) => void;
 }
 
-const Toast = ({ message, type, onClose }:{
-  message: string; type: 'success' | 'error'; onClose: () => void;
-}) => (
-  <div
-    className={`
-      fixed top-6 left-1/2 -translate-x-1/2 z-[10000]
-      w-full max-w-md p-4 rounded-lg shadow-2xl border text-center
-      ${type === 'success'
-        ? 'bg-green-50 border-green-300 text-green-800'
-        : 'bg-red-50 border-red-300 text-red-800'}
-    `}
-  >
-    <div className="flex items-start gap-3">
-      {type === 'success'
-        ? <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-        : <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />}
-      <div className="flex-1">
-        <p className="font-semibold text-sm">{type === 'success' ? 'Success!' : 'Error!'}</p>
-        <p className="text-sm mt-1">{message}</p>
+function Toast({
+  message,
+  type = 'success',
+  onClose,
+}: {
+  message: string;
+  type?: 'success' | 'error';
+  onClose?: () => void;
+}) {
+  return (
+    <div
+      className={`fixed top-4 right-4 z-50 rounded-md border px-4 py-3 shadow ${
+        type === 'success'
+          ? 'bg-green-50 border-green-200 text-green-800'
+          : 'bg-red-50 border-red-200 text-red-800'
+      }`}
+    >
+      <div className="flex items-center space-x-2">
+        {type === 'success' ? (
+          <CheckCircle className="h-4 w-4" />
+        ) : (
+          <AlertCircle className="h-4 w-4" />
+        )}
+        <span>{message}</span>
+        <button className="ml-3 text-sm underline" onClick={onClose}>
+          close
+        </button>
       </div>
-      <Button variant="ghost" size="sm" onClick={onClose} className="h-auto p-1">×</Button>
     </div>
-  </div>
-);
+  );
+}
 
-export function AssetForm({
-  mode, initialData, assetId, onSubmit, onCancel, loading = false,
-}: AssetFormProps) {
+export default function AssetForm({ mode = 'create', initialData, onSaved }: Props) {
   const [formData, setFormData] = useState<AssetFormData>({
-    status: mode === 'create' ? 'available' : undefined,
-    patchstatus: mode === 'create' ? 'needs-review' : '',
-    condition: mode === 'create' ? 'good' : undefined,
+    asset_tag: '',
+    type: '',
+    manufacturer: '',
+    model: '',
+    serialnumber: '',
+    purchasedate: '',
+    purchaseprice: '' as any,
+    supplier: '',
+    warrantyexpiry: '',
+    assigneduser: '',
+    location: '',
+    department: '',
+    status: 'available',
+    condition: 'good',
+    operatingsystem: '',
+    processor: '',
+    memory: '',
+    storage: '',
+    hostname: '',
+    ipaddress: '',
+    macaddress: '',
+    patchstatus: 'needs-review',
+    lastpatch_check: '',
     isloanable: false,
-    ...initialData,
+    description: '',
+    notes: '',
+    ...(initialData || {}),
   });
 
-  const [originalData, setOriginalData] = useState<AssetFormData | undefined>(initialData);
   const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  useEffect(() => {
-    if (mode !== 'create' && initialData) {
-      // ⬅️ เซ็ตตรง ๆ เพื่อให้ค่าไปลง <Select> แน่นอน
-      setFormData(prev => ({ ...prev, ...initialData }));
-      setOriginalData(initialData);
-    }
-  }, [initialData, mode]);
+  // ===== Derived flags for conditional UI (คงโครงสร้างเดิม + เติมเงื่อนไข) =====
+  const typeLower = (formData.type || '').toLowerCase();
+  const isPC = typeLower === 'desktop' || typeLower === 'laptop' || typeLower === 'pc';
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 3500);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
+  // กฎจาก form.tsx:
+  const hideSpecsSet = new Set(['monitor', 'printer', 'router', 'switch', 'firewall', 'projector']);
+  const showOnlyStorage = typeLower === 'storage';
+  const hideNetworkSet = new Set(['monitor', 'storage', 'projector']);
+  const hidePatchSet = new Set(['monitor', 'storage', 'projector']);
 
-  const showToast = (message: string, type: 'success' | 'error') => setToast({ message, type });
+  // ===== Helpers =====
+  const handleInputChange = (key: keyof AssetFormData, value: any) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
 
+  const normalizeDate = (v: unknown) => {
+    if (!v) return '';
+    const s = String(v);
+    return s.includes('T') ? s.split('T')[0] : s;
+  };
+
+  const normalizeNumber = (v: unknown) => {
+    if (v === '' || v === null || v === undefined) return '';
+    const n = Number(v);
+    return Number.isFinite(n) ? n : '';
+  };
+
+  // ===== Validate (เติม dynamic required) =====
   const validateForm = (): boolean => {
-    const required: (keyof AssetFormData)[] = ['type', 'manufacturer', 'model', 'serialnumber'];
-    const missing = required.filter(k => !(formData[k] as any));
+    const missing: string[] = [];
+
+    // พื้นฐาน
+    (['type', 'manufacturer', 'model', 'serialnumber'] as Array<keyof AssetFormData>).forEach(
+      (k) => {
+        const v = (formData as any)[k];
+        if (v === undefined || v === null || v === '') missing.push(String(k));
+      }
+    );
+
+    // Desktop/Laptop ต้องมี CPU + IP
+    if (isPC) {
+      if (!formData.processor) missing.push('processor (CPU)');
+      if (!formData.ipaddress) missing.push('ipaddress (IP Address)');
+    }
+
     if (missing.length) {
       setError(`Please fill in required fields: ${missing.join(', ')}`);
       return false;
@@ -91,295 +183,527 @@ export function AssetForm({
     return true;
   };
 
-  const normalizeDate = (v: unknown) => {
-    if (!v) return '';
-    const s = String(v);
-    return s.includes('T') ? s.split('T')[0] : s;
-  };
-  const normalizeNumber = (v: unknown) => {
-    if (v === '' || v === null || v === undefined) return null;
-    const n = typeof v === 'number' ? v : parseFloat(String(v));
-    return Number.isFinite(n) ? n : null;
-  };
-  const toNull = (v: unknown) => (v === undefined || v === null || v === '' || v === '-' ? null : v);
-
+  // ===== Submit =====
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+
     setSubmitting(true);
+    setToast(null);
     setError(null);
     try {
-      const base: any = {
+      const payload: AssetFormData = {
         ...formData,
-        purchasedate:     normalizeDate(formData.purchasedate),
-        warrantyexpiry:   normalizeDate(formData.warrantyexpiry),
-        lastpatch_check:  normalizeDate(formData.lastpatch_check),
-        purchaseprice:    normalizeNumber(formData.purchaseprice),
-        assigneduser:     toNull(formData.assigneduser),
-        location:         toNull(formData.location),
-        department:       toNull(formData.department),
+        purchasedate: normalizeDate(formData.purchasedate),
+        warrantyexpiry: normalizeDate(formData.warrantyexpiry),
+        lastpatch_check: normalizeDate(formData.lastpatch_check),
+        purchaseprice: normalizeNumber(formData.purchaseprice),
       };
 
-      let dataToSubmit: any;
-      if (mode === 'edit') {
-        const diff: any = {};
-        Object.keys(base).forEach(k => {
-          if ((base as any)[k] !== (originalData as any)?.[k]) diff[k] = (base as any)[k];
-        });
-        if (!Object.keys(diff).length) {
-          showToast('No changes detected', 'error');
-          setSubmitting(false);
-          return;
-        }
-        dataToSubmit = diff;
-      } else {
-        const { id, ...rest } = base;
-        dataToSubmit = rest;
-        if (!dataToSubmit.asset_tag) dataToSubmit.asset_tag = `AST-${Date.now()}`;
-      }
+      // NOTE: คง endpoint แบบเดิม
+      const res = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
 
-      const result = await onSubmit(dataToSubmit);
-      if (result?.success) {
-        showToast(`Asset ${mode === 'create' ? 'created' : 'updated'} successfully!`, 'success');
-      } else {
-        throw new Error(result?.error || `Failed to ${mode} asset`);
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+
+      setToast({
+        message: `Asset ${mode === 'create' ? 'created' : 'saved'} successfully`,
+        type: 'success',
+      });
+      onSaved?.(json.data);
+
+      if (mode === 'create') {
+        // reset เฉพาะฟิลด์ที่ควรเคลียร์
+        setFormData((prev) => ({
+          ...prev,
+          asset_tag: '',
+          manufacturer: '',
+          model: '',
+          serialnumber: '',
+          purchasedate: '',
+          purchaseprice: '' as any,
+          supplier: '',
+          warrantyexpiry: '',
+          assigneduser: '',
+          location: '',
+          department: '',
+          operatingsystem: '',
+          processor: '',
+          memory: '',
+          storage: '',
+          hostname: '',
+          ipaddress: '',
+          macaddress: '',
+          description: '',
+          notes: '',
+        }));
       }
     } catch (err: any) {
-      const msg = err?.message || `Failed to ${mode} asset`;
-      setError(msg);
-      showToast(msg, 'error');
+      setToast({ message: err.message || 'Failed to save asset', type: 'error' });
+      setError(err.message || 'Failed to save asset');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleInputChange = (field: string, value: any) =>
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Auto-generate asset_tag เมื่อ create และยังว่าง
+  useEffect(() => {
+    if (mode === 'create' && !formData.asset_tag) {
+      handleInputChange('asset_tag', `AST-${Date.now()}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
-  const Icon = mode === 'create' ? Plus : Package;
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading asset data...</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const Icon = Package;
 
   return (
     <>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
 
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Icon className="h-5 w-5" />
-            <span>Asset Information</span>
+            <span>{mode === 'create' ? 'Add Asset' : 'Edit Asset'}</span>
           </CardTitle>
         </CardHeader>
 
         <CardContent>
           {error && (
-            <div className="mb-6 p-3 bg-red-100 border border-red-300 rounded-md text-red-800 flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              {error}
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-800 rounded flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="asset_tag">Asset Tag</Label>
-                <Input
-                  id="asset_tag"
-                  placeholder={mode === 'create' ? 'Auto-generated if empty' : ''}
-                  value={formData.asset_tag ?? ''}
-                  onChange={(e) => handleInputChange('asset_tag', e.target.value)}
-                  disabled={submitting}
-                />
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* ===== Basic Information ===== */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="asset_tag">Asset Tag</Label>
+                  <Input
+                    id="asset_tag"
+                    value={formData.asset_tag || ''}
+                    onChange={(e) => handleInputChange('asset_tag', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="type">Asset Type *</Label>
+                  <Select
+                    value={formData.type || ''}
+                    onValueChange={(value) => handleInputChange('type', value)}
+                    disabled={submitting}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select asset type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* options เดิม */}
+                      <SelectItem value="laptop">Laptop</SelectItem>
+                      <SelectItem value="desktop">Desktop</SelectItem>
+                      <SelectItem value="monitor">Monitor</SelectItem>
+                      <SelectItem value="printer">Printer</SelectItem>
+                      <SelectItem value="phone">Phone</SelectItem>
+                      <SelectItem value="tablet">Tablet</SelectItem>
+                      <SelectItem value="server">Server</SelectItem>
+                      <SelectItem value="router">Router</SelectItem>
+                      <SelectItem value="switch">Network Switch</SelectItem>
+                      <SelectItem value="storage">Storage</SelectItem>
+                      <SelectItem value="projector">Projector</SelectItem>
+                      <SelectItem value="firewall">Firewall</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status || 'available'}
+                    onValueChange={(value) => handleInputChange('status', value as any)}
+                    disabled={submitting}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="assigned">Assigned</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Asset Type *</Label>
-                <Select
-                  /** key บังคับ re-render ทุกครั้งที่ค่าเปลี่ยน */
-                  key={`type-${formData.type ?? 'empty'}`}
-                  value={formData.type ?? ''}
-                  onValueChange={(v) => handleInputChange('type', v)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select asset type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="laptop">Laptop</SelectItem>
-                    <SelectItem value="desktop">Desktop</SelectItem>
-                    <SelectItem value="monitor">Monitor</SelectItem>
-                    <SelectItem value="printer">Printer</SelectItem>
-                    <SelectItem value="phone">Phone</SelectItem>
-                    <SelectItem value="tablet">Tablet</SelectItem>
-                    <SelectItem value="server">Server</SelectItem>
-                    <SelectItem value="router">Router</SelectItem>
-                    <SelectItem value="switch">Network Switch</SelectItem>
-                    <SelectItem value="firewall">Firewall</SelectItem>
-                    <SelectItem value="storage">Storage Device</SelectItem>
-                    <SelectItem value="projector">Projector</SelectItem>
-                    <SelectItem value="camera">Camera</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manufacturer">Manufacturer *</Label>
+                  <Input
+                    id="manufacturer"
+                    value={formData.manufacturer || ''}
+                    onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+                    disabled={submitting}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="model">Model *</Label>
+                  <Input
+                    id="model"
+                    value={formData.model || ''}
+                    onChange={(e) => handleInputChange('model', e.target.value)}
+                    disabled={submitting}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="serialnumber">Serial Number *</Label>
+                  <Input
+                    id="serialnumber"
+                    value={formData.serialnumber || ''}
+                    onChange={(e) => handleInputChange('serialnumber', e.target.value)}
+                    disabled={submitting}
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* ===== Assignment & Location ===== */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Assignment & Location</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assigneduser">Assigned To</Label>
+                  <Input
+                    id="assigneduser"
+                    placeholder="firstname or employee_id"
+                    value={formData.assigneduser || ''}
+                    onChange={(e) => handleInputChange('assigneduser', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location || ''}
+                    onChange={(e) => handleInputChange('location', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Input
+                    id="department"
+                    value={formData.department || ''}
+                    onChange={(e) => handleInputChange('department', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ===== Purchase & Warranty ===== */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="purchasedate">Purchase Date</Label>
+                  <Input
+                    id="purchasedate"
+                    type="date"
+                    value={formData.purchasedate || ''}
+                    onChange={(e) => handleInputChange('purchasedate', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="purchaseprice">Purchase Price</Label>
+                  <Input
+                    id="purchaseprice"
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g., 1200.00"
+                    value={formData.purchaseprice as any}
+                    onChange={(e) => handleInputChange('purchaseprice', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supplier">Supplier</Label>
+                  <Input
+                    id="supplier"
+                    value={formData.supplier || ''}
+                    onChange={(e) => handleInputChange('supplier', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warrantyexpiry">Warranty Expiry</Label>
+                  <Input
+                    id="warrantyexpiry"
+                    type="date"
+                    value={formData.warrantyexpiry || ''}
+                    onChange={(e) => handleInputChange('warrantyexpiry', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ===== Technical Specifications (conditional) ===== */}
+            {(() => {
+              if (showOnlyStorage) {
+                return (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Technical Specifications</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="storage">Storage</Label>
+                        <Input
+                          id="storage"
+                          placeholder="e.g., 12TB NAS, 4x3TB RAID5"
+                          value={formData.storage || ''}
+                          onChange={(e) => handleInputChange('storage', e.target.value)}
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              if (hideSpecsSet.has(typeLower)) return null;
+
+              return (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Technical Specifications</h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="operatingsystem">Operating System</Label>
+                      <Input
+                        id="operatingsystem"
+                        placeholder="e.g., Windows 11 Pro, macOS Ventura"
+                        value={formData.operatingsystem || ''}
+                        onChange={(e) => handleInputChange('operatingsystem', e.target.value)}
+                        disabled={submitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="processor">
+                        CPU / Processor {isPC && <span className="text-red-600">*</span>}
+                      </Label>
+                      <Input
+                        id="processor"
+                        placeholder="e.g., Intel i7-12700, Apple M2 Pro"
+                        value={formData.processor || ''}
+                        onChange={(e) => handleInputChange('processor', e.target.value)}
+                        disabled={submitting}
+                        required={isPC}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="memory">Memory (RAM)</Label>
+                      <Input
+                        id="memory"
+                        placeholder="e.g., 16GB DDR4, 32GB"
+                        value={formData.memory || ''}
+                        onChange={(e) => handleInputChange('memory', e.target.value)}
+                        disabled={submitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="storage">Storage</Label>
+                      <Input
+                        id="storage"
+                        placeholder="e.g., 512GB SSD, 1TB NVMe"
+                        value={formData.storage || ''}
+                        onChange={(e) => handleInputChange('storage', e.target.value)}
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ===== Network Information (conditional) ===== */}
+            {!hideNetworkSet.has(typeLower) && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Network Information</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="hostname">Hostname</Label>
+                    <Input
+                      id="hostname"
+                      placeholder="e.g., LAPTOP-001, DESK-ENG-05"
+                      value={formData.hostname || ''}
+                      onChange={(e) => handleInputChange('hostname', e.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ipaddress">
+                      IP Address {isPC && <span className="text-red-600">*</span>}
+                    </Label>
+                    <Input
+                      id="ipaddress"
+                      placeholder="e.g., 192.168.1.100"
+                      value={formData.ipaddress || ''}
+                      onChange={(e) => handleInputChange('ipaddress', e.target.value)}
+                      disabled={submitting}
+                      required={isPC}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="macaddress">MAC Address</Label>
+                    <Input
+                      id="macaddress"
+                      placeholder="e.g., 00:1B:44:11:3A:B7"
+                      value={formData.macaddress || ''}
+                      onChange={(e) => handleInputChange('macaddress', e.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== Patch Management (conditional) ===== */}
+            {!hidePatchSet.has(typeLower) && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Patch Management</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="patchstatus">Patch Status</Label>
+                    <Select
+                      value={formData.patchstatus || ''}
+                      onValueChange={(value) => handleInputChange('patchstatus', value as any)}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select patch status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="up-to-date">Up-to-Date</SelectItem>
+                        <SelectItem value="needs-review">Needs Review</SelectItem>
+                        <SelectItem value="update-pending">Update Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastpatch_check">Last Patch Check Date</Label>
+                    <Input
+                      id="lastpatch_check"
+                      type="date"
+                      value={formData.lastpatch_check || ''}
+                      onChange={(e) => handleInputChange('lastpatch_check', e.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== Additional Information ===== */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="condition">Condition</Label>
+                  <Select
+                    value={formData.condition || 'good'}
+                    onValueChange={(value) => handleInputChange('condition', value as any)}
+                    disabled={submitting}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="fair">Fair</SelectItem>
+                      <SelectItem value="poor">Poor</SelectItem>
+                      <SelectItem value="broken">Broken</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="isloanable">Loanable</Label>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isloanable"
+                      checked={!!formData.isloanable}
+                      onCheckedChange={(v) => handleInputChange('isloanable', !!v)}
+                      disabled={submitting}
+                    />
+                    <span className="text-sm text-gray-600">Available for loan</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="manufacturer">Manufacturer *</Label>
-                <Input
-                  id="manufacturer"
-                  value={formData.manufacturer ?? ''}
-                  onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-                  required disabled={submitting}
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  rows={3}
+                  placeholder="Optional description"
+                  value={formData.description || ''}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  disabled={submitting}
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="model">Model *</Label>
-                <Input
-                  id="model"
-                  value={formData.model ?? ''}
-                  onChange={(e) => handleInputChange('model', e.target.value)}
-                  required disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="serialnumber">Serial Number *</Label>
-                <Input
-                  id="serialnumber"
-                  value={formData.serialnumber ?? ''}
-                  onChange={(e) => handleInputChange('serialnumber', e.target.value)}
-                  required disabled={submitting}
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  rows={3}
+                  placeholder="Optional notes"
+                  value={formData.notes || ''}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  disabled={submitting}
                 />
               </div>
             </div>
 
-            {/* Purchase */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="purchasedate">Purchase Date</Label>
-                <Input
-                  id="purchasedate" type="date"
-                  value={formData.purchasedate ?? ''}
-                  onChange={(e) => handleInputChange('purchasedate', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="purchaseprice">Purchase Price</Label>
-                <Input
-                  id="purchaseprice" type="number" step="0.01" min="0"
-                  value={formData.purchaseprice ?? ''}
-                  onChange={(e) => handleInputChange('purchaseprice', e.target.value ? parseFloat(e.target.value) : null)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
+            {/* ===== Actions ===== */}
+            <div className="flex items-center justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={submitting}
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, asset_tag: `AST-${Date.now()}` }))
+                }
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Generate Tag
+              </Button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier ?? ''}
-                  onChange={(e) => handleInputChange('supplier', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="warrantyexpiry">Warranty Expiry Date</Label>
-                <Input
-                  id="warrantyexpiry" type="date"
-                  value={formData.warrantyexpiry ?? ''}
-                  onChange={(e) => handleInputChange('warrantyexpiry', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-
-            {/* Assignment & Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="assigneduser">Assigned User</Label>
-                <Input
-                  id="assigneduser"
-                  value={formData.assigneduser ?? ''}
-                  onChange={(e) => handleInputChange('assigneduser', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  key={`status-${formData.status ?? 'empty'}`}
-                  value={formData.status ?? ''}
-                  onValueChange={(v) => handleInputChange('status', v)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Select
-                  key={`location-${formData.location ?? 'empty'}`}
-                  value={formData.location ?? ''}
-                  onValueChange={(v) => handleInputChange('location', v)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="clean-room">Clean Room</SelectItem>
-                    <SelectItem value="white-room">White Room</SelectItem>
-                    <SelectItem value="spd-office">SPD Office</SelectItem>
-                    <SelectItem value="it-storage">IT Room</SelectItem>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="fdb-fan">FDB Fan</SelectItem>
-                    <SelectItem value="remote">Remote Location</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Select
-                  key={`dept-${formData.department ?? 'empty'}`}
-                  value={formData.department ?? ''}
-                  onValueChange={(v) => handleInputChange('department', v)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="engineering">Engineering</SelectItem>
-                    <SelectItem value="it">Information Technology</SelectItem>
-                    <SelectItem value="production">Productions</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* (ส่วนอื่น ๆ คงเดิม: Technical/Network/Patch/Additional) */}
-            {/* … ใส่โค้ดส่วนที่เหลือของคุณต่อจากนี้ (คงเดิมได้เลย) … */}
-
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>Cancel</Button>
-              <Button type="submit" disabled={submitting} className={submitting ? 'opacity-50' : ''}>
+              <Button type="submit" disabled={submitting}>
                 <Save className="h-4 w-4 mr-2" />
                 {submitting ? 'Saving...' : mode === 'create' ? 'Add Asset' : 'Save Changes'}
               </Button>
@@ -390,3 +714,6 @@ export function AssetForm({
     </>
   );
 }
+
+// เผื่อกรณี import แบบ named
+export { AssetForm };

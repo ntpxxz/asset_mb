@@ -54,71 +54,69 @@ function cleanCreateData(data: any) {
   return cleaned;
 }
 
-// GET /api/assets - Get all assets
+// GET /api/assets — map assets.assigneduser (employee_id) -> users.firstname
+
 export async function GET(request: NextRequest) {
   try {
     console.log('GET /api/assets - Loading all assets');
-    
-    // Parse query parameters for filtering/pagination
+
     const { searchParams } = new URL(request.url);
-    const limit = searchParams.get('limit');
-    const offset = searchParams.get('offset');
     const status = searchParams.get('status');
     const type = searchParams.get('type');
-    
-    let query = 'SELECT * FROM assets';
-    const queryParams: any[] = [];
-    const conditions: string[] = [];
-    
-    // Add filters if provided
-    if (status) {
-      conditions.push(`status = $${queryParams.length + 1}`);
-      queryParams.push(status);
-    }
-    
-    if (type) {
-      conditions.push(`type = $${queryParams.length + 1}`);
-      queryParams.push(type);
-    }
-    
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(' AND ')}`;
-    }
-    
-    // Add ordering
-    query += ' ORDER BY created_at DESC';
-    
-    // Add pagination if provided
-    if (limit) {
-      query += ` LIMIT $${queryParams.length + 1}`;
-      queryParams.push(parseInt(limit));
-    }
-    
-    if (offset) {
-      query += ` OFFSET $${queryParams.length + 1}`;
-      queryParams.push(parseInt(offset));
-    }
-    
-    console.log('Executing query:', query);
-    console.log('With parameters:', queryParams);
-    
-    const result = await pool.query(query, queryParams);
-    console.log('Database query result:', { rowCount: result.rowCount });
-    
+
+    // server-side pagination (default 20/หน้า)
+    const limit = Number(searchParams.get('limit') ?? 20);
+    const offset = Number(searchParams.get('offset') ?? 0);
+
+    const params: any[] = [];
+    const conds: string[] = [];
+    if (status) { params.push(status); conds.push(`a.status = $${params.length}`); }
+    if (type)   { params.push(type);   conds.push(`a.type   = $${params.length}`); }
+    const whereSql = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+
+    // จับคู่ employee_id ใน a.assigneduser กับ users.employee_id
+    // แล้ว "แทนค่า" assigneduser ในผลลัพธ์ให้เป็น firstname (ถ้าเจอ)
+    params.push(limit, offset);
+    const sql = `
+      SELECT
+        a.*,
+        u.firstname AS assigned_firstname,
+        u.employee_id AS assigned_employee_id_resolved,
+        COALESCE(u.firstname, a.assigneduser, '-') AS assigneduser, -- <-- ส่งกลับชื่อแทน id
+        COUNT(*) OVER() AS total_count
+      FROM assets a
+      LEFT JOIN users u
+        ON a.assigneduser = u.employee_id  -- assigneduser เก็บ emp id
+      ${whereSql}
+      ORDER BY a.created_at DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}
+    `;
+
+    console.log('Executing query:', sql);
+    console.log('With parameters:', params);
+
+    const result = await pool.query(sql, params);
+    const total = result.rows[0]?.total_count ?? 0;
+
+    // ส่ง field เพิ่มเติมเผื่อหน้าใหม่อยากใช้แยก
+    const data = result.rows.map(r => ({
+      ...r,
+      assigned_employee_id: r.assigned_employee_id_resolved ?? null,
+      assigned_firstname: r.assigned_firstname ?? null,
+      // assigneduser ถูกทำให้เป็น firstname แล้วจาก COALESCE ใน SQL
+    }));
+
     return NextResponse.json({
       success: true,
-      data: result.rows,
+      data,
       count: result.rowCount,
-      message: `Loaded ${result.rowCount} assets`
+      total,
+      message: `Loaded ${result.rowCount} assets`,
     });
   } catch (error: any) {
     console.error('Failed to fetch assets:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch assets',
-        details: error.message 
-      },
+      { success: false, error: 'Failed to fetch assets', details: error.message },
       { status: 500 }
     );
   }
@@ -128,84 +126,120 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const sanitize = (v: any) => (v === undefined || v === null || v === '' || v === '-' ? null : v);
-    const data = {
-      assignedUser: sanitize(body.assigneduser), 
-      location: sanitize(body.location),
-      department: sanitize(body.department),
-    };
-
+    const sanitize = (v: any) =>
+      v === undefined || v === null || v === '' || v === '-' ? null : v;
 
     console.log('POST /api/assets - Received data:', body);
 
     // Auto-generate asset_tag if not provided
-    if (!body.asset_tag || body.asset_tag.trim() === '') {
+    if (!body.asset_tag || String(body.asset_tag).trim() === '') {
       body.asset_tag = `AST-${Date.now()}`;
     }
 
     // Validate the request data
     const validationResult = assetCreateSchema.safeParse(body);
-    
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(err => ({
+      const errors = validationResult.error.errors.map((err) => ({
         field: err.path.join('.'),
-        message: err.message
+        message: err.message,
       }));
-      
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Validation failed',
-          details: errors
-        },
+        { success: false, error: 'Validation failed', details: errors },
         { status: 400 }
       );
     }
 
     const cleanedData = cleanCreateData(validationResult.data);
-    
-    // Field mapping to ensure consistency with database column names
-    const fieldMapping = {
-      'asset_tag': 'asset_tag',
-      'type': 'type', 
-      'manufacturer': 'manufacturer',
-      'model': 'model',
-      'serialnumber': 'serialnumber',
-      'purchasedate': 'purchasedate',
-      'purchaseprice': 'purchaseprice',
-      'supplier': 'supplier',
-      'warrantyexpiry': 'warrantyexpiry',
-      'assigneduser': 'assigneduser',
-      'location': 'location',
-      'department': 'department',
-      'status': 'status',
-      'condition': 'condition',
-      'operatingsystem': 'operatingsystem',
-      'processor': 'processor',
-      'memory': 'memory',
-      'storage': 'storage',
-      'hostname': 'hostname',
-      'ipaddress': 'ipaddress',
-      'macaddress': 'macaddress',
-      'patchstatus': 'patchstatus',
-      'lastpatch_check': 'lastpatch_check',
-      'isloanable': 'isloanable',
-      'description': 'description',
-      'notes': 'notes',
-    };
 
-    // Map frontend field names to database column names
-    const mappedData: any = {};
+    // ---- Resolve assigneduser -> employee_id (NO rowCount used) ----
+    const rawAssigned: string | null =
+      (cleanedData.assigneduser ?? '').toString().trim() || null;
+
+    let resolvedEmpId: string | null = null;
+    if (rawAssigned) {
+      // 1) Try as employee_id first
+      const byId = await pool.query(
+        `SELECT employee_id FROM users WHERE employee_id = $1 LIMIT 1`,
+        [rawAssigned]
+      );
+      const foundId = byId.rows?.[0]?.employee_id;
+
+      if (foundId) {
+        resolvedEmpId = foundId;
+      } else {
+        // 2) Otherwise try as firstname (warning: may be non-unique)
+        const byFirst = await pool.query(
+          `SELECT employee_id FROM users WHERE firstname = $1 LIMIT 2`,
+          [rawAssigned]
+        );
+        const matches = byFirst.rows ?? [];
+        if (matches.length === 1) {
+          resolvedEmpId = matches[0].employee_id;
+        } else if (matches.length > 1) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Firstname "${rawAssigned}" พบมากกว่า 1 คน — โปรดระบุเป็น employee_id`,
+            },
+            { status: 400 }
+          );
+        } else {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `ไม่พบผู้ใช้ "${rawAssigned}" (ไม่ตรงทั้ง employee_id และ firstname)`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Always store employee_id (or NULL) into assets.assigneduser
+    cleanedData.assigneduser = resolvedEmpId;
+
+    // ---- Field mapping to DB columns ----
+    const fieldMapping = {
+      asset_tag: 'asset_tag',
+      type: 'type',
+      manufacturer: 'manufacturer',
+      model: 'model',
+      serialnumber: 'serialnumber',
+      purchasedate: 'purchasedate',
+      purchaseprice: 'purchaseprice',
+      supplier: 'supplier',
+      warrantyexpiry: 'warrantyexpiry',
+      assigneduser: 'assigneduser', // <- will be employee_id from above
+      location: 'location',
+      department: 'department',
+      status: 'status',
+      condition: 'condition',
+      operatingsystem: 'operatingsystem',
+      processor: 'processor',
+      memory: 'memory',
+      storage: 'storage',
+      hostname: 'hostname',
+      ipaddress: 'ipaddress',
+      macaddress: 'macaddress',
+      patchstatus: 'patchstatus',
+      lastpatch_check: 'lastpatch_check',
+      isloanable: 'isloanable',
+      description: 'description',
+      notes: 'notes',
+    } as const;
+
+    const mappedData: Record<string, any> = {};
     Object.entries(cleanedData).forEach(([key, value]) => {
-      const dbColumn = fieldMapping[key as keyof typeof fieldMapping];
-      if (dbColumn && value !== undefined) {
-        mappedData[dbColumn] = value;
+      // @ts-ignore dynamic mapping
+      const dbCol = fieldMapping[key];
+      if (dbCol && value !== undefined) {
+        mappedData[dbCol] = value;
       }
     });
 
     const insertFields = Object.keys(mappedData);
     const insertValues = Object.values(mappedData);
-    
+
     if (insertFields.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No valid fields to insert' },
@@ -213,13 +247,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build dynamic INSERT query
-    const placeholders = insertFields.map((_, index) => `$${index + 1}`).join(', ');
+    const placeholders = insertFields.map((_, i) => `$${i + 1}`).join(', ');
     const columns = insertFields.join(', ');
-    
+
     const query = `
-      INSERT INTO assets (${columns}, created_at, updated_at) 
-      VALUES (${placeholders}, NOW(), NOW()) 
+      INSERT INTO assets (${columns}, created_at, updated_at)
+      VALUES (${placeholders}, NOW(), NOW())
       RETURNING *;
     `;
 
@@ -227,65 +260,79 @@ export async function POST(request: NextRequest) {
     console.log('With Parameters:', insertValues);
 
     const result = await pool.query(query, insertValues);
-
-    if (result.rowCount === 0) {
+    const newAsset = result.rows?.[0];
+    if (!newAsset) {
       return NextResponse.json(
         { success: false, error: 'Insert failed' },
         { status: 500 }
       );
     }
 
-    const newAsset = result.rows[0];
-    console.log('Successfully created asset:', { id: newAsset.id, asset_tag: newAsset.asset_tag });
+    // Optional: enrich response with firstname for UI convenience
+    let assignedFirstname: string | null = null;
+    if (resolvedEmpId) {
+      const r = await pool.query(
+        `SELECT firstname FROM users WHERE employee_id = $1 LIMIT 1`,
+        [resolvedEmpId]
+      );
+      assignedFirstname = r.rows?.[0]?.firstname ?? null;
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: newAsset,
-      message: `Asset "${newAsset.asset_tag}" created successfully`,
-      timestamp: new Date().toISOString()
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          ...newAsset,
+          assigned_employee_id: resolvedEmpId,
+          assigned_firstname: assignedFirstname,
+          // ถ้าหน้าปัจจุบันยังอ่าน asset.assigneduser:
+          // ส่งชื่อกลับไปให้ด้วยเพื่อแสดงผลทันที (fallback เป็น emp id/'-')
+          assigneduser:
+            assignedFirstname ??
+            newAsset.assigneduser ??
+            '-',
+        },
+        message: `Asset "${newAsset.asset_tag}" created successfully`,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error('Failed to create asset:', error);
-    
-    // Handle PostgreSQL specific errors
-    if (error.code === '42703') { // undefined_column
+
+    // Common Postgres error codes
+    if (error.code === '42703') {
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: `Database column not found: ${error.message}`,
-          hint: 'Please check if column names match your database schema'
-        }, 
+          hint: 'Please check if column names match your database schema',
+        },
         { status: 400 }
       );
     }
-    
-    if (error.code === '23505') { // unique_violation
+    if (error.code === '23505') {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          error: 'Duplicate value detected. Asset tag or serial number may already exist.'
-        }, 
+          error:
+            'Duplicate value detected. Asset tag or serial number may already exist.',
+        },
         { status: 409 }
       );
     }
-
-    if (error.code === '23502') { // not_null_violation
+    if (error.code === '23502') {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          error: `Required field is missing: ${error.column || 'unknown'}`
-        }, 
+          error: `Required field is missing: ${error.column || 'unknown'}`,
+        },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { 
-        success: false,
-        error: 'Failed to create asset',
-        details: error.message
-      }, 
+      { success: false, error: 'Failed to create asset', details: error.message },
       { status: 500 }
     );
   }
