@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,10 +28,11 @@ import {
 
 interface Asset {
   id: string;
+  asset_tag: string;
   manufacturer: string;
   model: string;
   status: string;
-  isLoanable: boolean;
+  isloanable: boolean;
   location: string;
 }
 
@@ -44,24 +45,23 @@ interface User {
 
 interface BorrowRecord {
   id: string;
-  assetId: string;
-  borrowerId: string;
-  checkoutDate: string;
-  dueDate: string;
+  asset_tag: string;
+  borrowerId?: string;
+  borrowername?: string;
+  checkout_date: string;
+  due_date: string;
   status: string;
   purpose?: string;
-  borrowername?: string; // Added to hold borrower name
-
 }
 
 interface CheckedOutAsset {
-  id: string; // This is the borrow record ID (e.g., BOR-175678547387)
-  assetId: string;
+  id: string;               // borrow record id
+  asset_tag: string;
   name: string;
   borrowername: string;
   department: string;
-  checkoutDate: string;
-  dueDate: string;
+  checkout_date: string;
+  due_date: string;
   status: string;
   purpose?: string;
 }
@@ -73,8 +73,8 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
     case 'checked-out':
       return <Badge className="bg-green-100 text-green-800">Checked Out</Badge>;
-    case 'active':
-      return <Badge className="bg-blue-100 text-blue-800">Active</Badge>;
+    case 'available':
+      return <Badge className="bg-blue-100 text-blue-800">Available</Badge>;
     case 'maintenance':
       return <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>;
     case 'retired':
@@ -98,162 +98,90 @@ export default function BorrowingPage() {
       setLoading(true);
       setError(null);
 
-      console.log('Starting to load data...');
-
-      // Load data step by step for better error handling
-      console.log('Fetching assets...');
       const assetsResponse = await fetch('/api/assets');
-      if (!assetsResponse.ok) {
-        throw new Error(`Assets API error: ${assetsResponse.status} ${assetsResponse.statusText}`);
-      }
+      if (!assetsResponse.ok) throw new Error(`Assets API error: ${assetsResponse.status}`);
       const assetsRes = await assetsResponse.json();
-      console.log('Assets response:', assetsRes);
 
-      console.log('Fetching users...');
       const usersResponse = await fetch('/api/users');
-      if (!usersResponse.ok) {
-        throw new Error(`Users API error: ${usersResponse.status} ${usersResponse.statusText}`);
-      }
+      if (!usersResponse.ok) throw new Error(`Users API error: ${usersResponse.status}`);
       const usersRes = await usersResponse.json();
-      console.log('Users response:', usersRes);
 
-      console.log('Fetching borrowing records...');
       const borrowsResponse = await fetch('/api/borrowing?status=checked-out');
-      if (!borrowsResponse.ok) {
-        throw new Error(`Borrowing API error: ${borrowsResponse.status} ${borrowsResponse.statusText}`);
-      }
+      if (!borrowsResponse.ok) throw new Error(`Borrowing API error: ${borrowsResponse.status}`);
       const borrowsRes = await borrowsResponse.json();
-      console.log('Borrowing response:', borrowsRes);
-      
-      
-      // Extract data with better error handling
-      const allAssets = assetsRes.success ? assetsRes.data : [];
-      const allUsers = usersRes.success ? usersRes.data : [];
-      const borrowRecords = borrowsRes.success ? borrowsRes.data : [];
-      const checkedOutIds = new Set(
-        (Array.isArray(borrowRecords) ? borrowRecords : [])
-          .filter(r => (r.status || '').toLowerCase().replace(/\s+/g, '-') === 'checked-out')
-          .map(r => r.assetId)
-      );
-      console.log('Processed data:');
-      console.log('- Assets count:', Array.isArray(allAssets) ? allAssets.length : 'Not an array');
-      console.log('- Users count:', Array.isArray(allUsers) ? allUsers.length : 'Not an array');
-      console.log('- Borrow records count:', Array.isArray(borrowRecords) ? borrowRecords.length : 'Not an array');
 
-      // Ensure we have arrays
-      if (!Array.isArray(allAssets)) {
-        console.error('Assets is not an array:', allAssets);
-      }
-      if (!Array.isArray(allUsers)) {
-        console.error('Users is not an array:', allUsers);
-      }
-      if (!Array.isArray(borrowRecords)) {
-        console.error('Borrow records is not an array:', borrowRecords);
-      }
+      const allAssets: Asset[] = assetsRes.success ? assetsRes.data : [];
+      const allUsers: User[] = usersRes.success ? usersRes.data : [];
+      const borrowRecords: BorrowRecord[] = borrowsRes.success ? borrowsRes.data : [];
+
+      const checkedOutTags = new Set(
+        (borrowRecords || [])
+          .filter(r => (r.status || '').toLowerCase().replace(/\s+/g, '-') === 'checked-out')
+          .map(r => r.asset_tag)
+      );
 
       const today = new Date();
-      let checkedOut: CheckedOutAsset[] = [];
+      const checkedOut: CheckedOutAsset[] = (borrowRecords || []).map((record) => {
+        const asset = (allAssets || []).find((a) => a.asset_tag === record.asset_tag);
+        const user = (allUsers || []).find((u) => u.id === record.borrowerId);
+        const borrowerDisplay = record.borrowername 
+          ? record.borrowername 
+          : user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown User';
+        const isOverdue = record.due_date ? new Date(record.due_date) < today : false;
 
-      if (Array.isArray(borrowRecords) && borrowRecords.length > 0) {
-        checkedOut = borrowRecords.map((record: BorrowRecord) => {
-          const asset = Array.isArray(allAssets) 
-            ? allAssets.find((a: Asset) => a.id === record.assetId)
-            : undefined;
-          const user = Array.isArray(allUsers) && record.borrowerId
-            ? allUsers.find((u: User) => u.id === record.borrowerId)
-            : undefined;
-          const isOverdue = record.dueDate ? new Date(record.dueDate) < today : false;
+        return {
+          id: record.id,
+          asset_tag: record.asset_tag,
+          name: asset ? `${asset.manufacturer || ''} ${asset.model || ''}`.trim() : 'Unknown Asset',
+          borrowername: borrowerDisplay,
+          department: user?.department ?? 'Unknown',
+          checkout_date: record.checkout_date,
+          due_date: record.due_date,
+          status: isOverdue ? 'overdue' : 'checked-out',
+          purpose: record.purpose,
+        };
+      });
 
-          const borrowerDisplay = 
-          record.borrowername ? record.borrowername :
-          user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown User';
-          
-          
-          
-          return {
-            id: record.id, // This is the borrow record ID like BOR-175678547387
-            assetId: record.assetId,
-            name: asset ? `${asset.manufacturer || ''} ${asset.model || ''}`.trim() : 'Unknown Asset',
-            borrowername:borrowerDisplay,
-            department: user?.department ?? 'Unknown',
-            checkoutDate: record.checkoutDate,
-            dueDate: record.dueDate,
-            status: isOverdue ? 'overdue' : 'checked out',
-            purpose: record.purpose,
-          };
-        });
-        console.log('Processed checked out assets:', checkedOut);
-      }
-
-      // Replace the loanable filtering block
-      let loanable: Asset[] = [];
-      if (Array.isArray(allAssets) && allAssets.length > 0) {
-        loanable = allAssets.filter((a: Asset) => {
-          const s = (a.status || '').toLowerCase();
-          const isActive = s === 'active';
-          return a.isLoanable === true && isActive && !checkedOutIds.has(a.id);
-        });
-        console.log('Filtered loanable assets:', loanable.length);
-      }
+      const loanable: Asset[] = (allAssets || []).filter((a) => {
+        const s = (a.status || '').toLowerCase();
+        const isAvailable = s === 'available';
+        return a.isloanable === true && isAvailable && !checkedOutTags.has(a.asset_tag);
+      });
 
       setCheckedOutAssets(checkedOut);
       setLoanableAssets(loanable);
-      setUsers(Array.isArray(allUsers) ? allUsers : []);
-
-      console.log('Final state:');
-      console.log('- Checked out assets:', checkedOut.length);
-      console.log('- Loanable assets:', loanable.length);
-      console.log('- Users:', Array.isArray(allUsers) ? allUsers.length : 0);
+      setUsers(allUsers || []);
     } catch (e) {
-      console.error('loadData error:', e);
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleCheckin = async (recordId: string) => {
     try {
       setLoading(true);
-      
-      const response = await fetch(`/api/borrowing/${recordId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'checkin'
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to check in asset');
-      }
-
-      // Reload data after successful checkin
-      await loadData();
-    } catch (error) {
-      console.error('Checkin error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to check in asset');
+      // ไปหน้า Check-in พร้อม borrowId (เหมือนเดิม)
+      router.push(`/borrowing/checkin?id=${encodeURIComponent(recordId)}`);
+    } finally {
+      setLoading(false);
     }
   };
+
   const dateOnly = (s?: string | null) =>
     s ? new Date(s).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) : '';
 
-  
   const filteredCheckedOut = checkedOutAssets.filter(asset =>
     asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.borrowername.toLowerCase().includes(searchTerm.toLowerCase())
+    asset.borrowername.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.asset_tag.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredLoanable = loanableAssets.filter(asset =>
-    `${asset.manufacturer} ${asset.model}`.toLowerCase().includes(searchTerm.toLowerCase())
+    `${asset.manufacturer} ${asset.model}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.asset_tag.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading && checkedOutAssets.length === 0) {
@@ -274,7 +202,6 @@ export default function BorrowingPage() {
           <p className="text-gray-600">Track borrowed assets and manage returns</p>
         </div>
         <div className="flex gap-3">
-         
           <Button size="sm" onClick={() => router.push('/borrowing/checkout')}>
             <Activity className="h-4 w-4 mr-2" />
             Check Out
@@ -333,11 +260,11 @@ export default function BorrowingPage() {
                 <p className="text-sm font-medium text-gray-600">Due Soon</p>
                 <p className="text-2xl font-bold">
                   {checkedOutAssets.filter(a => {
-                    if (!a.dueDate) return false;
-                    const dueDate = new Date(a.dueDate);
+                    if (!a.due_date) return false;
+                    const due_date = new Date(a.due_date);
                     const threeDaysFromNow = new Date();
                     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-                    return dueDate <= threeDaysFromNow && a.status !== 'overdue';
+                    return due_date <= threeDaysFromNow && a.status !== 'overdue';
                   }).length}
                 </p>
               </div>
@@ -352,7 +279,7 @@ export default function BorrowingPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search by asset name or borrower..."
+              placeholder="Search by asset, tag, or borrower..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -361,16 +288,14 @@ export default function BorrowingPage() {
         </CardContent>
       </Card>
 
-      {/* Currently Checked Out */}
+      {/* Checked Out */}
       <Card>
         <CardHeader>
           <CardTitle>Currently Checked Out ({filteredCheckedOut.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {filteredCheckedOut.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No checked out assets found
-            </div>
+            <div className="text-center py-8 text-gray-500">No checked out assets found</div>
           ) : (
             <div className="rounded-md border">
               <Table>
@@ -390,33 +315,18 @@ export default function BorrowingPage() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{asset.name}</p>
-                          <p className="text-sm text-gray-500">{asset.assetId}</p>
+                          <p className="text-sm text-gray-500">{asset.asset_tag}</p>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{asset.borrowername}</p>
-                        </div>
+                        <p className="font-medium">{asset.borrowername}</p>
                       </TableCell>
-                      <TableCell>{dateOnly(asset.checkoutDate)}</TableCell>
-                      <TableCell>{asset.dueDate ? dateOnly(asset.dueDate) : "No due date"}</TableCell>
+                      <TableCell>{dateOnly(asset.checkout_date)}</TableCell>
+                      <TableCell>{asset.due_date ? dateOnly(asset.due_date) : "No due date"}</TableCell>
+                      <TableCell>{getStatusBadge(asset.status)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(asset.status)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => router.push(`/borrowing/checkin?borrowId=${encodeURIComponent(asset.id)}`)}
-                          disabled={loading}
-                        >
-                          {loading ? (
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                          ) : (
-                            <RotateCcw className="h-4 w-4 mr-1" />
-                          )}
+                        <Button variant="outline" size="sm" onClick={() => handleCheckin(asset.id)}>
+                          <RotateCcw className="h-4 w-4 mr-1" />
                           Check In
                         </Button>
                       </TableCell>
@@ -429,16 +339,14 @@ export default function BorrowingPage() {
         </CardContent>
       </Card>
 
-      {/* Available for Borrowing */}
+      {/* Available */}
       <Card>
         <CardHeader>
           <CardTitle>Available for Borrowing ({filteredLoanable.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {filteredLoanable.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No assets available for borrowing
-            </div>
+            <div className="text-center py-8 text-gray-500">No assets available for borrowing</div>
           ) : (
             <div className="rounded-md border">
               <Table>
@@ -452,20 +360,20 @@ export default function BorrowingPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredLoanable.map((asset) => (
-                    <TableRow key={asset.id}>
+                    <TableRow key={asset.asset_tag}>
                       <TableCell>
                         <div>
                           <p className="font-medium">{asset.manufacturer} {asset.model}</p>
-                          <p className="text-sm text-gray-500">{asset.id}</p>
+                          <p className="text-sm text-gray-500">{asset.asset_tag}</p>
                         </div>
                       </TableCell>
                       <TableCell>{asset.location}</TableCell>
                       <TableCell>{getStatusBadge(asset.status)}</TableCell>
                       <TableCell>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/borrowing/checkout?assetId=${encodeURIComponent(asset.id)}`)}
+                          onClick={() => router.push(`/borrowing/checkout?asset_tag=${encodeURIComponent(asset.asset_tag)}`)}
                         >
                           <Activity className="h-4 w-4 mr-1" />
                           Check Out

@@ -8,48 +8,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Activity, Save, Loader2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { borrowService } from "@/lib/data-store";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type Asset = {
-  id: string;
+  asset_tag: string;
   manufacturer?: string;
   model?: string;
-  status?: string; // 'Active' | 'Maintenance' | 'Retired' | ...
-  isLoanable?: boolean; // true | false
+  status?: string;      // 'available' | ...
+  isloanable?: boolean; // ใช้ key นี้เท่านั้น
 };
 
 type User = {
   id: string;
   firstName?: string;
   lastName?: string;
-  name?: string; // fallback in case API provides full name
+  name?: string;
   department?: string;
 };
 
 function CheckoutAssetPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const assetIdFromUrl = useMemo(
-    () =>
-      searchParams.get("assetId") ? String(searchParams.get("assetId")) : "",
-    [searchParams]
-  );
+
+
   const [formData, setFormData] = useState({
-    assetId: '',
-    borrowerName: '',
-    borrowerContact: '',
-    checkoutDate: new Date().toISOString().split('T')[0],
-    expectedReturnDate: '',
-    purpose: '',
-    location: '',
-    notes: '',
+    asset_tag: "",
+    borrowername: "",
+    borrowercontact: "",
+    checkout_date: new Date().toISOString().split("T")[0],
+    expected_returndate: "",
+    purpose: "",
+    location: "",
+    notes: "",
   });
 
   const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
@@ -60,51 +51,56 @@ function CheckoutAssetPageInner() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.assetId) {
-      setSubmitError("Please select both Asset and User.");
+    if (!formData.asset_tag) {
+      setSubmitError("Please select an Asset.");
       return;
     }
-
     setSubmitting(true);
     setSubmitError(null);
-
+  
+    const tid = toast.loading("Processing checkout...");
+  
     try {
       const res = await fetch("/api/borrowing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          assetId: formData.assetId,
-          borrowerName: formData.borrowerName.trim(),
-          borrowerContact: formData.borrowerContact.trim() || null,
-          checkoutDate: formData.checkoutDate,
-          dueDate: formData.expectedReturnDate || null,
+          asset_tag: formData.asset_tag,
+          borrowername: formData.borrowername.trim(),
+          borrowercontact: formData.borrowercontact.trim() || null,
+          checkout_date: formData.checkout_date,
+          due_date: formData.expected_returndate || null,
           purpose: formData.purpose || null,
           location: formData.location || null,
           notes: formData.notes || null,
-          status: 'checked-out',
+          status: "checked-out",
         }),
       });
-
+  
       const json = await res.json().catch(() => ({}));
-
       if (!res.ok || json?.success === false) {
-        throw new Error(
-          json?.error ||
-            (res.status === 409
-              ? "This asset is already checked out."
-              : `Checkout failed (${res.status})`)
-        );
+        throw new Error(json?.error || (res.status === 409 ? "This asset is already checked out." : `Checkout failed (${res.status})`));
       }
-
-      router.push("/borrowing");
-    } catch (err) {
+  
+      toast.success("Checkout complete", {
+        id: tid,
+        description: `Asset ${formData.asset_tag} has been checked out.`,
+        duration: 2500,
+      });
+  
+      setTimeout(() => router.push("/borrowing"), 50);
+    } catch (err: any) {
+      toast.error("Checkout failed", {
+        id: tid,
+        description: err?.message ?? "Please try again.",
+        duration: 3500,
+      });
       setSubmitError(err instanceof Error ? err.message : "Checkout failed.");
     } finally {
       setSubmitting(false);
     }
   };
-
+  
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -118,35 +114,29 @@ function CheckoutAssetPageInner() {
       const assetsJson = await assetsRes.json();
       const allAssets: Asset[] = assetsJson?.success ? assetsJson.data : [];
 
-      // 2) users
+      // 2) users (เผื่อสรุปชื่อใน Summary/อนาคต)
       const usersRes = await fetch("/api/users");
       const usersJson = await usersRes.json();
       const allUsers: User[] = usersJson?.success ? usersJson.data : [];
 
-      // 3) currently checked-out borrow records
+      // 3) currently checked-out
       const borrowsRes = await fetch("/api/borrowing?status=checked-out");
       const borrowsJson = await borrowsRes.json();
-      const borrowRecords: { assetId: string; status: string }[] =
+      const borrowRecords: { asset_tag: string; status: string }[] =
         borrowsJson?.success ? borrowsJson.data : [];
 
-      // Build a set of assetIds that are currently checked out
-      const checkedOutIds = new Set(
+      // tag ที่ถูกยืมอยู่
+      const checkedOutTags = new Set(
         (Array.isArray(borrowRecords) ? borrowRecords : [])
-          .filter(
-            (r) =>
-              (r.status || "").toLowerCase().replace(/\s+/g, "-") ===
-              "checked-out"
-          )
-          .map((r) => r.assetId)
+          .filter((r) => (r.status || "").toLowerCase().replace(/\s+/g, "-") === "checked-out")
+          .map((r) => r.asset_tag)
       );
 
-      // Available = Active + loanable + not checked-out
-      const filtered = (Array.isArray(allAssets) ? allAssets : []).filter(
-        (a) => {
-          const isActive = (a.status || "").toLowerCase() === "active";
-          return Boolean(a.isLoanable) && isActive && !checkedOutIds.has(a.id);
-        }
-      );
+      // Available = isloanable && status === 'available' && ไม่ถูกยืม
+      const filtered = (Array.isArray(allAssets) ? allAssets : []).filter((a) => {
+        const isAvailable = (a.status || "").toLowerCase() === "available";
+        return a.isloanable === true && isAvailable && !checkedOutTags.has(a.asset_tag);
+      });
 
       setAvailableAssets(filtered);
       setUsers(allUsers);
@@ -162,43 +152,31 @@ function CheckoutAssetPageInner() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+  
+// ---- Prefill from URL (asset_tag) ----
+const assetTagFromUrl = useMemo(
+  () => searchParams.get("asset_tag") ?? "",
+  [searchParams]
+);
 
-  // Prefill assetId from URL (first load)
   useEffect(() => {
-    const id = searchParams.get("assetId");
-    if (id) {
-      setFormData((prev) => ({ ...prev, assetId: id }));
-    }
-  }, [searchParams]);
+    if (!assetTagFromUrl) return;
+    setFormData((p) => ({ ...p, asset_tag: assetTagFromUrl }));
+  }, [assetTagFromUrl]);
+  
+  // ---- Validate: ค่าที่เลือกต้องยังอยู่ใน availableAssets ----
   useEffect(() => {
-    if (!assetIdFromUrl) return;
-    if (loadingAssets) return; // รอให้ availableAssets มาแล้วก่อน
-
-    const exists = availableAssets.some((a) => String(a.id) === assetIdFromUrl);
-    if (exists) {
-      setFormData((p) => ({ ...p, assetId: assetIdFromUrl }));
-    } else {
-      // ไม่เจอในลิสต์: เคลียร์ค่าให้ผู้ใช้เลือกเอง (หรือจะ toast แจ้งก็ได้)
-      setFormData((p) => ({ ...p, assetId: "" }));
-    }
-  }, [assetIdFromUrl, loadingAssets, availableAssets]);
-  // If assetId from URL is not in the available list anymore, clear it
-  useEffect(() => {
-    if (loadingAssets) return;
-    if (!formData.assetId) return;
-
-    const found = availableAssets.find(
-      (a) => String(a.id) === String(formData.assetId)
+    if (loadingAssets || !formData.asset_tag) return;
+    const exists = availableAssets.some(
+      (a) => String(a.asset_tag) === String(formData.asset_tag)
     );
-    if (!found) {
-      setFormData((p) => ({ ...p, assetId: "" }));
+    if (!exists) {
+      setFormData((p) => ({ ...p, asset_tag: "" }));
     }
-  }, [loadingAssets, availableAssets, formData.assetId]);
-
-  // Helpers
+  }, [loadingAssets, availableAssets, formData.asset_tag]);
 
   const displayAssetName = (a: Asset) =>
-    `${a.manufacturer ?? ""} ${a.model ?? ""}`.trim() || a.id;
+    `${a.manufacturer ?? ""} ${a.model ?? ""}`.trim() || a.asset_tag;
 
   const displayUserName = (u: User) =>
     (u.name ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()) || u.id;
@@ -228,35 +206,23 @@ function CheckoutAssetPageInner() {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Asset & User Selection */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Asset &amp; User Selection
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Asset &amp; User Selection</h3>
 
               {/* Asset */}
               <div className="space-y-2">
                 <Label htmlFor="asset">Select Asset *</Label>
                 <Select
-                  value={formData.assetId || undefined}
-                  onValueChange={(value) =>
-                    setFormData((p) => ({ ...p, assetId: value }))
-                  }
+                  value={formData.asset_tag || undefined}
+                  onValueChange={(value) => setFormData((p) => ({ ...p, asset_tag: value }))}
                   disabled={loadingAssets}
                 >
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        loadingAssets
-                          ? "Loading assets..."
-                          : "Choose an available asset"
-                      }
-                    />
+                    <SelectValue placeholder={loadingAssets ? "Loading assets..." : "Choose an available asset"} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableAssets.map((asset) => (
-                      <SelectItem key={asset.id} value={String(asset.id)}>
-                        {`${asset.manufacturer ?? ""} ${
-                          asset.model ?? ""
-                        }`.trim() || asset.id}
+                      <SelectItem key={asset.asset_tag} value={asset.asset_tag}>
+                        {`${asset.manufacturer ?? ""} ${asset.model ?? ""}`.trim() || asset.asset_tag}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -265,55 +231,48 @@ function CheckoutAssetPageInner() {
 
               {/* User */}
               <div className="space-y-2">
-  <Label htmlFor="borrowerName">Borrower Full Name *</Label>
-  <Input
-    id="borrowerName"
-    placeholder="ชื่อ-นามสกุลผู้ยืม"
-    value={formData.borrowerName}
-    onChange={(e) => setFormData(p => ({ ...p, borrowerName: e.target.value }))}
-    required
-  />
-</div>
+                <Label htmlFor="borrowername">Borrower Name *</Label>
+                <Input
+                  id="borrowername"
+                  placeholder="ชื่อ-นามสกุลผู้ยืม"
+                  value={formData.borrowername}
+                  onChange={(e) => setFormData((p) => ({ ...p, borrowername: e.target.value }))}
+                  required
+                />
+              </div>
 
-<div className="space-y-2">
-  <Label htmlFor="borrowerContact">Contact (phone/email/org)</Label>
-  <Input
-    id="borrowerContact"
-    placeholder="เช่น 081-xxx-xxxx / malee@example.com / บริษัท ABC"
-    value={formData.borrowerContact}
-    onChange={(e) => setFormData(p => ({ ...p, borrowerContact: e.target.value }))}
-  />
-</div>
-
+              <div className="space-y-2">
+                <Label htmlFor="borrowercontact">Contact (phone/email/org)</Label>
+                <Input
+                  id="borrowercontact"
+                  placeholder="เช่น 081-xxx-xxxx / malee@example.com / บริษัท ABC"
+                  value={formData.borrowercontact}
+                  onChange={(e) => setFormData((p) => ({ ...p, borrowercontact: e.target.value }))}
+                />
+              </div>
             </div>
 
             {/* Checkout Details */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Checkout Details
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Checkout Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="checkout-date">Checkout Date *</Label>
+                  <Label htmlFor="checkout_date">Checkout Date *</Label>
                   <Input
-                    id="checkout-date"
+                    id="checkout_date"
                     type="date"
-                    value={formData.checkoutDate}
-                    onChange={(e) =>
-                      handleInputChange("checkoutDate", e.target.value)
-                    }
+                    value={formData.checkout_date}
+                    onChange={(e) => handleInputChange("checkout_date", e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="return-date">Expected Return Date</Label>
+                  <Label htmlFor="return_date">Expected Return Date</Label>
                   <Input
-                    id="return-date"
+                    id="return_date"
                     type="date"
-                    value={formData.expectedReturnDate}
-                    onChange={(e) =>
-                      handleInputChange("expectedReturnDate", e.target.value)
-                    }
+                    value={formData.expected_returndate}
+                    onChange={(e) => handleInputChange("expected_returndate", e.target.value)}
                   />
                 </div>
               </div>
@@ -321,50 +280,30 @@ function CheckoutAssetPageInner() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="purpose">Purpose</Label>
-                  <Select
-                    value={formData.purpose || undefined}
-                    onValueChange={(value) =>
-                      handleInputChange("purpose", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select purpose" />
-                    </SelectTrigger>
+                  <Select value={formData.purpose || undefined} onValueChange={(v) => handleInputChange("purpose", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="work">Work Assignment</SelectItem>
                       <SelectItem value="project">Project Use</SelectItem>
-                      <SelectItem value="temporary">
-                        Temporary Assignment
-                      </SelectItem>
-                      <SelectItem value="replacement">
-                        Equipment Replacement
-                      </SelectItem>
+                      <SelectItem value="temporary">Temporary Assignment</SelectItem>
+                      <SelectItem value="replacement">Equipment Replacement</SelectItem>
                       <SelectItem value="travel">Business Travel</SelectItem>
-                      <SelectItem value="training">
-                        Training/Learning
-                      </SelectItem>
+                      <SelectItem value="training">Training/Learning</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="checkout-location">Deployment Location</Label>
-                  <Select
-                    value={formData.location || undefined}
-                    onValueChange={(value) =>
-                      handleInputChange("location", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
+                  <Select value={formData.location || undefined} onValueChange={(v) => handleInputChange("location", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fdb">FDB</SelectItem>
                       <SelectItem value="pom">POM</SelectItem>
                       <SelectItem value="fac2">FAC2</SelectItem>
                       <SelectItem value="Cleanroom">Cleanroom</SelectItem>
                       <SelectItem value="Whiteroom">Whiteroom</SelectItem>
-                    </SelectContent>                  
-                    </Select>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -382,50 +321,41 @@ function CheckoutAssetPageInner() {
 
             {/* Checkout Summary */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">
-                Checkout Summary
-              </h4>
+              <h4 className="font-medium text-gray-900 mb-2">Checkout Summary</h4>
               <div className="space-y-1 text-sm text-gray-600">
                 <p>
                   Asset:{" "}
-                  {formData.assetId
+                  {formData.asset_tag
                     ? displayAssetName(
-                        availableAssets.find(
-                          (a) => a.id === formData.assetId
-                        ) || { id: formData.assetId }
+                        availableAssets.find((a) => a.asset_tag === formData.asset_tag) ||
+                          { asset_tag: formData.asset_tag }
                       )
                     : "Not selected"}
                 </p>
                 <p>
                   User:{" "}
-                  {formData.borrowerName
+                  {formData.borrowername
                     ? displayUserName(
-                        users.find((u) => u.id === formData.borrowerName) || {
-                          id: formData.borrowerName,
-                        }
+                        users.find((u) => u.id === formData.borrowername) || { id: formData.borrowername }
                       )
                     : "Not selected"}
                 </p>
-                <p>Date: {formData.checkoutDate}</p>
+                <p>Date: {formData.checkout_date}</p>
                 <p>Purpose: {formData.purpose || "Not specified"}</p>
               </div>
             </div>
-            {submitError && (
-              <p className="text-sm text-red-600">{submitError}</p>
-            )}
-            {/* Form Actions */}
+
+            {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+
+            {/* Actions */}
             <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 onClick={handleSubmit}
-                disabled={submitting || !formData.assetId || !formData.borrowerName.trim()}
+                disabled={submitting || !formData.asset_tag || !formData.borrowername.trim()}
               >
                 {submitting ? (
                   <>
@@ -438,7 +368,6 @@ function CheckoutAssetPageInner() {
                     Checkout Asset
                   </>
                 )}
-               
               </Button>
             </div>
           </form>
@@ -447,17 +376,18 @@ function CheckoutAssetPageInner() {
     </div>
   );
 }
+
 export default function CheckoutAssetPage() {
   return (
-  <Suspense
-  fallback={
-  <div className="flex items-center justify-center h-64">
-  <Loader2 className="h-8 w-8 animate-spin" />
-  <span className="ml-2">Loading checkout record...</span>
-  </div>
-  }
-  >
-  <CheckoutAssetPageInner />
-  </Suspense>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading checkout record...</span>
+        </div>
+      }
+    >
+      <CheckoutAssetPageInner />
+    </Suspense>
   );
-  }
+}

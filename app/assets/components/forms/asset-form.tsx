@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Package, Save, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 /** ถ้ามี type ภายนอกอยู่แล้ว สามารถลบส่วนนี้ทิ้งได้ */
 type AssetFormData = {
@@ -71,27 +72,27 @@ function Toast({
   onClose?: () => void;
 }) {
   return (
-    <div
-      className={`fixed top-4 right-4 z-50 rounded-md border px-4 py-3 shadow ${
-        type === 'success'
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* backdrop โปร่งบาง */}
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div
+        className={`relative rounded-md border px-5 py-4 shadow-lg max-w-md w-[90%] text-center
+        ${type === 'success'
           ? 'bg-green-50 border-green-200 text-green-800'
-          : 'bg-red-50 border-red-200 text-red-800'
-      }`}
-    >
-      <div className="flex items-center space-x-2">
-        {type === 'success' ? (
-          <CheckCircle className="h-4 w-4" />
-        ) : (
-          <AlertCircle className="h-4 w-4" />
-        )}
-        <span>{message}</span>
-        <button className="ml-3 text-sm underline" onClick={onClose}>
-          close
-        </button>
+          : 'bg-red-50 border-red-200 text-red-800'}`}
+      >
+        <div className="flex items-center justify-center space-x-2">
+          {type === 'success'
+            ? <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17l-3.88-3.88L3.7 13.71 9 19l12-12-1.41-1.41z"/></svg>
+            : <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11 7h2v6h-2zm0 8h2v2h-2z"/><path d="M1 21h22L12 2 1 21z"/></svg>}
+          <span className="font-medium">{message}</span>
+        </div>
+        <button className="mt-3 text-sm underline" onClick={onClose}>close</button>
       </div>
     </div>
   );
 }
+
 
 export default function AssetForm({ mode = 'create', initialData, onSaved }: Props) {
   const [formData, setFormData] = useState<AssetFormData>({
@@ -123,6 +124,7 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
     notes: '',
     ...(initialData || {}),
   });
+  const router = useRouter();
 
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
@@ -210,12 +212,16 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
 
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
 
-      setToast({
-        message: `Asset ${mode === 'create' ? 'created' : 'saved'} successfully`,
-        type: 'success',
-      });
+      setToast({ message: `Asset ${mode === 'create' ? 'created' : 'saved'} successfully`, type: 'success' });
       onSaved?.(json.data);
-
+      
+      // แสดง Toast สักครู่แล้วค่อย Redirect
+   
+      onSaved?.(json.data);
+      setTimeout(() => {
+        router.push('/assets'); // หน้ารายการ Hardware ของคุณ
+      }, 1200);
+      
       if (mode === 'create') {
         // reset เฉพาะฟิลด์ที่ควรเคลียร์
         setFormData((prev) => ({

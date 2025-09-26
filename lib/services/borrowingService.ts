@@ -4,15 +4,15 @@ import { z } from 'zod';
 const borrowingSchema = z.object({
   assetId: z.string().min(1, "Asset ID is required"),
   borrowerId: z.string().min(1, "Borrower ID is required"),
-  checkoutDate: z.string(),
-  dueDate: z.string().optional(),
+  checkout_date: z.string(),
+  due_date: z.string().optional(),
   status: z.string(),
   purpose: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const borrowingUpdateSchema = borrowingSchema.partial().extend({
-  checkinDate: z.string().optional().nullable(),
+  checkin_date: z.string().optional().nullable(),
   action: z.string().optional(),
 });
 
@@ -51,24 +51,24 @@ export async function getBorrowingRecordById(id: string) {
 
 export async function createBorrowingRecord(borrowingData: z.infer<typeof borrowingSchema>) {
   const {
-    assetId, borrowerId, checkoutDate, dueDate, status, purpose, notes
+    assetId, borrowerId, checkout_date, due_date, status, purpose, notes
   } = borrowingData;
 
   const id = `BOR-${Date.now()}`;
   const createdAt = new Date().toISOString();
   const updatedAt = new Date().toISOString();
-  const checkinDate = null;
+  const checkin_date = null;
 
   const query = `
     INSERT INTO asset_borrowing (
-      id, "assetId", "borrowerId", "checkoutDate", "dueDate", "checkinDate", status, purpose, notes,
+      id, "assetId", "borrowerId", "checkout_date", "due_date", "checkin_date", status, purpose, notes,
       "createdAt", "updatedAt"
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *;
   `;
   const queryParams = [
-    id, assetId, borrowerId, checkoutDate, dueDate, checkinDate, status, purpose, notes,
+    id, assetId, borrowerId, checkout_date, due_date, checkin_date, status, purpose, notes,
     createdAt, updatedAt
   ];
 
@@ -83,7 +83,7 @@ export async function updateBorrowingRecord(id: string, borrowingData: z.infer<t
   }
 
   if (fields.action === 'checkin') {
-    fields.checkinDate = new Date().toISOString().split('T')[0];
+    fields.checkin_date = new Date().toISOString().split('T')[0];
     fields.status = 'returned';
   }
   delete fields.action;

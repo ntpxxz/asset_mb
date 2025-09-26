@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 // Updated Zod schema with all fields that frontend sends
 const borrowingUpdateSchema = z.object({
-  asset_id: z.string().min(1, "Asset ID is required").optional(),
+  asset_tag: z.string().min(1, "Asset Tag is required").optional(),
   borrower_id: z.string().min(1, "Borrower ID is required").optional(),
   checkout_date: z.string().optional(),
   due_date: z.string().optional(),
@@ -22,49 +22,72 @@ const borrowingUpdateSchema = z.object({
   returned_byname: z.string().optional(),
 }).partial();
 
-// GET /api/borrowing/[id] - Get single borrow record
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+const listQuerySchema = z.object({
+  id: z.string().optional(),          // ✅ ใช้ id
+  status: z.string().optional(),
+  limit: z.coerce.number().int().positive().max(500).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+});
+
+export async function GET(req: NextRequest) {
   try {
-    const { id } = await params;
-    console.log('Fetching borrow record for ID:', id);
-    
-    const query = `SELECT
-        ab.*,
-        a."asset_tag"                  AS "asset_tag",
-        a.type                        AS "assettype",
-        a.manufacturer                AS "assetmanufacturer",
-        a.model                       AS "assetmodel",
-        a."serialnumber"              AS "assetserial",
-        a.description                 AS "assetdescription",
-        a.status                      AS "assetstatus",
-        a.location                    AS "assetlocation",
-        a.condition                   AS "assetcondition"
-      FROM asset_borrowing ab
-      LEFT JOIN asse6ts a ON a.id = ab."asset_id"
-      WHERE ab.id = $1
-      LIMIT 1;`;
-    
-    const result = await pool.query(query, [id]);
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Borrow record not found' },
-        { status: 404 }
-      );
+    const sp = req.nextUrl.searchParams;
+    const parsed = listQuerySchema.safeParse({
+      id: sp.get("id") ?? undefined,
+      status: sp.get("status") ?? undefined,
+      limit: sp.get("limit") ?? undefined,
+      offset: sp.get("offset") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid query", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { id, status } = parsed.data;
+    const limit = parsed.data.limit ?? 200;
+    const offset = parsed.data.offset ?? 0;
+
+    // ----- ดึง 1 รายการด้วย id
+    if (id) {
+      const sql = `
+        SELECT
+          ab.*,
+          a.name         AS "assetname",
+          a.manufacturer AS "assetmanufacturer",
+          a.model        AS "assetmodel"
+        FROM asset_borrowing ab
+        LEFT JOIN assets a ON a."asset_tag" = ab."asset_tag"
+        WHERE ab.id = $1
+        LIMIT 1;
+      `;
+      const r = await pool.query(sql, [id]);
+      if (r.rowCount === 0) {
+        return NextResponse.json({ success: false, error: "Borrow record not found" }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, data: r.rows[0] });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Failed to fetch borrow record:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch borrow record' },
-      { status: 500 }
-    );
+    // ----- ลิสต์ (ถ้ามี filter status)
+    const where: string[] = [];
+    const params: any[] = [];
+    if (status) {
+      where.push(
+        `LOWER(REPLACE(REPLACE(ab.status,'_',' '),'-',' ')) = LOWER(REPLACE(REPLACE($${params.length + 1},'_',' '),'-',' '))`
+      );
+      params.push(status);
+    }
+    params.push(limit, offset);
+
+    const sql = `
+      SELECT ab.*
+      FROM asset_borrowing ab
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY ab.created_at DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length};
+    `;
+    const r = await pool.query(sql, params);
+    return NextResponse.json({ success: true, data: r.rows });
+  } catch (err) {
+    console.error("GET /api/borrowing error:", err);
+    return NextResponse.json({ success: false, error: "Failed to fetch borrow records" }, { status: 500 });
   }
 }
 
@@ -110,7 +133,7 @@ export async function PATCH(
       const dbColumn = key === 'checkinDate' ? 'checkin_date' : 
                       key === 'checkoutDate' ? 'checkout_date' :
                       key === 'dueDate' ? 'due_date' :
-                      key === 'assetId' ? 'asset_id' :
+                      key === 'assetTag' ? 'asset_tag' :
                       key === 'borrowerId' ? 'borrower_id' :
                       key === 'damageReported' ? 'damage_reported' :
                       key === 'damageDescription' ? 'damage_description' :

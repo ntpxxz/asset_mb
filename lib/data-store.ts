@@ -126,9 +126,9 @@ export interface BorrowRecord {
   id: string;
   assetId: string;
   borrowerId: string;
-  checkoutDate: string;
-  dueDate: string;
-  checkinDate?: string;
+  checkout_date: string;
+  due_date: string;
+  checkin_date?: string;
   status: 'checked-out' | 'returned' | 'overdue';
   purpose: string;
   notes: string;
@@ -319,13 +319,13 @@ export const borrowService = {
   getById: (id: string): BorrowRecord | undefined => 
     borrowRecords.find(record => record.id === id),
   
-  checkout: (assetId: string, borrowerId: string, dueDate: string, purpose: string, notes: string): BorrowRecord => {
+  checkout: (assetId: string, borrowerId: string, due_date: string, purpose: string, notes: string): BorrowRecord => {
     const record: BorrowRecord = {
       id: generateId('BOR'),
       assetId,
       borrowerId,
-      checkoutDate: new Date().toISOString().split('T')[0],
-      dueDate,
+      checkout_date: new Date().toISOString().split('T')[0],
+      due_date,
       status: 'checked-out',
       purpose,
       notes,
@@ -346,7 +346,7 @@ export const borrowService = {
     
     borrowRecords[index] = {
       ...borrowRecords[index],
-      checkinDate: new Date().toISOString().split('T')[0],
+      checkin_date: new Date().toISOString().split('T')[0],
       status: 'returned',
       updatedAt: new Date().toISOString(),
     };
@@ -363,7 +363,7 @@ export const borrowService = {
   getOverdue: (): BorrowRecord[] => {
     const today = new Date().toISOString().split('T')[0];
     return borrowRecords.filter(record => 
-      record.status === 'checked-out' && record.dueDate < today
+      record.status === 'checked-out' && record.due_date < today
     );
   },
 };

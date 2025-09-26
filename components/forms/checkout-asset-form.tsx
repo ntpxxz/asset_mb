@@ -25,7 +25,7 @@ export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
   const [formData, setFormData] = useState({
     assetId: '',
     userId: '',
-    checkoutDate: new Date().toISOString().split('T')[0],
+    checkout_date: new Date().toISOString().split('T')[0],
     expectedReturnDate: '',
     notes: '',
     location: '',
@@ -126,8 +126,8 @@ export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
                   <Input
                     id="checkout-date"
                     type="date"
-                    value={formData.checkoutDate}
-                    onChange={(e) => handleInputChange('checkoutDate', e.target.value)}
+                    value={formData.checkout_date}
+                    onChange={(e) => handleInputChange('checkout_date', e.target.value)}
                     required
                   />
                 </div>
@@ -194,7 +194,7 @@ export function CheckoutAssetForm({ onClose, onSave }: CheckoutAssetFormProps) {
               <div className="space-y-1 text-sm text-gray-600">
                 <p>Asset: {formData.assetId ? availableAssets.find(a => a.id === formData.assetId)?.name : 'Not selected'}</p>
                 <p>User: {formData.userId ? users.find(u => u.id === formData.userId)?.name : 'Not selected'}</p>
-                <p>Date: {formData.checkoutDate}</p>
+                <p>Date: {formData.checkout_date}</p>
                 <p>Purpose: {formData.purpose || 'Not specified'}</p>
               </div>
             </div>

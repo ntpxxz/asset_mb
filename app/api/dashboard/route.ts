@@ -50,7 +50,7 @@ async function getBorrowingStats(): Promise<{ checkedOut: number; overdue: numbe
 
   // เดาชื่อคอลัมน์คืน/กำหนดส่งที่ใช้จริง
   const returnedCol = pickExistingColumn(cols, ['returned_at', 'return_date', 'returned_date', 'return_at']);
-  const dueCol = pickExistingColumn(cols, ['due_date', 'duedate', 'due_on']);
+  const dueCol = pickExistingColumn(cols, ['due_date']);
 
   // ถ้าไม่รู้คอลัมน์คืน ให้ถือว่าทุกแถวคือ checked out = 0 (ไม่พัง API)
   if (!returnedCol) return { checkedOut: 0, overdue: 0 };

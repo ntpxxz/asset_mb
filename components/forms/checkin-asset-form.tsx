@@ -25,7 +25,7 @@ interface CheckinAssetFormProps {
 export function CheckinAssetForm({ onClose, onSave }: CheckinAssetFormProps) {
   const [formData, setFormData] = useState({
     assetId: '',
-    checkinDate: new Date().toISOString().split('T')[0],
+    checkin_date: new Date().toISOString().split('T')[0],
     condition: '',
     damageReported: false,
     damageDescription: '',
@@ -94,8 +94,8 @@ export function CheckinAssetForm({ onClose, onSave }: CheckinAssetFormProps) {
                   <Input
                     id="checkin-date"
                     type="date"
-                    value={formData.checkinDate}
-                    onChange={(e) => handleInputChange('checkinDate', e.target.value)}
+                    value={formData.checkin_date}
+                    onChange={(e) => handleInputChange('checkin_date', e.target.value)}
                     required
                   />
                 </div>
@@ -206,7 +206,7 @@ export function CheckinAssetForm({ onClose, onSave }: CheckinAssetFormProps) {
               </h4>
               <div className="space-y-1 text-sm text-green-800">
                 <p>Asset: {formData.assetId ? checkedOutAssets.find(a => a.id === formData.assetId)?.name : 'Not selected'}</p>
-                <p>Date: {formData.checkinDate}</p>
+                <p>Date: {formData.checkin_date}</p>
                 <p>Condition: {formData.condition || 'Not assessed'}</p>
                 <p>Damage Reported: {formData.damageReported ? 'Yes' : 'No'}</p>
                 <p>Maintenance Required: {formData.maintenanceRequired ? 'Yes' : 'No'}</p>

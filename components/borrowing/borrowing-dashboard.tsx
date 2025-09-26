@@ -133,8 +133,8 @@ export function BorrowingDashboard({
                         <p className="text-sm text-gray-500">{asset.department}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{asset.checkoutDate}</TableCell>
-                    <TableCell>{asset.dueDate}</TableCell>
+                    <TableCell>{asset.checkout_date}</TableCell>
+                    <TableCell>{asset.due_date}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(asset.status)}
