@@ -45,7 +45,7 @@ finished = true;
     } catch (err) {
       toast.error("Failed to added asset", {
         id:tid,
-        description: err?.message ?? "Please try again.",
+        description:"Please try again.",
          icon: "⚠️",
          className:
            "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",

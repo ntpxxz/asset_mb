@@ -110,8 +110,8 @@ export interface SoftwareLicense {
 
 export interface User {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstname: string;
+  lastname: string;
   email: string;
   phone: string;
   department: string;
@@ -121,7 +121,7 @@ export interface User {
   manager: string;
   start_date: string;
   status: 'active' | 'inactive' | 'suspended';
-  assetsCount: number;
+  assets_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -297,11 +297,11 @@ export const userService = {
   getById: (id: string): User | undefined => 
     users.find(user => user.id === id),
   
-  create: (data: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'assetsCount'>): User => {
+  create: (data: Omit<User, 'id' | 'created_at' | 'updated_at' | 'assets_count'>): User => {
     const user: User = {
       ...data,
       id: generateId('USR'),
-      assetsCount: 0,
+      assets_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

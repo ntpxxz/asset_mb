@@ -60,7 +60,7 @@ export function EditUserForm({ userId, onClose, onSave }: EditUserFormProps) {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="flex items-center space-x-2">
             <UserPlus className="h-5 w-5" />
-            <span>Edit User: {formData.firstName} {formData.lastName}</span>
+            <span>Edit User: {formData.firstname} {formData.lastname}</span>
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -76,7 +76,7 @@ export function EditUserForm({ userId, onClose, onSave }: EditUserFormProps) {
                   <Label htmlFor="first-name">First Name</Label>
                   <Input
                     id="first-name"
-                    value={formData.firstName || ''}
+                    value={formData.firstname || ''}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                   />
                 </div>
@@ -84,7 +84,7 @@ export function EditUserForm({ userId, onClose, onSave }: EditUserFormProps) {
                   <Label htmlFor="last-name">Last Name</Label>
                   <Input
                     id="last-name"
-                    value={formData.lastName || ''}
+                    value={formData.lastname || ''}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                   />
                 </div>
@@ -119,7 +119,7 @@ export function EditUserForm({ userId, onClose, onSave }: EditUserFormProps) {
                   <Label htmlFor="employee-id">Employee ID</Label>
                   <Input
                     id="employee-id"
-                    value={formData.employeeId || ''}
+                    value={formData.employee_id || ''}
                     onChange={(e) => handleInputChange('employeeId', e.target.value)}
                   />
                 </div>

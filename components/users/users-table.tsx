@@ -83,7 +83,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   };
 
   const filteredUsers = users.filter(user => {
-    const fullName = `${user.firstName} ${user.lastName}`;
+    const fullName = `${user.firstname} ${user.lastname}`;
     const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase());
@@ -168,11 +168,11 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                       <div className="flex items-center space-x-3">
                         <Avatar>
                           <AvatarFallback>
-                            {user.firstName[0]}{user.lastName[0]}
+                            {user.firstname[0]}{user.lastname[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{user.firstName} {user.lastName}</p>
+                          <p className="font-medium">{user.firstname} {user.lastname}</p>
                           <p className="text-sm text-gray-500">{user.role}</p>
                         </div>
                       </div>
@@ -182,7 +182,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                     </TableCell>
                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{user.assetsCount} assets</Badge>
+                      <Badge variant="secondary">{user.assets_count} assets</Badge>
                     </TableCell>
                     <TableCell>{user.location}</TableCell>
                     <TableCell>

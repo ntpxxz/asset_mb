@@ -141,11 +141,11 @@ export default function UserViewPage() {
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12">
               <AvatarFallback className="text-lg">
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstname[0]}{user.lastname[0]}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{user.firstName} {user.lastName}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{user.firstname} {user.lastname}</h1>
               <p className="text-gray-600">{user.role} • {user.department}</p>
             </div>
           </div>
@@ -177,11 +177,11 @@ export default function UserViewPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">First Name</label>
-                  <p className="text-lg">{user.firstName}</p>
+                  <p className="text-lg">{user.firstname}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Last Name</label>
-                  <p className="text-lg">{user.lastName}</p>
+                  <p className="text-lg">{user.lastname}</p>
                 </div>
               </div>
               
@@ -207,7 +207,7 @@ export default function UserViewPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Employee ID</label>
-                  <p className="text-lg font-mono">{user.employeeId}</p>
+                  <p className="text-lg font-mono">{user.employee_id}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
@@ -233,7 +233,7 @@ export default function UserViewPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-lg">{user.startDate || 'Not specified'}</p>
+                  <p className="text-lg">{user.start_date || 'Not specified'}</p>
                 </div>
               </div>
 
@@ -344,7 +344,7 @@ export default function UserViewPage() {
               
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Member Since</span>
-                <span className="text-sm">{user.startDate || 'Unknown'}</span>
+                <span className="text-sm">{user.start_date || 'Unknown'}</span>
               </div>
             </CardContent>
           </Card>

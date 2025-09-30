@@ -89,7 +89,7 @@ export default function BorrowingPage() {
         const user = (allUsers || []).find((u) => u.id === record.borrowerId);
         const borrowerDisplay = record.borrowername 
           ? record.borrowername 
-          : user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown User';
+          : user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : 'Unknown User';
         const isOverdue = record.due_date ? new Date(record.due_date) < today : false;
 
         return {

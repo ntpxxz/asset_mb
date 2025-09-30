@@ -89,7 +89,7 @@ export default function UsersPage() {
   };
 
   const filteredUsers = users.filter((user) => {
-    const fullName = `${user.firstName} ${user.lastName}`;
+    const fullName = `${user.firstname} ${user.lastname}`;
     const matchesSearch =
       fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -262,13 +262,13 @@ export default function UsersPage() {
                       <div className="flex items-center space-x-3">
                         <Avatar>
                           <AvatarFallback>
-                            {user.firstName[0]}
-                            {user.lastName[0]}
+                            {user.firstname[0]}
+                            {user.lastname[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">
-                            {user.firstName} {user.lastName}
+                            {user.firstname} {user.lastname}
                           </p>
                           <p className="text-sm text-gray-500">{user.role}</p>
                         </div>
@@ -280,7 +280,7 @@ export default function UsersPage() {
                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
-                        {user.assetsCount} assets
+                        {user.assets_count} assets
                       </Badge>
                     </TableCell>
                     <TableCell>{user.location}</TableCell>

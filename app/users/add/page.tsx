@@ -19,16 +19,16 @@ import { userService } from '@/lib/data-store';
 export default function AddUserPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    firstname: '',
+    lastname: '',
     email: '',
     phone: '',
     department: '',
     role: '',
     location: '',
-    employeeId: '',
+    employee_id: '',
     manager: '',
-    startDate: '',
+    start_date: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,16 +36,16 @@ export default function AddUserPage() {
     
     // Create the user using the data service
     userService.create({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
+      firstname: formData.firstname,
+      lastname: formData.lastname,
       email: formData.email,
       phone: formData.phone,
       department: formData.department,
       role: formData.role,
       location: formData.location,
-      employeeId: formData.employeeId,
+      employee_id: formData.employee_id,
       manager: formData.manager,
-      startDate: formData.startDate,
+      start_date: formData.start_date,
       status: 'active',
     });
     
@@ -88,8 +88,8 @@ export default function AddUserPage() {
                   <Input
                     id="first-name"
                     placeholder="John"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    value={formData.firstname}
+                    onChange={(e) => handleInputChange('firstname', e.target.value)}
                     required
                   />
                 </div>
@@ -98,8 +98,8 @@ export default function AddUserPage() {
                   <Input
                     id="last-name"
                     placeholder="Smith"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    value={formData.lastname}
+                    onChange={(e) => handleInputChange('lastname', e.target.value)}
                     required
                   />
                 </div>
@@ -138,8 +138,8 @@ export default function AddUserPage() {
                   <Input
                     id="employee-id"
                     placeholder="EMP-001"
-                    value={formData.employeeId}
-                    onChange={(e) => handleInputChange('employeeId', e.target.value)}
+                    value={formData.employee_id}
+                    onChange={(e) => handleInputChange('employee_id', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -147,8 +147,8 @@ export default function AddUserPage() {
                   <Input
                     id="start-date"
                     type="date"
-                    value={formData.startDate}
-                    onChange={(e) => handleInputChange('startDate', e.target.value)}
+                    value={formData.start_date}
+                    onChange={(e) => handleInputChange('start_date', e.target.value)}
                   />
                 </div>
               </div>

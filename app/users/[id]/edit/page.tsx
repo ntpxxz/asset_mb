@@ -146,7 +146,7 @@ export default function EditUserPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit User</h1>
-          <p className="text-gray-600">{formData.firstName} {formData.lastName}</p>
+          <p className="text-gray-600">{formData.firstname} {formData.lastname}</p>
         </div>
       </div>
 
@@ -167,7 +167,7 @@ export default function EditUserPage() {
                   <Label htmlFor="first-name">First Name *</Label>
                   <Input
                     id="first-name"
-                    value={formData.firstName || ''}
+                    value={formData.firstname || ''}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                     required
                   />
@@ -176,7 +176,7 @@ export default function EditUserPage() {
                   <Label htmlFor="last-name">Last Name *</Label>
                   <Input
                     id="last-name"
-                    value={formData.lastName || ''}
+                    value={formData.lastname || ''}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                     required
                   />
@@ -213,7 +213,7 @@ export default function EditUserPage() {
                   <Label htmlFor="employee-id">Employee ID</Label>
                   <Input
                     id="employee-id"
-                    value={formData.employeeId || ''}
+                    value={formData.employee_id || ''}
                     onChange={(e) => handleInputChange('employeeId', e.target.value)}
                   />
                 </div>
@@ -279,7 +279,7 @@ export default function EditUserPage() {
                   <Input
                     id="start-date"
                     type="date"
-                    value={formData.startDate || ''}
+                    value={formData.start_date || ''}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
                   />
                 </div>
