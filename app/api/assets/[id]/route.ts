@@ -100,18 +100,79 @@ const assetUpdateSchema = z
 
 /** GET /api/assets/[id] */
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const r = await pool.query("SELECT * FROM assets WHERE id = $1", [
-      params.id,
-    ]);
-    if (r.rowCount === 0) return bad("Asset not found", 404);
-    return ok(r.rows[0]);
-  } catch (e) {
-    console.error("[GET asset]", e);
-    return bad("Failed to fetch asset", 500);
+    const { id } = await params;
+    console.log('GET /api/assets/[id] - Loading asset with ID:', id);
+
+
+    // Try different ID fields
+    let result = await pool.query('SELECT * FROM assets WHERE id = $1', [id]);
+
+    if (result.rowCount === 0) {
+      result = await pool.query('SELECT * FROM assets WHERE asset_tag = $1', [id]);
+    }
+
+    if (result.rowCount === 0) {
+      result = await pool.query(
+        `SELECT * FROM assets 
+         WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1
+         LIMIT 1`,
+        [id]
+      );
+    }
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Asset not found' },
+        { status: 404 }
+      );
+    }
+
+    const asset = result.rows[0];
+    
+    // Clean up the asset data - no more field mapping needed since is_loanale is removed
+    const cleanAsset = {
+      ...asset,
+      // Set default value for isloanable since it's not in DB anymore
+      isloanable: false, // Default value since field is removed from DB
+    };
+
+    // Remove any unwanted fields
+    delete cleanAsset.delete_at; // Don't send soft delete field to frontend
+
+    console.log('=== ASSET DATA DEBUG ===');
+    console.log('Original asset data:', asset);
+    console.log('Clean asset data:', cleanAsset);
+    console.log('Field check:');
+    console.log('- type:', cleanAsset.type);
+    console.log('- status:', cleanAsset.status);
+    console.log('- location:', cleanAsset.location);
+    console.log('- department:', cleanAsset.department);
+    console.log('- condition:', cleanAsset.condition);
+    console.log('- patchstatus:', cleanAsset.patchstatus);
+    console.log('- isloanable:', cleanAsset.isloanable);
+
+    return NextResponse.json({
+      success: true,
+      data: cleanAsset,
+      message: `Asset ${cleanAsset.asset_tag} loaded successfully`,
+    });
+  } catch (error: any) {
+    console.error('Failed to fetch asset:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch asset',
+        details:
+          process.env.NODE_ENV === 'development'
+            ? error.message
+            : 'Internal server error',
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -23,25 +23,25 @@ import {
   RefreshCw,
   Activity,
   Cpu,
+  Coins,
 } from "lucide-react";
 import { HardwareAsset } from "@/lib/data-store";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "in-use":
-      return <Badge className="bg-green-100 text-green-800">Active</Badge>;
-    case "in-stock":
+    case "assigned":
+      return <Badge className="bg-green-100 text-green-800">Assigned</Badge>;
+    case "available":
       return <Badge className="bg-blue-100 text-blue-800">Available</Badge>;
-    case "under-repair":
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>
-      );
+    case "maintenance":
+      return <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>;
     case "retired":
       return <Badge className="bg-gray-100 text-gray-800">Retired</Badge>;
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }
 };
+
 
 const getPatchStatusBadge = (status: string) => {
   switch (status) {
@@ -168,7 +168,7 @@ export default function AssetViewPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/assets")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -195,7 +195,7 @@ export default function AssetViewPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/assets")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -432,7 +432,7 @@ export default function AssetViewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <DollarSign className="h-5 w-5" />
+                <Coins className="h-5 w-5" />
                 <span>Purchase Information</span>
               </CardTitle>
             </CardHeader>
@@ -442,8 +442,7 @@ export default function AssetViewPage() {
                   <label className="text-sm font-medium text-gray-500">
                     Purchase Date
                   </label>
-                  <p className="text-lg">
-                    ฿
+                  <p className="text-lg">                    
                     {asset.purchasedate ? asset.purchasedate.split("T")[0] : ""}
                   </p>
                 </div>
@@ -451,7 +450,7 @@ export default function AssetViewPage() {
                   <label className="text-sm font-medium text-gray-500">
                     Purchase Price
                   </label>
-                  <p className="text-lg">${asset.purchaseprice || "0"}</p>
+                  <p className="text-lg">{asset.purchaseprice || "0"}฿</p>
                 </div>
               </div>
 
