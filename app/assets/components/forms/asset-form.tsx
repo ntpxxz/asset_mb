@@ -16,85 +16,21 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Package, Save, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-
-/** ถ้ามี type ภายนอกอยู่แล้ว สามารถลบส่วนนี้ทิ้งได้ */
-type AssetFormData = {
-  asset_tag?: string;
-  type?: string;
-  manufacturer?: string;
-  model?: string;
-  serialnumber?: string;
-  purchasedate?: string;
-  purchaseprice?: number | string | null;
-  supplier?: string;
-  warrantyexpiry?: string;
-
-  assigneduser?: string; // รับ firstname หรือ employee_id (ฝั่ง API จะ map ให้เป็น employee_id)
-  location?: string;
-  department?: string;
-
-  status?: 'available' | 'assigned' | 'maintenance' | 'retired';
-  condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
-
-  operatingsystem?: string;
-  processor?: string;
-  memory?: string;
-  storage?: string;
-
-  hostname?: string;
-  ipaddress?: string;
-  macaddress?: string;
-
-  patchstatus?: 'up-to-date' | 'needs-review' | 'update-pending';
-  lastpatch_check?: string;
-
-  isloanable?: boolean;
-  description?: string;
-  notes?: string;
-
-  id?: string;
-};
+import { toast } from 'sonner';
+import type { AssetFormData } from "@/lib/data-store";
 
 type Mode = 'create' | 'edit';
 interface Props {
   mode?: Mode;
   initialData?: Partial<AssetFormData> & { id?: string };
+  assetId?: string;  
+  onSubmit?: (formData: AssetFormData) => Promise<{ success: boolean; error?: string }>;
+  onCancel?: () => void;
   onSaved?: (asset: any) => void;
+  loading?: boolean;
 }
 
-function Toast({
-  message,
-  type = 'success',
-  onClose,
-}: {
-  message: string;
-  type?: 'success' | 'error';
-  onClose?: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* backdrop โปร่งบาง */}
-      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-      <div
-        className={`relative rounded-md border px-5 py-4 shadow-lg max-w-md w-[90%] text-center
-        ${type === 'success'
-          ? 'bg-green-50 border-green-200 text-green-800'
-          : 'bg-red-50 border-red-200 text-red-800'}`}
-      >
-        <div className="flex items-center justify-center space-x-2">
-          {type === 'success'
-            ? <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17l-3.88-3.88L3.7 13.71 9 19l12-12-1.41-1.41z"/></svg>
-            : <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11 7h2v6h-2zm0 8h2v2h-2z"/><path d="M1 21h22L12 2 1 21z"/></svg>}
-          <span className="font-medium">{message}</span>
-        </div>
-        <button className="mt-3 text-sm underline" onClick={onClose}>close</button>
-      </div>
-    </div>
-  );
-}
-
-
-export default function AssetForm({ mode = 'create', initialData, onSaved }: Props) {
+export default function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onCancel, onSaved, loading }: Props) {
   const [formData, setFormData] = useState<AssetFormData>({
     asset_tag: '',
     type: '',
@@ -102,7 +38,7 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
     model: '',
     serialnumber: '',
     purchasedate: '',
-    purchaseprice: '' as any,
+    purchaseprice: null,
     supplier: '',
     warrantyexpiry: '',
     assigneduser: '',
@@ -127,9 +63,6 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
   const router = useRouter();
 
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null
-  );
   const [error, setError] = useState<string | null>(null);
 
   // ===== Derived flags for conditional UI (คงโครงสร้างเดิม + เติมเงื่อนไข) =====
@@ -153,11 +86,13 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
     return s.includes('T') ? s.split('T')[0] : s;
   };
 
-  const normalizeNumber = (v: unknown) => {
-    if (v === '' || v === null || v === undefined) return '';
-    const n = Number(v);
-    return Number.isFinite(n) ? n : '';
-  };
+const normalizeNumber = (v: unknown): number | null => {
+if (v === '' || v === null || v === undefined) return null;
+const n = typeof v === 'number' ? v : Number(String(v).replace(/,/g, ''));
+ return Number.isFinite(n) ? n : null;
+};
+
+
 
   // ===== Validate (เติม dynamic required) =====
   const validateForm = (): boolean => {
@@ -189,10 +124,28 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
+    // ถ้ามี onSubmit prop ให้ใช้แทน (สำหรับ edit mode)
+    if (onSubmit) {
+      setSubmitting(true);
+      const result = await onSubmit(formData);
+      setSubmitting(false);
+      if (!result.success) {
+        setError(result.error || 'Failed to save asset');
+      }
+      return;
+    }
+  
+    // ถ้าไม่มี onSubmit ให้ทำ default behavior (create mode)
     setSubmitting(true);
-    setToast(null);
     setError(null);
+  
+    const tid = toast.loading("Saving asset...", {
+      description: "Writing to database…",
+      className: "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
+      duration: 5000,
+    });
+  
     try {
       const payload: AssetFormData = {
         ...formData,
@@ -201,56 +154,67 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
         lastpatch_check: normalizeDate(formData.lastpatch_check),
         purchaseprice: normalizeNumber(formData.purchaseprice),
       };
-
-      // NOTE: คง endpoint แบบเดิม
-      const res = await fetch('/api/assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+  
+      const url = mode === 'edit' && assetId ? `/api/assets/${assetId}` : '/api/assets';
+      const method = mode === 'edit' ? 'PUT' : 'POST';
+  
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-
+      const json = await res.json().catch(() => ({} as any));
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-
-      setToast({ message: `Asset ${mode === 'create' ? 'created' : 'saved'} successfully`, type: 'success' });
+  
+      toast.success(`Asset ${mode === "create"} successfully`, {
+        id: tid,
+        description: payload.asset_tag ? `Tag: ${payload.asset_tag}` : undefined,
+        icon: "✅",
+        className:
+          "rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(16,185,129,.25)" },
+        duration: 2000,
+      });
+  
       onSaved?.(json.data);
-      
-      // แสดง Toast สักครู่แล้วค่อย Redirect
-   
-      onSaved?.(json.data);
-      setTimeout(() => {
-        router.push('/assets'); // หน้ารายการ Hardware ของคุณ
-      }, 1200);
-      
-      if (mode === 'create') {
-        // reset เฉพาะฟิลด์ที่ควรเคลียร์
+      setTimeout(() => router.push("/assets"), 2100);
+  
+      if (mode === "create") {
         setFormData((prev) => ({
           ...prev,
-          asset_tag: '',
-          manufacturer: '',
-          model: '',
-          serialnumber: '',
-          purchasedate: '',
-          purchaseprice: '' as any,
-          supplier: '',
-          warrantyexpiry: '',
-          assigneduser: '',
-          location: '',
-          department: '',
-          operatingsystem: '',
-          processor: '',
-          memory: '',
-          storage: '',
-          hostname: '',
-          ipaddress: '',
-          macaddress: '',
-          description: '',
-          notes: '',
+          asset_tag: "",
+          manufacturer: "",
+          model: "",
+          serialnumber: "",
+          purchasedate: "",
+          purchaseprice: "" as any,
+          supplier: "",
+          warrantyexpiry: "",
+          assigneduser: "",
+          location: "",
+          department: "",
+          operatingsystem: "",
+          processor: "",
+          memory: "",
+          storage: "",
+          hostname: "",
+          ipaddress: "",
+          macaddress: "",
+          description: "",
+          notes: "",
         }));
       }
     } catch (err: any) {
-      setToast({ message: err.message || 'Failed to save asset', type: 'error' });
-      setError(err.message || 'Failed to save asset');
+      toast.error("Failed to save asset", {
+        id: tid,
+        description: err?.message ?? "Please try again.",
+        icon: "⚠️",
+        className:
+          "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(244,63,94,.25)" },
+        duration: 4000,
+      });
+      setError(err?.message || "Failed to save asset");
     } finally {
       setSubmitting(false);
     }
@@ -268,10 +232,6 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
 
   return (
     <>
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-      )}
-
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -442,8 +402,8 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
                     type="number"
                     step="0.01"
                     placeholder="e.g., 1200.00"
-                    value={formData.purchaseprice as any}
-                    onChange={(e) => handleInputChange('purchaseprice', e.target.value)}
+                    value={formData.purchaseprice ?? ''}
+                   onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))}
                     disabled={submitting}
                   />
                 </div>
@@ -697,23 +657,16 @@ export default function AssetForm({ mode = 'create', initialData, onSaved }: Pro
 
             {/* ===== Actions ===== */}
             <div className="flex items-center justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={submitting}
-                onClick={() =>
-                  setFormData((prev) => ({ ...prev, asset_tag: `AST-${Date.now()}` }))
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Generate Tag
-              </Button>
-
-              <Button type="submit" disabled={submitting}>
-                <Save className="h-4 w-4 mr-2" />
-                {submitting ? 'Saving...' : mode === 'create' ? 'Add Asset' : 'Save Changes'}
-              </Button>
-            </div>
+  {onCancel && (
+    <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+      Cancel
+    </Button>
+  )}
+  <Button type="submit" disabled={submitting || loading}>
+    <Save className="h-4 w-4 mr-2" />
+    {submitting ? 'Saving...' : mode === 'create' ? 'Add Asset' : 'Save Changes'}
+  </Button>
+</div>
           </form>
         </CardContent>
       </Card>

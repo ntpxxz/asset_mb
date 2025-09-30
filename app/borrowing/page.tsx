@@ -25,46 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { User, AssetFormData, BorrowRecord, CheckedOutAsset } from '@/lib/data-store'; 
 
-interface Asset {
-  id: string;
-  asset_tag: string;
-  manufacturer: string;
-  model: string;
-  status: string;
-  isloanable: boolean;
-  location: string;
-}
 
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  department: string;
-}
-
-interface BorrowRecord {
-  id: string;
-  asset_tag: string;
-  borrowerId?: string;
-  borrowername?: string;
-  checkout_date: string;
-  due_date: string;
-  status: string;
-  purpose?: string;
-}
-
-interface CheckedOutAsset {
-  id: string;               // borrow record id
-  asset_tag: string;
-  name: string;
-  borrowername: string;
-  department: string;
-  checkout_date: string;
-  due_date: string;
-  status: string;
-  purpose?: string;
-}
 
 const getStatusBadge = (status: string) => {
   const s = (status || '').toLowerCase();
@@ -88,7 +51,7 @@ export default function BorrowingPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [checkedOutAssets, setCheckedOutAssets] = useState<CheckedOutAsset[]>([]);
-  const [loanableAssets, setLoanableAssets] = useState<Asset[]>([]);
+  const [loanableAssets, setLoanableAssets] = useState<AssetFormData[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +73,7 @@ export default function BorrowingPage() {
       if (!borrowsResponse.ok) throw new Error(`Borrowing API error: ${borrowsResponse.status}`);
       const borrowsRes = await borrowsResponse.json();
 
-      const allAssets: Asset[] = assetsRes.success ? assetsRes.data : [];
+      const allAssets: AssetFormData[] = assetsRes.success ? assetsRes.data : [];
       const allUsers: User[] = usersRes.success ? usersRes.data : [];
       const borrowRecords: BorrowRecord[] = borrowsRes.success ? borrowsRes.data : [];
 
@@ -142,7 +105,7 @@ export default function BorrowingPage() {
         };
       });
 
-      const loanable: Asset[] = (allAssets || []).filter((a) => {
+      const loanable: AssetFormData[] = (allAssets || []).filter((a) => {
         const s = (a.status || '').toLowerCase();
         const isAvailable = s === 'available';
         return a.isloanable === true && isAvailable && !checkedOutTags.has(a.asset_tag);
@@ -163,8 +126,7 @@ export default function BorrowingPage() {
   const handleCheckin = async (recordId: string) => {
     try {
       setLoading(true);
-      // ไปหน้า Check-in พร้อม borrowId (เหมือนเดิม)
-      router.push(`/borrowing/checkin?id=${encodeURIComponent(recordId)}`);
+        router.push(`/borrowing/checkin?id=${encodeURIComponent(recordId)}`);
     } finally {
       setLoading(false);
     }
@@ -327,7 +289,7 @@ export default function BorrowingPage() {
                       <TableCell>
                         <Button variant="outline" size="sm" onClick={() => handleCheckin(asset.id)}>
                           <RotateCcw className="h-4 w-4 mr-1" />
-                          Check In
+                          Return
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -376,7 +338,7 @@ export default function BorrowingPage() {
                           onClick={() => router.push(`/borrowing/checkout?asset_tag=${encodeURIComponent(asset.asset_tag)}`)}
                         >
                           <Activity className="h-4 w-4 mr-1" />
-                          Check Out
+                         Borrow
                         </Button>
                       </TableCell>
                     </TableRow>

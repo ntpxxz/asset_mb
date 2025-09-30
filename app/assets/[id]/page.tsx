@@ -443,7 +443,7 @@ export default function AssetViewPage() {
                     Purchase Date
                   </label>
                   <p className="text-lg">
-                    $
+                    ฿
                     {asset.purchasedate ? asset.purchasedate.split("T")[0] : ""}
                   </p>
                 </div>

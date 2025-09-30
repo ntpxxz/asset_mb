@@ -20,13 +20,13 @@ import {
 } from 'lucide-react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Hardware', href: '/assets', icon: Package },
   { name: 'Software', href: '/software', icon: Shield },
   { name: 'Borrowing', href: '/borrowing', icon: Activity },
   //{ name: 'Patches', href: '/patches', icon: RefreshCw },
   //{ name: 'Users', href: '/users', icon: Users },
-  //{ name: 'Reports', href: '/reports', icon: BarChart3 },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
   //{ name: 'Settings', href: '/settings', icon: Settings, classname:'hidden'},
   //{ name: 'Help', href: '/help', icon: HelpCircle },
 ];
@@ -68,7 +68,7 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           
           return (
             <Link key={item.name} href={item.href}>
@@ -87,7 +87,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      {!collapsed && (
+      {/*{!collapsed && (
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
             <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
@@ -97,7 +97,7 @@ export function Sidebar() {
             </div>
           </div>
         </div>
-      )}
+      )}*/}
     </div>
   );
 }

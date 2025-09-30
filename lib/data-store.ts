@@ -32,9 +32,9 @@ export interface HardwareAsset {
   created_at: string;
   updated_at: string;
 }
-export interface AssetFormData {
-  id?: string;
-  asset_tag?: string;
+
+export type AssetFormData = {
+  asset_tag: string;
   type?: string;
   manufacturer?: string;
   model?: string;
@@ -43,10 +43,11 @@ export interface AssetFormData {
   purchaseprice?: number | null;
   supplier?: string;
   warrantyexpiry?: string;
-  assigneduser?: string;
+  assigneduser?: string; 
   location?: string;
   department?: string;
-  status?: string;
+  status: string | 'available' | 'assigned' | 'maintenance' | 'retired';
+  condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
   operatingsystem?: string;
   processor?: string;
   memory?: string;
@@ -54,13 +55,14 @@ export interface AssetFormData {
   hostname?: string;
   ipaddress?: string;
   macaddress?: string;
-  patchstatus: string;
+  patchstatus?: 'up-to-date' | 'needs-review' | 'update-pending';
   lastpatch_check?: string;
   isloanable?: boolean;
-  condition?: string;
   description?: string;
   notes?: string;
-}
+  id?: string;
+};
+
 export interface SoftwareFormData {
   id?: string;
   software_name: string;
@@ -104,6 +106,8 @@ export interface SoftwareLicense {
   updatedAt: string;
 }
 
+
+
 export interface User {
   id: string;
   firstName: string;
@@ -113,19 +117,20 @@ export interface User {
   department: string;
   role: string;
   location: string;
-  employeeId: string;
+  employee_id: string;
   manager: string;
-  startDate: string;
+  start_date: string;
   status: 'active' | 'inactive' | 'suspended';
   assetsCount: number;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface BorrowRecord {
   id: string;
-  assetId: string;
+  asset_tag: string;
   borrowerId: string;
+  borrowername?: string;
   checkout_date: string;
   due_date: string;
   checkin_date?: string;
@@ -134,6 +139,19 @@ export interface BorrowRecord {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  
+}
+
+export interface CheckedOutAsset {
+  id: string;     
+  asset_tag: string;
+  name: string;
+  borrowername: string;
+  department: string;
+  checkout_date: string;
+  due_date: string;
+  status: string;
+  purpose?: string;
 }
 
 export interface PatchRecord {
@@ -284,8 +302,8 @@ export const userService = {
       ...data,
       id: generateId('USR'),
       assetsCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     users.push(user);
     return user;
@@ -298,7 +316,7 @@ export const userService = {
     users[index] = {
       ...users[index],
       ...data,
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     return users[index];
   },
@@ -319,10 +337,10 @@ export const borrowService = {
   getById: (id: string): BorrowRecord | undefined => 
     borrowRecords.find(record => record.id === id),
   
-  checkout: (assetId: string, borrowerId: string, due_date: string, purpose: string, notes: string): BorrowRecord => {
+  checkout: (asset_tag: string, borrowerId: string, due_date: string, purpose: string, notes: string): BorrowRecord => {
     const record: BorrowRecord = {
       id: generateId('BOR'),
-      assetId,
+      asset_tag,
       borrowerId,
       checkout_date: new Date().toISOString().split('T')[0],
       due_date,
@@ -335,7 +353,7 @@ export const borrowService = {
     borrowRecords.push(record);
     
     // Update asset status
-    hardwareService.update(assetId, { status: 'in-use', assigneduser: borrowerId });
+    hardwareService.update(asset_tag, { status: 'in-use', assigneduser: borrowerId });
     
     return record;
   },
@@ -352,7 +370,7 @@ export const borrowService = {
     };
     
     // Update asset status
-    hardwareService.update(borrowRecords[index].assetId, { status: 'in-stock', assigneduser: '' });
+    hardwareService.update(borrowRecords[index].asset_tag, { status: 'in-stock', assigneduser: '' });
     
     return borrowRecords[index];
   },

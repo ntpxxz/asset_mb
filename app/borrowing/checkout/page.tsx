@@ -57,9 +57,15 @@ function CheckoutAssetPageInner() {
     }
     setSubmitting(true);
     setSubmitError(null);
-  
-    const tid = toast.loading("Processing checkout...");
-  
+
+    const tid = toast.loading("Processing check-out...", {
+      description: "Saving return details…",
+      className:
+        "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
+      duration: 1000, 
+    });
+    
+    let finished = false; 
     try {
       const res = await fetch("/api/borrowing", {
         method: "POST",
@@ -81,20 +87,30 @@ function CheckoutAssetPageInner() {
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || (res.status === 409 ? "This asset is already checked out." : `Checkout failed (${res.status})`));
       }
-  
-      toast.success("Checkout complete", {
-        id: tid,
+      toast.success("Check-out complete", {
+        id: tid, // อัปเดตแทนตัว loading
         description: `Asset ${formData.asset_tag} has been checked out.`,
-        duration: 2500,
+        icon: "✅",
+        className:
+          "rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(16,185,129,.25)" },
+        duration: 2000,
       });
-  
-      setTimeout(() => router.push("/borrowing"), 50);
+      finished = true;
+      setTimeout(() => router.push("/borrowing"), 2200);
     } catch (err: any) {
-      toast.error("Checkout failed", {
-        id: tid,
+
+      toast.error("Check-out failed", {
+        id: tid, // อัปเดตแทนตัว loading เช่นกัน
         description: err?.message ?? "Please try again.",
-        duration: 3500,
+        icon: "⚠️",
+        className:
+          "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(244,63,94,.25)" },
+        duration: 4000,
       });
+      finished = true;
+      
       setSubmitError(err instanceof Error ? err.message : "Checkout failed.");
     } finally {
       setSubmitting(false);
@@ -190,7 +206,7 @@ const assetTagFromUrl = useMemo(
           Back
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Asset Checkout</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Asset Check-out</h1>
           <p className="text-gray-600">Check out an asset to a user</p>
         </div>
       </div>
@@ -199,7 +215,7 @@ const assetTagFromUrl = useMemo(
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Activity className="h-5 w-5" />
-            <span>Checkout Information</span>
+            <span>Check-out Information</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -234,7 +250,7 @@ const assetTagFromUrl = useMemo(
                 <Label htmlFor="borrowername">Borrower Name *</Label>
                 <Input
                   id="borrowername"
-                  placeholder="ชื่อ-นามสกุลผู้ยืม"
+                  placeholder="Firstname Lastname"
                   value={formData.borrowername}
                   onChange={(e) => setFormData((p) => ({ ...p, borrowername: e.target.value }))}
                   required
@@ -254,7 +270,7 @@ const assetTagFromUrl = useMemo(
 
             {/* Checkout Details */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Checkout Details</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Check-out Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="checkout_date">Checkout Date *</Label>

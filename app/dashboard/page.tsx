@@ -126,7 +126,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Key Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className={loading ? 'opacity-50' : ''}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -149,7 +149,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className={loading ? 'opacity-50' : ''}>
+        {/* <Card className={loading ? 'opacity-50' : ''}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -159,7 +159,7 @@ export default function DashboardPage() {
               <Users className="h-6 w-6 text-purple-600" />
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
         <Card className={loading ? 'opacity-50' : ''}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -354,18 +354,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card className={loading ? 'opacity-50' : ''}>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-gray-600" />
-            <span>Recent Activity</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-500">Coming soon…</p>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }

@@ -342,7 +342,7 @@ export default function AssetsPage() {
                           <TableCell>{asset.assigneduser || "-"}</TableCell>
                           <TableCell>{asset.location || "-"}</TableCell>
                           <TableCell className="font-medium">
-                            {asset.purchaseprice ? `$${asset.purchaseprice}` : "-"}
+                            {asset.purchaseprice ? `${asset.purchaseprice}฿` : "-"}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">

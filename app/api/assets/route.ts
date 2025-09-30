@@ -59,7 +59,6 @@ function cleanCreateData(data: any) {
 export async function GET(request: NextRequest) {
   try {
     console.log('GET /api/assets - Loading all assets');
-
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const type = searchParams.get('type');

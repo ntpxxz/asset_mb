@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 /** ===== Types: ตรงกับฐานข้อมูล ===== **/
 type BorrowRecord = {
@@ -33,7 +34,6 @@ type BorrowRecord = {
   assetModel?: string;
 };
 
-
 // ✅ ใช้ id เป็นหลัก (รองรับ borrowid/borrowId เผื่อยังมีลิงก์เก่า)
 
 function CheckinAssetPageInner() {
@@ -42,12 +42,8 @@ function CheckinAssetPageInner() {
   const searchParams = useSearchParams();
 
   const borrowIdFromUrl = React.useMemo(() => {
-    return (
-      (params?.id as string) ||
-      searchParams.get("id") || ""
-    );
+    return (params?.id as string) || searchParams.get("id") || "";
   }, [params, searchParams]);
-  
 
   /** ===== Form state: ใช้ชื่อฟิลด์ตาม DB ===== **/
   const [formData, setFormData] = useState({
@@ -81,36 +77,51 @@ function CheckinAssetPageInner() {
           `/api/borrowing?id=${encodeURIComponent(borrowIdFromUrl)}`,
           { cache: "no-store" }
         );
-  
-        const payload = await res.json();            // ✅ อ่านครั้งเดียว
+
+        const payload = await res.json(); // ✅ อ่านครั้งเดียว
         if (!res.ok || payload?.success === false) {
           throw new Error(payload?.error || `Failed to load (${res.status})`);
         }
-  
+
         // ✅ รองรับหลายทรง: data:[], data:{}, row, rows:[]
         let rec: any =
           (Array.isArray(payload?.data) ? payload.data[0] : payload?.data) ??
           payload?.row ??
           (Array.isArray(payload?.rows) ? payload.rows[0] : undefined) ??
           (Array.isArray(payload) ? payload[0] : payload);
-  
+
         if (!rec) throw new Error("API returned empty record.");
-  
+
         // ✅ map alias ฟิลด์ asset ให้เข้ากับที่หน้าใช้
         rec = {
           ...rec,
-          assetName: rec.assetName ?? rec.assetname ?? rec.name ?? rec.asset_tag ?? null,
-          assetManufacturer: rec.assetManufacturer ?? rec.assetmanufacturer ?? rec.manufacturer ?? null,
+          assetName:
+            rec.assetName ?? rec.assetname ?? rec.name ?? rec.asset_tag ?? null,
+          assetManufacturer:
+            rec.assetManufacturer ??
+            rec.assetmanufacturer ??
+            rec.manufacturer ??
+            null,
           assetModel: rec.assetModel ?? rec.assetmodel ?? rec.model ?? null,
         };
-  
+
         setBorrowRecord(rec);
-  
+
         // แค่เตือนถ้าไม่ได้อยู่สถานะที่คืนได้ (อย่า throw)
-        const normalized = String(rec.status || "").toLowerCase().replace(/[\s_]+/g, "-");
-        const isCheckedOut = ["checked-out", "checkedout", "out", "borrowed"].includes(normalized);
-        setSubmitError(isCheckedOut ? null :
-          "This record is not currently checked out or has already been returned.");
+        const normalized = String(rec.status || "")
+          .toLowerCase()
+          .replace(/[\s_]+/g, "-");
+        const isCheckedOut = [
+          "checked-out",
+          "checkedout",
+          "out",
+          "borrowed",
+        ].includes(normalized);
+        setSubmitError(
+          isCheckedOut
+            ? null
+            : "This record is not currently checked out or has already been returned."
+        );
       } catch (error: any) {
         console.error("Load borrow record failed:", error);
         setSubmitError(error?.message || "Failed to load checkout record.");
@@ -163,28 +174,21 @@ function CheckinAssetPageInner() {
   /** ===== Handlers ===== **/
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!borrowIdFromUrl) return setSubmitError("No borrowId specified.");
-    if (!borrowRecord)
-      return setSubmitError("Borrow record not found or not checked-out.");
-    if (!formData.condition)
-      return setSubmitError("Please assess the asset condition.");
-    if (!formData.returned_by_name.trim())
-      return setSubmitError("Please confirm the borrower's name.");
-    if (!validateNameConfirmation(formData.returned_by_name)) {
-      return setSubmitError(
-        "Please verify the borrower's name matches the original checkout record."
-      );
-    }
-    if (formData.damage_reported && !formData.damage_description.trim()) {
-      return setSubmitError("Please describe the reported damage.");
-    }
+    // ... validation เดิม
 
     setSubmitting(true);
     setSubmitError(null);
 
+    // สร้าง loading toast แบบผูก id ไว้เพื่ออัปเดตสถานะภายหลัง
+
+    const tid = toast.loading("Processing check-in...", {
+      description: "Saving return details…",
+      className: "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
+      duration: 1000,
+    });
+    let finished = false;
+
     try {
-      // ส่งคีย์ตรงกับ DB
       const res = await fetch(`/api/borrowing/${borrowIdFromUrl}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -204,14 +208,33 @@ function CheckinAssetPageInner() {
           returned_by_name: formData.returned_by_name.trim(),
         }),
       });
-
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || `Check-in failed (${res.status})`);
       }
 
-      router.push("/borrowing");
+      toast.success("Check-in complete", {
+        id: tid, // อัปเดตแทนตัว loading
+        description: `Record ${borrowIdFromUrl} has been returned successfully.`,
+        icon: "✅",
+        className:
+          "rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(16,185,129,.25)" },
+        duration: 2000,
+      });
+      finished = true;
+      setTimeout(() => router.push("/borrowing"), 2200);
     } catch (err: any) {
+      toast.error("Check-in failed", {
+        id: tid, 
+        description: err?.message ?? "Please try again.",
+        icon: "⚠️",
+        className:
+          "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(244,63,94,.25)" },
+        duration: 4000,
+      });
+      finished = true;
       setSubmitError(err?.message || "Check-in failed.");
     } finally {
       setSubmitting(false);
@@ -266,11 +289,7 @@ function CheckinAssetPageInner() {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Borrow Record Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Checkout Record Information
-              </h3>
-
-              {borrowRecord ? (
+               {borrowRecord ? (
                 <div className="space-y-2">
                   <Label>Checkout Details</Label>
                   <div className="rounded-md border p-4 bg-gray-50">

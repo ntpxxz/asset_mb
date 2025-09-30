@@ -56,7 +56,7 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <div className="relative">
+          {/*<div className="relative">
             <Button variant="ghost" size="sm" className="p-2">
               <Bell className="h-5 w-5" />
             </Button>
@@ -66,7 +66,7 @@ export function Header() {
             >
               3
             </Badge>
-          </div>
+          </div>*/}
         </div>
       </div>
     </header>
