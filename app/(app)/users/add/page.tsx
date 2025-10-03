@@ -19,8 +19,8 @@ import { toast } from 'sonner';
 export default function AddUserPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    firstname: '',
+    lastname: '',
     email: '',
     password: '',
     phone: '',
@@ -88,22 +88,22 @@ export default function AddUserPage() {
               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="first_name">First Name *</Label>
+                  <Label htmlFor="firstname">First Name *</Label>
                   <Input
-                    id="first_name"
+                    id="firstname"
                     placeholder="John"
-                    value={formData.first_name}
-                    onChange={(e) => handleInputChange('first_name', e.target.value)}
+                    value={formData.firstname}
+                    onChange={(e) => handleInputChange('firstname', e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="last_name">Last Name *</Label>
+                  <Label htmlFor="lastname">Last Name *</Label>
                   <Input
-                    id="last_name"
+                    id="lastname"
                     placeholder="Smith"
-                    value={formData.last_name}
-                    onChange={(e) => handleInputChange('last_name', e.target.value)}
+                    value={formData.lastname}
+                    onChange={(e) => handleInputChange('lastname', e.target.value)}
                     required
                   />
                 </div>

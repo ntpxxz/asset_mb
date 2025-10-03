@@ -5,8 +5,8 @@ import bcrypt from 'bcrypt';
 
 // Zod schema for validation using snake_case
 const userSchema = z.object({
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
+  firstname: z.string().min(1, "First name is required"),
+  lastname: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   phone: z.string().optional(),
@@ -26,12 +26,12 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const department = searchParams.get('department');
 
-  let query = 'SELECT id, first_name, last_name, email, phone, department, role, location, employee_id, status, assets_count FROM users'; // Exclude password from general GET requests
+  let query = 'SELECT id, firstname, lastname, email, phone, department, role, location, employee_id, status, assets_count FROM users'; // Exclude password from general GET requests
   const queryParams: any[] = [];
   const whereClauses: string[] = [];
 
   if (search) {
-    whereClauses.push(`(first_name ILIKE $${queryParams.length + 1} OR last_name ILIKE $${queryParams.length + 1} OR email ILIKE $${queryParams.length + 1})`);
+    whereClauses.push(`(firstname ILIKE $${queryParams.length + 1} OR lastname ILIKE $${queryParams.length + 1} OR email ILIKE $${queryParams.length + 1})`);
     queryParams.push(`%${search}%`);
   }
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
     
     const { 
-      first_name, last_name, email, password, phone, department, role, location, 
+      firstname, lastname, email, password, phone, department, role, location, 
       employee_id, manager, start_date, status 
     } = validation.data;
 
@@ -90,12 +90,12 @@ export async function POST(request: NextRequest) {
     const updated_at = new Date().toISOString();
 
     const query = `
-      INSERT INTO users (id, first_name, last_name, email, password, phone, department, role, location, employee_id, manager, start_date, status, assets_count, created_at, updated_at)
+      INSERT INTO users (id, firstname, lastname, email, password, phone, department, role, location, employee_id, manager, start_date, status, assets_count, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-      RETURNING id, first_name, last_name, email, role, created_at;
+      RETURNING id, firstname, lastname, email, role, created_at;
     `;
     const queryParams = [
-      id, first_name, last_name, email, hashedPassword, phone, department, role, location, 
+      id, firstname, lastname, email, hashedPassword, phone, department, role, location, 
       employee_id, manager, start_date, status, assets_count, created_at, updated_at
     ];
     

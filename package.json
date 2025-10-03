@@ -2,15 +2,14 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
-    "scripts": {
-      "dev": "next dev -p 3091",
-      "build": "next build",
-      "start": "next start -p 3092",
-      "lint": "next lint",
-      "db:seed:dev": "psql $DATABASE_URL -f database/seed_development.sql",
-      "dev:setup": "npm run db:migrate && npm run db:seed:dev && npm run dev"
-    },
-
+  "scripts": {
+    "dev": "next dev -p 3091",
+    "build": "next build",
+    "start": "next start -p 3092",
+    "lint": "next lint",
+    "db:seed:dev": "psql $DATABASE_URL -f database/seed_development.sql",
+    "dev:setup": "npm run db:migrate && npm run db:seed:dev && npm run dev"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@next/swc-wasm-nodejs": "13.5.1",
@@ -46,6 +45,7 @@
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "10.4.15",
+    "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -74,6 +74,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "cross-env": "^10.0.0"
   }
 }

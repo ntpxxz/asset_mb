@@ -106,8 +106,6 @@ export interface SoftwareLicense {
   updatedAt: string;
 }
 
-
-
 export interface User {
   id: string;
   firstname: string;

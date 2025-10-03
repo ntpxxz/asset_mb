@@ -4,8 +4,8 @@ import { z } from 'zod';
 
 // Zod schema for validation (all fields optional for updates, no password)
 const userUpdateSchema = z.object({
-  first_name: z.string().min(1, "First name is required").optional(),
-  last_name: z.string().min(1, "Last name is required").optional(),
+  firstname: z.string().min(1, "First name is required").optional(),
+  lastname: z.string().min(1, "Last name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().optional(),
   department: z.string().optional(),
@@ -26,7 +26,7 @@ export async function GET(
   try {
     const { id } = params;
     // Exclude password from the SELECT statement for security
-    const result = await pool.query('SELECT id, first_name, last_name, email, phone, department, role, location, employee_id, manager, start_date, status, assets_count FROM users WHERE id = $1', [id]);
+    const result = await pool.query('SELECT id, firstname, lastname, email, phone, department, role, location, employee_id, manager, start_date, status, assets_count FROM users WHERE id = $1', [id]);
     
     if (result.rowCount === 0) {
       return NextResponse.json(

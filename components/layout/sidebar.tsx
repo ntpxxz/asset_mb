@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { 
@@ -20,7 +20,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
-import router, { useRouter } from 'next/router';
+
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -28,7 +28,7 @@ const navigation = [
   { name: 'Software', href: '/software', icon: Shield },
   { name: 'Borrowing', href: '/borrowing', icon: Activity },
   //{ name: 'Patches', href: '/patches', icon: RefreshCw },
-  //{ name: 'Users', href: '/users', icon: Users },
+  { name: 'Users', href: '/users', icon: Users },
   //{ name: 'Reports', href: '/reports', icon: BarChart3 },
   //{ name: 'Settings', href: '/settings', icon: Settings, classname:'hidden'},
   //{ name: 'Help', href: '/help', icon: HelpCircle },

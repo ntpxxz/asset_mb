@@ -141,7 +141,7 @@ export default function UserViewPage() {
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12">
               <AvatarFallback className="text-lg">
-                {user.firstname[0]}{user.lastname[0]}
+                {user.firstname}{user.lastname}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -162,7 +162,7 @@ export default function UserViewPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Main Information */}
         <div className="lg:col-span-2 space-y-6">
           {/* Personal Information */}
@@ -283,85 +283,6 @@ export default function UserViewPage() {
                   <p className="text-gray-500">No assets assigned</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Mail className="h-5 w-5" />
-                <span>Contact</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Mail className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{user.email}</p>
-                </div>
-              </div>
-              
-              {user.phone && (
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Phone</p>
-                    <p className="font-medium">{user.phone}</p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center space-x-3">
-                <MapPin className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Location</p>
-                  <p className="font-medium">{user.location}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Assets Assigned</span>
-                <Badge variant="outline">{userAssets.length}</Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Account Status</span>
-                {getStatusBadge(user.status)}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Member Since</span>
-                <span className="text-sm">{user.start_date || 'Unknown'}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Activity className="h-5 w-5" />
-                <span>Recent Activity</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-4">
-                <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No recent activity</p>
-              </div>
             </CardContent>
           </Card>
         </div>

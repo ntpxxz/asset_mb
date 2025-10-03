@@ -262,8 +262,8 @@ export default function UsersPage() {
                       <div className="flex items-center space-x-3">
                         <Avatar>
                           <AvatarFallback>
-                            {user.firstname[0]}
-                            {user.lastname[0]}
+                            {user.firstname}
+                            {user.lastname}
                           </AvatarFallback>
                         </Avatar>
                         <div>
