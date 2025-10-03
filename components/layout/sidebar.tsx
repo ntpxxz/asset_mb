@@ -16,8 +16,11 @@ import {
   Settings, 
   HelpCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
+import { toast } from 'sonner';
+import router, { useRouter } from 'next/router';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -34,7 +37,22 @@ const navigation = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-
+  const router = useRouter();
+  
+  const handleLogout = async () => {
+    const tid = toast.loading('Logging out...');
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' });
+      if (res.ok) {
+        toast.success('Logged out successfully', { id: tid });
+        router.push('/login');
+      } else {
+        throw new Error('Failed to logout');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'An error occurred', { id: tid });
+    }
+  }
   return (
     <div className={cn(
       "bg-white border-r border-gray-200 flex flex-col transition-all duration-300",
@@ -86,7 +104,20 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
+    
+      {/* Footer with Logout Button */}
+      <div className="p-4 border-t border-gray-200">
+         <div 
+            onClick={handleLogout}
+            className={cn(
+              "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            )}
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && <span className="font-medium">Logout</span>}
+          </div>
+      </div>
+
       {/*{!collapsed && (
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
@@ -98,6 +129,7 @@ export function Sidebar() {
           </div>
         </div>
       )}*/}
+      
     </div>
   );
 }

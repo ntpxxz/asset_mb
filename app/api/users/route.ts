@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { z } from 'zod';
+import bcrypt from 'bcrypt';
 
-// Zod schema for validation
+// Zod schema for validation using snake_case
 const userSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   phone: z.string().optional(),
   department: z.string().optional(),
-  role: z.string().optional(),
+  role: z.enum(['user', 'admin']).default('user'),
   location: z.string().optional(),
-  employeeId: z.string().optional(),
+  employee_id: z.string().optional(),
   manager: z.string().optional(),
-  startDate: z.string().optional(), // Assuming date is sent as string
-  status: z.enum(['active', 'inactive', 'on-leave']),
+  start_date: z.string().optional(), // Assuming date is sent as string
+  status: z.enum(['active', 'inactive', 'suspended']),
 });
-
 
 // GET /api/users - Get all users
 export async function GET(request: NextRequest) {
@@ -25,12 +26,12 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const department = searchParams.get('department');
 
-  let query = 'SELECT * FROM users';
+  let query = 'SELECT id, first_name, last_name, email, phone, department, role, location, employee_id, status, assets_count FROM users'; // Exclude password from general GET requests
   const queryParams: any[] = [];
   const whereClauses: string[] = [];
 
   if (search) {
-    whereClauses.push(`("firstName" ILIKE $${queryParams.length + 1} OR "lastName" ILIKE $${queryParams.length + 1} OR email ILIKE $${queryParams.length + 1})`);
+    whereClauses.push(`(first_name ILIKE $${queryParams.length + 1} OR last_name ILIKE $${queryParams.length + 1} OR email ILIKE $${queryParams.length + 1})`);
     queryParams.push(`%${search}%`);
   }
 
@@ -78,23 +79,24 @@ export async function POST(request: NextRequest) {
     }
     
     const { 
-      firstName, lastName, email, phone, department, role, location, 
-      employeeId, manager, startDate, status 
+      first_name, last_name, email, password, phone, department, role, location, 
+      employee_id, manager, start_date, status 
     } = validation.data;
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const id = `USR-${Date.now()}`;
-    const assetsCount = 0;
-    const createdAt = new Date().toISOString();
-    const updatedAt = new Date().toISOString();
+    const assets_count = 0;
+    const created_at = new Date().toISOString();
+    const updated_at = new Date().toISOString();
 
     const query = `
-      INSERT INTO users (id, "firstName", "lastName", email, phone, department, role, location, "employeeId", manager, "startDate", status, "assetsCount", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      RETURNING *;
+      INSERT INTO users (id, first_name, last_name, email, password, phone, department, role, location, employee_id, manager, start_date, status, assets_count, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      RETURNING id, first_name, last_name, email, role, created_at;
     `;
     const queryParams = [
-      id, firstName, lastName, email, phone, department, role, location, 
-      employeeId, manager, startDate, status, assetsCount, createdAt, updatedAt
+      id, first_name, last_name, email, hashedPassword, phone, department, role, location, 
+      employee_id, manager, start_date, status, assets_count, created_at, updated_at
     ];
     
     const result = await pool.query(query, queryParams);
@@ -106,8 +108,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error:unknown) {
     console.error('Failed to create user:', error);
-    // Check for unique constraint violation
-    if (error) { // unique_violation
+    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') { 
         return NextResponse.json(
             { success: false, error: 'User with this email or employee ID already exists.' },
             { status: 409 }

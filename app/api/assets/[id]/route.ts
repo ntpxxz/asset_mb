@@ -37,7 +37,6 @@ const enums = {
   patchstatus: ["up-to-date", "needs-review", "update-pending"] as const,
 };
 
-// 👉 แปลง purchaseprice เป็น number|null อัตโนมัติ
 const price = z.preprocess((v) => {
   if (v === "" || v == null) return null;
   const n = typeof v === "number" ? v : Number(String(v).replace(/,/g, ""));
@@ -67,7 +66,7 @@ const assetUpdateSchema = z
     serialnumber: z.string().nullable().optional(),
     manufacturer: z.string().nullable().optional(),
     model: z.string().nullable().optional(),
-    purchaseprice: price.optional(), // ⬅️ ใช้ตัวบน
+    purchaseprice: price.optional(),
     supplier: z.string().nullable().optional(),
 
     type: z.enum(enums.type).optional(),
@@ -101,14 +100,13 @@ const assetUpdateSchema = z
 /** GET /api/assets/[id] */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const params = await props.params;
+    const { id } = params;
     console.log('GET /api/assets/[id] - Loading asset with ID:', id);
 
-
-    // Try different ID fields
     let result = await pool.query('SELECT * FROM assets WHERE id = $1', [id]);
 
     if (result.rowCount === 0) {
@@ -133,15 +131,12 @@ export async function GET(
 
     const asset = result.rows[0];
     
-    // Clean up the asset data - no more field mapping needed since is_loanale is removed
     const cleanAsset = {
       ...asset,
-      // Set default value for isloanable since it's not in DB anymore
-      isloanable: false, // Default value since field is removed from DB
+      isloanable: false,
     };
 
-    // Remove any unwanted fields
-    delete cleanAsset.delete_at; // Don't send soft delete field to frontend
+    delete cleanAsset.delete_at;
 
     console.log('=== ASSET DATA DEBUG ===');
     console.log('Original asset data:', asset);
@@ -179,12 +174,13 @@ export async function GET(
 /** PUT /api/assets/[id] */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   const { id } = params;
+  const body = await req.json();
   const client = await pool.connect();
   try {
-    const body = await req.json();
     const parsed = assetUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return bad(parsed.error.errors.map((e) => e.message).join("; "), 400);
@@ -192,7 +188,6 @@ export async function PUT(
 
     await client.query("BEGIN");
 
-    // current for duplicate check
     const cur = await client.query(
       "SELECT asset_tag, serialnumber FROM assets WHERE id = $1",
       [id]
@@ -206,7 +201,6 @@ export async function PUT(
       serialnumber: string | null;
     };
 
-    // sanitize
     const v = parsed.data;
     const updates: Record<string, any> = {
       asset_tag: undefIfEmpty(trim(v.asset_tag)),
@@ -233,17 +227,14 @@ export async function PUT(
       warrantyexpiry: toISOorNull(v.warrantyexpiry),
       lastpatch_check: toISOorNull(v.lastpatch_check),
       
-      assigneduser:  v.assigneduser === "-" ? null : undefIfEmpty(trim(v.assigneduser)),
+      assigneduser: v.assigneduser === "-" ? null : undefIfEmpty(trim(v.assigneduser)),
       isloanable: typeof v.isloanable === "boolean" ? v.isloanable : undefined,
       condition: undefIfEmpty(trim(v.condition)),
     };
 
-    // duplicate checks (เฉพาะเมื่อเปลี่ยนจริง)
-    // ===== Duplicate checks (เช็คเฉพาะเมื่อมีการเปลี่ยนจริง) =====
     const has = (o: Record<string, any>, k: string) =>
       Object.prototype.hasOwnProperty.call(o, k);
 
-    // util: เช็คว่ามีเรคคอร์ดอื่นที่ค่าชนกันหรือไม่ (เร็วและพิมพ์เล็ก/ใหญ่ไม่ต่างกัน)
     const exists = async (sql: string, params: any[]) => {
       const { rows } = await client.query<{ exists: boolean }>(
         `SELECT EXISTS (${sql}) AS exists`,
@@ -252,7 +243,6 @@ export async function PUT(
       return !!rows?.[0]?.exists;
     };
 
-    // asset_tag
     if (
       has(updates, "asset_tag") &&
       (updates.asset_tag ?? null) !== (current.asset_tag ?? null)
@@ -269,7 +259,6 @@ export async function PUT(
       }
     }
 
-    // serialnumber
     if (
       has(updates, "serialnumber") &&
       (updates.serialnumber ?? null) !== (current.serialnumber ?? null)
@@ -286,7 +275,6 @@ export async function PUT(
       }
     }
 
-    // build UPDATE
     const sets: string[] = [];
     const vals: any[] = [];
     let i = 1;
@@ -304,9 +292,7 @@ export async function PUT(
     sets.push(`updated_at = NOW()`);
     vals.push(id);
 
-    const sql = `UPDATE assets SET ${sets.join(
-      ", "
-    )} WHERE id = $${i} RETURNING *`;
+    const sql = `UPDATE assets SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`;
     const up = await client.query(sql, vals);
 
     await client.query("COMMIT");
@@ -326,14 +312,16 @@ export async function PUT(
 /** DELETE /api/assets/[id] */
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
+  const { id } = params;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const r = await client.query(
       "DELETE FROM assets WHERE id = $1 RETURNING id",
-      [params.id]
+      [id]
     );
     if (r.rowCount === 0) {
       await client.query("ROLLBACK");

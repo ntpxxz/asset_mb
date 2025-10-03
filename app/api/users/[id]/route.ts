@@ -2,30 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { z } from 'zod';
 
-// Zod schema for validation (all fields optional for updates)
+// Zod schema for validation (all fields optional for updates, no password)
 const userUpdateSchema = z.object({
-  firstName: z.string().min(1, "First name is required").optional(),
-  lastName: z.string().min(1, "Last name is required").optional(),
+  first_name: z.string().min(1, "First name is required").optional(),
+  last_name: z.string().min(1, "Last name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().optional(),
   department: z.string().optional(),
   role: z.string().optional(),
   location: z.string().optional(),
-  employeeId: z.string().optional(),
+  employee_id: z.string().optional(),
   manager: z.string().optional(),
-  startDate: z.string().optional(),
+  start_date: z.string().optional(),
   status: z.enum(['active', 'inactive', 'on-leave']).optional(),
-  updatedAt: z.string().datetime().optional(), 
+  updated_at: z.string().datetime().optional(), 
 }).partial();
 
 // GET /api/users/[id] - Get single user
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const { id } = params;
+    // Exclude password from the SELECT statement for security
+    const result = await pool.query('SELECT id, first_name, last_name, email, phone, department, role, location, employee_id, manager, start_date, status, assets_count FROM users WHERE id = $1', [id]);
     
     if (result.rowCount === 0) {
       return NextResponse.json(
@@ -39,7 +40,7 @@ export async function GET(
       data: result.rows[0]
     });
   } catch (error: any) {
-    const { id } = await params;
+    const { id } = params;
     console.error(`Failed to fetch user ${id}:`, error);
     return NextResponse.json(
       { success: false, error: `Failed to fetch user ${id}`, details: error.message },
@@ -51,10 +52,10 @@ export async function GET(
 // PUT /api/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
     const validation = userUpdateSchema.safeParse(body);
 
@@ -73,20 +74,13 @@ export async function PUT(
         );
     }
 
-    fields.updatedAt = new Date().toISOString(); // ใช้ ISO string แทน toString()
+    fields.updated_at = new Date().toISOString(); 
 
-    // แก้ไข: เพิ่ม $ หน้า parameter placeholders
-    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
+    const setClauses = Object.keys(fields).map((key, index) => `${key} = $${index + 1}`).join(', ');
     const queryParams = Object.values(fields);
     queryParams.push(id);
     
-    // แก้ไข: เพิ่ม $ หน้า parameter ตัวสุดท้าย
     const query = `UPDATE users SET ${setClauses} WHERE id = $${queryParams.length} RETURNING *;`;
-    
-    // Debug logging
-    console.log('Update query:', query);
-    console.log('Query params:', queryParams);
-    console.log('Fields to update:', fields);
     
     const result = await pool.query(query, queryParams);
 
@@ -96,24 +90,20 @@ export async function PUT(
             { status: 404 }
         );
     }
+    
+    const updatedUser = result.rows[0];
+    delete updatedUser.password; // Remove password from the returned object
 
     return NextResponse.json({
       success: true,
-      data: result.rows[0],
+      data: updatedUser,
       message: 'User updated successfully'
     });
   } catch (error: any) {
-    const { id } = await params;
+    const { id } = params;
     console.error(`Failed to update user ${id}:`, error);
-    console.error('Error details:', {
-      code: error.code,
-      message: error.message,
-      detail: error.detail,
-      stack: error.stack
-    });
     
-    // Check for PostgreSQL unique constraint violation
-    if (error.code === '23505') { // unique_violation
+    if (error.code === '23505') { 
         return NextResponse.json(
             { success: false, error: 'User with this email or employee ID already exists.' },
             { status: 409 }
@@ -130,11 +120,11 @@ export async function PUT(
 // DELETE /api/users/[id] - Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *;', [id]);
+    const { id } = params;
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id;', [id]);
     
     if (result.rowCount === 0) {
       return NextResponse.json(
@@ -149,7 +139,7 @@ export async function DELETE(
       message: 'User deleted successfully'
     });
   } catch (error: any) {
-    const { id } = await params;
+    const { id } = params;
     console.error(`Failed to delete user ${id}:`, error);
     return NextResponse.json(
       { success: false, error: `Failed to delete user ${id}`, details: error.message },

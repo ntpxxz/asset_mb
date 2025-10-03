@@ -14,42 +14,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { userService } from '@/lib/data-store';
+import { toast } from 'sonner';
 
 export default function AddUserPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstname: '',
-    lastname: '',
+    first_name: '',
+    last_name: '',
     email: '',
+    password: '',
     phone: '',
     department: '',
-    role: '',
+    role: 'user', // Default role
     location: '',
     employee_id: '',
     manager: '',
     start_date: '',
+    status: 'active',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const tid = toast.loading('Creating user...');
     
-    // Create the user using the data service
-    userService.create({
-      firstname: formData.firstname,
-      lastname: formData.lastname,
-      email: formData.email,
-      phone: formData.phone,
-      department: formData.department,
-      role: formData.role,
-      location: formData.location,
-      employee_id: formData.employee_id,
-      manager: formData.manager,
-      start_date: formData.start_date,
-      status: 'active',
-    });
-    
-    router.push('/users');
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      toast.success('User created successfully', { id: tid });
+      router.push('/users');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'An error occurred', { id: tid });
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -84,22 +88,22 @@ export default function AddUserPage() {
               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="first-name">First Name *</Label>
+                  <Label htmlFor="first_name">First Name *</Label>
                   <Input
-                    id="first-name"
+                    id="first_name"
                     placeholder="John"
-                    value={formData.firstname}
-                    onChange={(e) => handleInputChange('firstname', e.target.value)}
+                    value={formData.first_name}
+                    onChange={(e) => handleInputChange('first_name', e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="last-name">Last Name *</Label>
+                  <Label htmlFor="last_name">Last Name *</Label>
                   <Input
-                    id="last-name"
+                    id="last_name"
                     placeholder="Smith"
-                    value={formData.lastname}
-                    onChange={(e) => handleInputChange('lastname', e.target.value)}
+                    value={formData.last_name}
+                    onChange={(e) => handleInputChange('last_name', e.target.value)}
                     required
                   />
                 </div>
@@ -118,6 +122,19 @@ export default function AddUserPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="********"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+               <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
                     id="phone"
@@ -126,33 +143,35 @@ export default function AddUserPage() {
                     onChange={(e) => handleInputChange('phone', e.target.value)}
                   />
                 </div>
-              </div>
             </div>
 
             {/* Work Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Work Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                  <Label htmlFor="role">Role *</Label>
+                  <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="employee-id">Employee ID</Label>
+                  <Label htmlFor="employee_id">Employee ID</Label>
                   <Input
-                    id="employee-id"
+                    id="employee_id"
                     placeholder="EMP-001"
                     value={formData.employee_id}
                     onChange={(e) => handleInputChange('employee_id', e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="start-date">Start Date</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => handleInputChange('start_date', e.target.value)}
-                  />
-                </div>
-              </div>
-              
+               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="department">Department *</Label>
@@ -161,25 +180,21 @@ export default function AddUserPage() {
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="engineering">Engineering</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="sales">Sales</SelectItem>
-                      <SelectItem value="hr">Human Resources</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="it">Information Technology</SelectItem>
-                      <SelectItem value="operations">Operations</SelectItem>
-                      <SelectItem value="legal">Legal</SelectItem>
+                       <SelectItem value="ENG">ENG</SelectItem>
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="PC/MC">PC/MC</SelectItem>
+                      <SelectItem value="PD">PD</SelectItem>
+                      <SelectItem value="POM">POM</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Job Title *</Label>
+                  <Label htmlFor="start_date">Start Date</Label>
                   <Input
-                    id="role"
-                    placeholder="e.g., Senior Developer"
-                    value={formData.role}
-                    onChange={(e) => handleInputChange('role', e.target.value)}
-                    required
+                    id="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => handleInputChange('start_date', e.target.value)}
                   />
                 </div>
               </div>
@@ -192,11 +207,10 @@ export default function AddUserPage() {
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ny-office">New York Office</SelectItem>
-                      <SelectItem value="chicago-office">Chicago Office</SelectItem>
-                      <SelectItem value="la-office">Los Angeles Office</SelectItem>
-                      <SelectItem value="remote">Remote</SelectItem>
-                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                      <SelectItem value="CR">Clean Room</SelectItem>
+                      <SelectItem value="WR">White Room</SelectItem>                      
+                      <SelectItem value="SPD">Spindle Office</SelectItem>
+                      <SelectItem value="SPD FAC 2">SPD FAC 2</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
