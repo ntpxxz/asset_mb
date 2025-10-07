@@ -116,7 +116,6 @@ export interface User {
   role: string;
   location: string;
   employee_id: string;
-  manager: string;
   start_date: string;
   status: 'active' | 'inactive' | 'suspended';
   assets_count: number;

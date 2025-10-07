@@ -55,11 +55,6 @@ export function TransferAssetForm({ onClose }: TransferAssetFormProps) {
     { id: 'USR-005', name: 'David Brown - HR' },
   ];
 
-  const managers = [
-    { id: 'MGR-001', name: 'Jane Doe - Engineering Manager' },
-    { id: 'MGR-002', name: 'Bob Johnson - IT Director' },
-    { id: 'MGR-003', name: 'Alice Williams - Operations Manager' },
-  ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -167,22 +162,6 @@ export function TransferAssetForm({ onClose }: TransferAssetFormProps) {
                     <SelectItem value="project-assignment">Project Assignment</SelectItem>
                     <SelectItem value="replacement">Equipment Replacement</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="approved-by">Approved By</Label>
-                <Select value={formData.approvedBy} onValueChange={(value) => handleInputChange('approvedBy', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select approving manager" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {managers.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {manager.name}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
               </div>

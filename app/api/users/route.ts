@@ -14,8 +14,7 @@ const userSchema = z.object({
   role: z.enum(['user', 'admin']).default('user'),
   location: z.string().optional(),
   employee_id: z.string().optional(),
-  manager: z.string().optional(),
-  start_date: z.string().optional(), // Assuming date is sent as string
+  start_date: z.string().nullable().optional(), // <-- FIX: Allow null  
   status: z.enum(['active', 'inactive', 'suspended']),
 });
 
@@ -69,7 +68,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validation = userSchema.safeParse(body);
+    const createSchema = userSchema.extend({
+        password: z.string().min(8, "Password must be at least 8 characters"),
+    });
+    const validation = createSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
     
     const { 
       firstname, lastname, email, password, phone, department, role, location, 
-      employee_id, manager, start_date, status 
+      employee_id, start_date, status 
     } = validation.data;
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -90,13 +92,13 @@ export async function POST(request: NextRequest) {
     const updated_at = new Date().toISOString();
 
     const query = `
-      INSERT INTO users (id, firstname, lastname, email, password, phone, department, role, location, employee_id, manager, start_date, status, assets_count, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-      RETURNING id, firstname, lastname, email, role, created_at;
+      INSERT INTO users (id, "firstname", "lastname", email, password, phone, department, role, location, "employee_id", "start_date", status, "assets_count", "created_at", "updated_at")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING id, "firstname", "lastname", email, role, "created_at";
     `;
     const queryParams = [
       id, firstname, lastname, email, hashedPassword, phone, department, role, location, 
-      employee_id, manager, start_date, status, assets_count, created_at, updated_at
+      employee_id, start_date || null, status, assets_count, created_at, updated_at
     ];
     
     const result = await pool.query(query, queryParams);

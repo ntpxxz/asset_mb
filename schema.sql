@@ -10,7 +10,6 @@ CREATE TABLE users (
     role          VARCHAR(255),
     location      VARCHAR(255),
     "employeeId"  VARCHAR(255) UNIQUE,
-    manager       VARCHAR(255),
     "startDate"   DATE,
     status        VARCHAR(50),
     "assetsCount" INT,

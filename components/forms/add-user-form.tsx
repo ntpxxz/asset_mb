@@ -30,7 +30,7 @@ export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
     role: '',
     location: '',
     employee_id: '',
-    manager: '',
+
     start_date: '',
   });
 
@@ -47,7 +47,6 @@ export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
       role: formData.role,
       location: formData.location,
       employee_id: formData.employee_id,
-      manager: formData.manager,
       start_date: formData.start_date,
       status: 'active',
     });
@@ -193,20 +192,6 @@ export function AddUserForm({ onClose, onSave }: AddUserFormProps) {
                       <SelectItem value="la-office">Los Angeles Office</SelectItem>
                       <SelectItem value="remote">Remote</SelectItem>
                       <SelectItem value="hybrid">Hybrid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="manager">Manager</Label>
-                  <Select value={formData.manager} onValueChange={(value) => handleInputChange('manager', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="jane-doe">Jane Doe</SelectItem>
-                      <SelectItem value="bob-johnson">Bob Johnson</SelectItem>
-                      <SelectItem value="alice-williams">Alice Williams</SelectItem>
-                      <SelectItem value="mike-brown">Mike Brown</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

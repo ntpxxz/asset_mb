@@ -228,10 +228,7 @@ export default function UsersPage() {
                 <SelectItem value="hr">HR</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
+
           </div>
         </CardContent>
       </Card>
@@ -258,32 +255,36 @@ export default function UsersPage() {
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
+
                     <TableCell>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {user.firstname}
-                            {user.lastname}
+                            {user.firstname.charAt(1).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">
                             {user.firstname} {user.lastname}
                           </p>
-                          <p className="text-sm text-gray-500">{user.role}</p>
+                          
                         </div>
                       </div>
                     </TableCell>
+
                     <TableCell>
-                      <Badge variant="outline">{user.department}</Badge>
+                      {user.department}
                     </TableCell>
+
                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">
-                        {user.assets_count} assets
-                      </Badge>
+                      
+                        {user.assets_count}
+                      
                     </TableCell>
+
                     <TableCell>{user.location}</TableCell>
+
                     <TableCell>
                       <div className="space-y-1">
                         <div className="flex items-center space-x-1 text-sm">

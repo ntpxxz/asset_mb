@@ -10,7 +10,6 @@ const userSchema = z.object({
   role: z.string().optional(),
   location: z.string().optional(),
   employeeId: z.string().optional(),
-  manager: z.string().optional(),
   startDate: z.string().optional(),
   status: z.enum(['active', 'inactive', 'on-leave']),
 });
@@ -53,7 +52,7 @@ export async function getUserById(id: string) {
 export async function createUser(userData: z.infer<typeof userSchema>) {
   const {
     firstName, lastName, email, phone, department, role, location,
-    employeeId, manager, startDate, status
+    employeeId, startDate, status
   } = userData;
 
   const id = `USR-${Date.now()}`;
@@ -62,13 +61,13 @@ export async function createUser(userData: z.infer<typeof userSchema>) {
   const updatedAt = new Date().toISOString();
 
   const query = `
-    INSERT INTO users (id, "firstName", "lastName", email, phone, department, role, location, "employeeId", manager, "startDate", status, "assetsCount", "createdAt", "updatedAt")
+    INSERT INTO users (id, "firstName", "lastName", email, phone, department, role, location, "employeeId", "startDate", status, "assetsCount", "createdAt", "updatedAt")
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     RETURNING *;
   `;
   const queryParams = [
     id, firstName, lastName, email, phone, department, role, location,
-    employeeId, manager, startDate, status, assetsCount, createdAt, updatedAt
+    employeeId, startDate, status, assetsCount, createdAt, updatedAt
   ];
 
   const result = await pool.query(query, queryParams);

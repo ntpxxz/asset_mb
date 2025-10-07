@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { z } from 'zod';
+import { redirect } from 'next/dist/server/api-utils';
 
 // Zod schema for validation (all fields optional for updates, no password)
 const userUpdateSchema = z.object({
-  firstname: z.string().min(1, "First name is required").optional(),
-  lastname: z.string().min(1, "Last name is required").optional(),
-  email: z.string().email("Invalid email address").optional(),
-  phone: z.string().optional(),
-  department: z.string().optional(),
-  role: z.string().optional(),
-  location: z.string().optional(),
-  employee_id: z.string().optional(),
-  manager: z.string().optional(),
-  start_date: z.string().optional(),
-  status: z.enum(['active', 'inactive', 'on-leave']).optional(),
-  updated_at: z.string().datetime().optional(), 
-}).partial();
-
+  firstname: z.string().min(1, "First name is required"),
+  lastname: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  // Make password optional only when editing
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  phone: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  role: z.enum(['user', 'admin']).default('user'),
+  location: z.string().nullable().optional(),
+  employee_id: z.string().nullable().optional(),
+  manager: z.string().nullable().optional(),
+  start_date: z.string().nullable().optional(), // <-- FIX: Allow null
+  status: z.enum(['active', 'inactive', 'suspended']),
+});
 // GET /api/users/[id] - Get single user
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = params; // No await needed here as per latest convention in function signature
     // Exclude password from the SELECT statement for security
-    const result = await pool.query('SELECT id, firstname, lastname, email, phone, department, role, location, employee_id, manager, start_date, status, assets_count FROM users WHERE id = $1', [id]);
+    const result = await pool.query('SELECT id, "firstname", "lastname", email, phone, department, role, location, "employee_id", "start_date", status, "assets_count" FROM users WHERE id = $1', [id]);
     
     if (result.rowCount === 0) {
       return NextResponse.json(
@@ -55,7 +56,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = params; // No await needed here
     const body = await request.json();
     const validation = userUpdateSchema.safeParse(body);
 
@@ -74,9 +75,9 @@ export async function PUT(
         );
     }
 
-    fields.updated_at = new Date().toISOString(); 
+    (fields as any).updated_at = new Date().toISOString(); 
 
-    const setClauses = Object.keys(fields).map((key, index) => `${key} = $${index + 1}`).join(', ');
+    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
     const queryParams = Object.values(fields);
     queryParams.push(id);
     
@@ -97,8 +98,10 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: updatedUser,
-      message: 'User updated successfully'
+      message: 'User updated successfully',
+      redirect: '/users'
     });
+
   } catch (error: any) {
     const { id } = params;
     console.error(`Failed to update user ${id}:`, error);
@@ -123,7 +126,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = params; // No await needed here
     const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id;', [id]);
     
     if (result.rowCount === 0) {

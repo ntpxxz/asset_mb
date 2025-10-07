@@ -237,12 +237,7 @@ export default function UserViewPage() {
                 </div>
               </div>
 
-              {user.manager && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Manager</label>
-                  <p className="text-lg">{user.manager}</p>
-                </div>
-              )}
+              
             </CardContent>
           </Card>
 
