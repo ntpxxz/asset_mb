@@ -90,10 +90,6 @@ export async function GET(request: NextRequest) {
       ORDER BY a.created_at DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `;
-
-    console.log('Executing query:', sql);
-    console.log('With parameters:', params);
-
     const result = await pool.query(sql, params);
     const total = result.rows[0]?.total_count ?? 0;
 

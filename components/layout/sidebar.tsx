@@ -17,16 +17,21 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Box,
+  Laptop,
+  BarChart2,
+  Home
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Hardware', href: '/assets', icon: Package },
+  { name: 'Home', href: '/dashboard', icon: Home },
+  { name: 'Hardware', href: '/assets', icon: Laptop },
   { name: 'Software', href: '/software', icon: Shield },
   { name: 'Borrowing', href: '/borrowing', icon: Activity },
+  { name: 'Inventory', href: '/inventory', icon: Box },
   //{ name: 'Patches', href: '/patches', icon: RefreshCw },
   { name: 'Users', href: '/users', icon: Users },
   //{ name: 'Reports', href: '/reports', icon: BarChart3 },
@@ -86,23 +91,43 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isActive = pathname.startsWith(item.href);
           
           return (
-            <Link key={item.name} href={item.href}>
-              <div className={cn(
-                "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-                isActive 
-                  ? "bg-blue-50 text-blue-700 border border-blue-200" 
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}>
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span className="font-medium">{item.name}</span>}
-              </div>
-            </Link>
+            <div key={item.name}>
+              <Link href={item.href}>
+                <div className={cn(
+                  "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                  isActive 
+                    ? "bg-blue-50 text-blue-700" 
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                )}>
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span className="font-medium">{item.name}</span>}
+                </div>
+              </Link>
+              
+              {/* Add Sub-menu for Inventory */}
+              {item.name === 'Inventory' && isActive && !collapsed && (
+                <div className="pl-8 pt-2 space-y-1">
+                   <Link href="/inventory/dashboard">
+                     <div className={cn(
+                       "flex items-center space-x-3 px-3 py-1.5 rounded-md text-sm transition-colors",
+                       pathname === '/inventory/dashboard'
+                         ? "text-blue-700 font-semibold"
+                         : "text-gray-500 hover:text-gray-900"
+                     )}>
+                       <BarChart2 className="h-4 w-4" />
+                       <span>Dashboard</span>
+                     </div>
+                   </Link>
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
+
 
     
       {/* Footer with Logout Button */}
