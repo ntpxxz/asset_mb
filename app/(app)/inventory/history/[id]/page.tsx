@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, History, Plus, Minus, Loader2 } from "lucide-react";
+import { ArrowLeft, History, Plus, Minus, Loader2, Download } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -71,6 +71,30 @@ export default function TransactionHistoryPage() {
         }
         return <Badge variant="secondary">Return (+{quantity})</Badge>
     };
+    const handleExport = () => {
+        const headers = ["Date", "Type", "Quantity Change", "Unit Price", "Total Value", "User", "Notes"];
+        const rows = transactions.map(tx => [
+          new Date(tx.transaction_date).toLocaleString(),
+          tx.transaction_type,
+          tx.quantity_change,
+          tx.price_per_unit,
+          tx.value_change,
+          tx.user_name || "System",
+          `"${tx.notes || ''}"`
+        ]);
+        let csvContent = "data:text/csv;charset=utf-8," 
+          + headers.join(",") + "\n" 
+          + rows.map(e => e.join(",")).join("\n");
+    
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `history_${itemName.replace(/\s+/g, '_')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+    
     
     const formatCurrency = (value: number | null | undefined) => {
         if (value === null || value === undefined) return '฿0.00';
@@ -94,6 +118,10 @@ export default function TransactionHistoryPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Transaction History</h1>
                     <p className="text-gray-600">History for: {itemName || `Item ID ${itemId}`}</p>
                 </div>
+                <Button size="sm" onClick={handleExport} disabled={transactions.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+        </Button>
             </div>
 
             <Card>

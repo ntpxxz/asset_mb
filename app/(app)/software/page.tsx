@@ -139,7 +139,7 @@ export default function SoftwarePage() {
         <div className="flex gap-3">
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Export CSV
           </Button>
           <Button size="sm" onClick={() => router.push("/software/add")}>
             <Plus className="h-4 w-4 mr-2" />

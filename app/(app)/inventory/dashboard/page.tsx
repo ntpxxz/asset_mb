@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, DollarSign, Archive, AlertTriangle, Boxes, Loader2, TrendingUp } from "lucide-react";
+import { ArrowLeft, DollarSign, Archive, AlertTriangle, Boxes, Loader2, TrendingUp, FileText, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { toast } from "sonner";
@@ -60,7 +60,26 @@ export default function InventoryDashboardPage() {
         };
         fetchDashboardData();
     }, []);
-
+    const handleExport = () => {
+        if (!data || !data.stats) {
+          toast.error("No data to export.");
+          return;
+        }
+    
+        const headers = ["Category", "Value"];
+        const rows = data.valueByCategory.map(item => [item.category, item.value]);
+        const csvContent = "data:text/csv;charset=utf-8," 
+          + headers.join(",") + "\n" 
+          + rows.map(e => e.join(",")).join("\n");
+    
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "inventory_report.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
     // FIX 2: Create a robust currency formatter that handles both strings and numbers
     const formatCurrency = (value: number | string | null | undefined) => {
         if (value === null || value === undefined) return '฿0.00';
@@ -78,6 +97,7 @@ export default function InventoryDashboardPage() {
         }));
     }, [data]);
 
+
     const stats = data?.stats;
     const kpiCards = [
         { title: "Total Stock Value", value: stats ? formatCurrency(stats.total_stock_value) : '฿0.00', icon: DollarSign, color: "text-green-600" },
@@ -88,7 +108,8 @@ export default function InventoryDashboardPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/inventory')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Inventory
@@ -97,6 +118,18 @@ export default function InventoryDashboardPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Inventory Dashboard</h1>
                     <p className="text-gray-600">A quick overview of your stock status.</p>
                 </div>
+                </div>
+                <div className="flex gap-3">
+                <Button size="sm" variant = "outline" onClick={handleExport}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+
+                <Button size="sm" onClick={() => router.push('/inventory/reports')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Go to Reports
+                </Button>
+              </div>
             </div>
 
             {loading ? (

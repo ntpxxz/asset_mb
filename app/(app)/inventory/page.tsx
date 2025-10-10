@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   ArrowRightLeft,
   Printer,
+  Download,
 } from "lucide-react";
 import {
   Table,
@@ -91,7 +92,31 @@ export default function InventoryPage() {
     setItemToPrint(item);
     setIsPrintModalOpen(true);
   };
+  const handleExport = () => {
+    const headers = ["ID", "Barcode", "Name", "Quantity", "Min Stock", "Unit Price", "Total Value", "Location", "Category"];
+    const rows = filteredItems.map(item => [
+      item.id,
+      item.barcode || '',
+      `"${item.name}"`,
+      item.quantity,
+      item.min_stock_level,
+      item.price_per_unit,
+      item.quantity * item.price_per_unit,
+      item.location || '',
+      item.category || ''
+    ]);
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n" 
+      + rows.map(e => e.join(",")).join("\n");
 
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "inventory_stock.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   const filteredItems = items.filter(
     (item) =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,14 +148,20 @@ export default function InventoryPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-            <Button size="sm" variant="outline" onClick={() => router.push('/inventory/add')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Stock
+            <Button size="sm" variant= "outline" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
             </Button>
-            <Button size="sm" onClick={() => router.push('/inventory/transaction')}>
+            <Button size="sm" variant="outline" onClick={() => router.push('/inventory/transaction')}>
                 <ArrowRightLeft className="h-4 w-4 mr-2" />
                 New Transaction
             </Button>
+            <Button size="sm"  onClick={() => router.push('/inventory/add')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Stock
+            </Button>
+
+
         </div>
       </div>
 

@@ -138,7 +138,7 @@ export async function GET(
 
     delete cleanAsset.delete_at;
 
-    console.log('=== ASSET DATA DEBUG ===');
+    /*console.log('=== ASSET DATA DEBUG ===');
     console.log('Original asset data:', asset);
     console.log('Clean asset data:', cleanAsset);
     console.log('Field check:');
@@ -148,7 +148,7 @@ export async function GET(
     console.log('- department:', cleanAsset.department);
     console.log('- condition:', cleanAsset.condition);
     console.log('- patchstatus:', cleanAsset.patchstatus);
-    console.log('- isloanable:', cleanAsset.isloanable);
+    console.log('- isloanable:', cleanAsset.isloanable);*/
 
     return NextResponse.json({
       success: true,

@@ -24,6 +24,7 @@ export default function EditInventoryPage() {
 
   const [initialData, setInitialData] = useState<InventoryItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
     if (itemId) {

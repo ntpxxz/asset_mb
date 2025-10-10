@@ -1,3 +1,4 @@
+// app/(app)/assets/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Package,
@@ -26,6 +28,7 @@ import {
   Coins,
 } from "lucide-react";
 import { HardwareAsset } from "@/lib/data-store";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -81,12 +84,19 @@ export default function AssetViewPage() {
   const [assignedUser, setAssignedUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (params.id) {
-      fetchAsset(params.id as string);
+  const fetchHistory = async (id: string) => {
+    try {
+      const response = await fetch(`/api/assets/${id}/history`);
+      const result = await response.json();
+      if (result.success) {
+        setHistory(result.data);
+      }
+    } catch (err) {
+      console.error("Error fetching asset history:", err);
     }
-  }, [params.id]);
+  };
 
   const fetchAsset = async (id: string) => {
     try {
@@ -129,6 +139,15 @@ export default function AssetViewPage() {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    if (params.id) {
+      const id = params.id as string;
+      fetchAsset(id);
+      fetchHistory(id);
+    }
+  }, [params.id]);
+
 
   const handleDelete = async () => {
     if (!asset) return;
@@ -229,399 +248,445 @@ export default function AssetViewPage() {
           </Button>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Information */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Icon className="h-5 w-5" />
-                <span>Asset Information</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Asset Tag
-                  </label>
-                  <p className="text-lg font-mono">{asset.asset_tag}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Serial Number
-                  </label>
-                  <p className="text-lg font-mono">{asset.serialnumber}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Manufacturer
-                  </label>
-                  <p className="text-lg">{asset.manufacturer}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Model
-                  </label>
-                  <p className="text-lg">{asset.model}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Status
-                  </label>
-                  <div className="mt-1">{getStatusBadge(asset.status)}</div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Condition
-                  </label>
-                  <p className="text-lg capitalize">{asset.condition}</p>
-                </div>
-              </div>
-
-              {asset.description && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Description
-                  </label>
-                  <p className="text-lg">{asset.description}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Technical Specifications */}
-          {(() => {
-            const t = (asset.type || "").toLowerCase();
-            const hideAll = new Set([
-              "monitor",
-              "printer",
-              "router",
-              "switch",
-              "firewall",
-              "projector",
-            ]);
-
-            if (t === "storage") {
-              return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      <Cpu className="h-5 w-5 inline-block mr-2" />
-                      <span>Technical Specifications</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        Storage
-                      </label>
-                      <p className="text-lg">
-                        {asset.storage || "Not specified"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            }
-
-            if (hideAll.has(t)) return null;
-
-            return (
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+        <TabsContent value="details">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+            {/* Main Information */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Basic Information */}          
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    <Cpu className="h-5 w-5 inline-block mr-2" />
-                    <span>Technical Specifications</span>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Icon className="h-5 w-5" />
+                    <span>Asset Information</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Operating System
+                        Asset Tag
                       </label>
-                      <p className="text-lg">
-                        {asset.operatingsystem || "Not specified"}
-                      </p>
+                      <p className="text-lg font-mono">{asset.asset_tag}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Processor
+                        Serial Number
                       </label>
-                      <p className="text-lg">
-                        {asset.processor || "Not specified"}
-                      </p>
+                      <p className="text-lg font-mono">{asset.serialnumber}</p>
                     </div>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Memory
+                        Manufacturer
                       </label>
-                      <p className="text-lg">
-                        {asset.memory || "Not specified"}
+                      <p className="text-lg">{asset.manufacturer}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Model
+                      </label>
+                      <p className="text-lg">{asset.model}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Status
+                      </label>
+                      <div className="mt-1">{getStatusBadge(asset.status)}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Condition
+                      </label>
+                      <p className="text-lg capitalize">{asset.condition}</p>
+                    </div>
+                  </div>
+
+                  {asset.description && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Description
+                      </label>
+                      <p className="text-lg">{asset.description}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Technical Specifications */}
+              {(() => {
+                const t = (asset.type || "").toLowerCase();
+                const hideAll = new Set([
+                  "monitor",
+                  "printer",
+                  "router",
+                  "switch",
+                  "firewall",
+                  "projector",
+                ]);
+
+                if (t === "storage") {
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>
+                          <Cpu className="h-5 w-5 inline-block mr-2" />
+                          <span>Technical Specifications</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Storage
+                          </label>
+                          <p className="text-lg">
+                            {asset.storage || "Not specified"}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+
+                if (hideAll.has(t)) return null;
+
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        <Cpu className="h-5 w-5 inline-block mr-2" />
+                        <span>Technical Specifications</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Operating System
+                          </label>
+                          <p className="text-lg">
+                            {asset.operatingsystem || "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Processor
+                          </label>
+                          <p className="text-lg">
+                            {asset.processor || "Not specified"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Memory
+                          </label>
+                          <p className="text-lg">
+                            {asset.memory || "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Storage
+                          </label>
+                          <p className="text-lg">
+                            {asset.storage || "Not specified"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+              {/* Network Informaion*/}
+              {(() => {
+                const t = (asset.type || "").toLowerCase();
+                const hideNet = new Set(["monitor", "storage", "projector"]);
+                if (hideNet.has(t)) return null;
+
+                if (asset.hostname || asset.ipaddress || asset.macaddress) {
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Network Information</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Hostname
+                          </label>
+                          <p className="text-lg font-mono">
+                            {asset.hostname || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            IP Address
+                          </label>
+                          <p className="text-lg font-mono">
+                            {asset.ipaddress || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            MAC Address
+                          </label>
+                          <p className="text-lg font-mono">
+                            {asset.macaddress || "-"}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Purchase Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Coins className="h-5 w-5" />
+                    <span>Purchase Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Purchase Date
+                      </label>
+                      <p className="text-lg">                    
+                        {asset.purchasedate ? asset.purchasedate.split("T")[0] : ""}
                       </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Storage
+                        Purchase Price
+                      </label>
+                      <p className="text-lg">{asset.purchaseprice || "0"}฿</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Supplier
+                      </label>
+                      <p className="text-lg">{asset.supplier || "Not specified"}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Warranty Expiry
                       </label>
                       <p className="text-lg">
-                        {asset.storage || "Not specified"}
+                        {asset.warrantyexpiry
+                          ? asset.warrantyexpiry.split("T")[0]
+                          : ""}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })()}
-          {/* Network Informaion*/}
-          {(() => {
-            const t = (asset.type || "").toLowerCase();
-            const hideNet = new Set(["monitor", "storage", "projector"]);
-            if (hideNet.has(t)) return null;
+            </div>
 
-            if (asset.hostname || asset.ipaddress || asset.macaddress) {
-              return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Network Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        Hostname
-                      </label>
-                      <p className="text-lg font-mono">
-                        {asset.hostname || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        IP Address
-                      </label>
-                      <p className="text-lg font-mono">
-                        {asset.ipaddress || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        MAC Address
-                      </label>
-                      <p className="text-lg font-mono">
-                        {asset.macaddress || "-"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            }
-            return null;
-          })()}
-
-          {/* Purchase Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Coins className="h-5 w-5" />
-                <span>Purchase Information</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Purchase Date
-                  </label>
-                  <p className="text-lg">                    
-                    {asset.purchasedate ? asset.purchasedate.split("T")[0] : ""}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Purchase Price
-                  </label>
-                  <p className="text-lg">{asset.purchaseprice || "0"}฿</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Supplier
-                  </label>
-                  <p className="text-lg">{asset.supplier || "Not specified"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Warranty Expiry
-                  </label>
-                  <p className="text-lg">
-                    {asset.warrantyexpiry
-                      ? asset.warrantyexpiry.split("T")[0]
-                      : ""}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Assignment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5" />
-                <span>Assignment</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {assignedUser ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Assigned To
-                    </label>
-                    <p className="text-lg font-medium">
-                      {assignedUser.firstName} {assignedUser.lastName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {assignedUser.email}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Department
-                    </label>
-                    <p className="text-lg">{assignedUser.department}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Role
-                    </label>
-                    <p className="text-lg">{assignedUser.role}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <User className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">Not assigned</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Location */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MapPin className="h-5 w-5" />
-                <span>Location</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Current Location
-                  </label>
-                  <p className="text-lg">{asset.location}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Department
-                  </label>
-                  <p className="text-lg">
-                    {asset.department || "Not specified"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Patch Status */}
-          {(() => {
-            const t = (asset.type || "").toLowerCase();
-            const hidePatch = new Set(["monitor", "storage", "projector"]);
-            if (hidePatch.has(t)) return null;
-
-            return (
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Assignment */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <RefreshCw className="h-5 w-5" />
-                    <span>Patch Status</span>
+                    <User className="h-5 w-5" />
+                    <span>Assignment</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {assignedUser ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Assigned To
+                        </label>
+                        <p className="text-lg font-medium">
+                          {assignedUser.firstName} {assignedUser.lastName}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {assignedUser.email}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Department
+                        </label>
+                        <p className="text-lg">{assignedUser.department}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Role
+                        </label>
+                        <p className="text-lg">{assignedUser.role}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <User className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">Not assigned</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Location */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5" />
+                    <span>Location</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Status
+                        Current Location
                       </label>
-                      <div className="mt-1">
-                        {getPatchStatusBadge(asset.patchstatus)}
-                      </div>
+                      <p className="text-lg">{asset.location}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Last Check
+                        Department
                       </label>
                       <p className="text-lg">
-                        {asset.lastpatch_check || "Never"}
+                        {asset.department || "Not specified"}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })()}
-          {/* Borrowing */}
-          {asset.isloanable && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="h-5 w-5" />
-                  <span>Borrowing</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-4">
-                  <Activity className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-green-600 font-medium">
-                    Available for borrowing
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Notes */}
-          {asset.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {asset.notes}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+              {/* Patch Status */}
+              {(() => {
+                const t = (asset.type || "").toLowerCase();
+                const hidePatch = new Set(["monitor", "storage", "projector"]);
+                if (hidePatch.has(t)) return null;
+
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <RefreshCw className="h-5 w-5" />
+                        <span>Patch Status</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Status
+                          </label>
+                          <div className="mt-1">
+                            {getPatchStatusBadge(asset.patchstatus)}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Last Check
+                          </label>
+                          <p className="text-lg">
+                            {asset.lastpatch_check || "Never"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+              {/* Borrowing */}
+              {asset.isloanable && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Activity className="h-5 w-5" />
+                      <span>Borrowing</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-4">
+                      <Activity className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                      <p className="text-green-600 font-medium">
+                        Available for borrowing
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Notes */}
+              {asset.notes && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {asset.notes}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="history">
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Asset History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date/Time</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Field</TableHead>
+                    <TableHead>Old Value</TableHead>
+                    <TableHead>New Value</TableHead>
+                    <TableHead>Changed By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.length > 0 ? (
+                    history.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell>{new Date(entry.change_date).toLocaleString()}</TableCell>
+                        <TableCell><Badge variant="outline">{entry.action}</Badge></TableCell>
+                        <TableCell>{entry.field_changed}</TableCell>
+                        <TableCell>{entry.old_value}</TableCell>
+                        <TableCell>{entry.new_value}</TableCell>
+                        <TableCell>{entry.changed_by_user_id || 'System'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">No history found.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -21,7 +21,8 @@ import {
   Box,
   Laptop,
   BarChart2,
-  Home
+  Home,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -119,6 +120,18 @@ export function Sidebar() {
                      )}>
                        <BarChart2 className="h-4 w-4" />
                        <span>Dashboard</span>
+                     </div>
+                   </Link>
+                   {/* New Reports Link */}
+                   <Link href="/inventory/reports">
+                     <div className={cn(
+                       "flex items-center space-x-3 px-3 py-1.5 rounded-md text-sm transition-colors",
+                       pathname === '/inventory/reports'
+                         ? "text-blue-700 font-semibold"
+                         : "text-gray-500 hover:text-gray-900"
+                     )}>
+                       <FileText className="h-4 w-4" />
+                       <span>Reports</span>
                      </div>
                    </Link>
                 </div>

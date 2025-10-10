@@ -205,7 +205,7 @@ export default function AssetsPage() {
           </Button>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Export CSV
           </Button>
           <Button size="sm" onClick={() => router.push("/assets/add")}>
             <Plus className="h-4 w-4 mr-2" />
