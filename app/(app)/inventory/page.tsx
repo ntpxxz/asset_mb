@@ -250,23 +250,32 @@ export default function InventoryPage() {
             <p className="mb-4 text-sm text-muted-foreground">
               Preview of the label for: <strong>{itemToPrint?.name}</strong>
             </p>
+            
+            {/* The hidden component that will be printed */}
             <div className="hidden">
-                <BarcodePrintLayout ref={printComponentRef} items={itemToPrint ? [itemToPrint] : []} />
+              {itemToPrint && (
+                <BarcodePrintLayout ref={printComponentRef} items={[itemToPrint]} />
+              )}
             </div>
 
-            {/* --- FIX 2 & 3: Center the preview and use 'value' prop --- */}
+            {/* A visible preview for the user, styled to be centered */}
             <div className="flex justify-center items-center p-4 border rounded-md">
                  {itemToPrint && itemToPrint.barcode ? (
-                    <div className="text-center">
-                        <p className="font-semibold mb-2">{itemToPrint.name}</p>
-                        
-                        <Barcode value={itemToPrint.barcode} />
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="font-semibold text-center">{itemToPrint.name}</p>
+                        <Barcode 
+                            value={itemToPrint.barcode}
+                            displayValue={false} // Hide the default text
+                            width={2}
+                            height={50}
+                        />
+                        <p className="font-mono tracking-widest text-lg">{itemToPrint.barcode}</p>
                     </div>
                  ) : (
                     <p>No barcode available for this item.</p>
                  )}
             </div>
-
+            
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPrintModalOpen(false)}>Cancel</Button>

@@ -34,7 +34,7 @@ const navigation = [
   { name: 'Borrowing', href: '/borrowing', icon: Activity },
   { name: 'Inventory', href: '/inventory', icon: Box },
   //{ name: 'Patches', href: '/patches', icon: RefreshCw },
-  { name: 'Users', href: '/users', icon: Users },
+  //{ name: 'Users', href: '/users', icon: Users },
   //{ name: 'Reports', href: '/reports', icon: BarChart3 },
   //{ name: 'Settings', href: '/settings', icon: Settings, classname:'hidden'},
   //{ name: 'Help', href: '/help', icon: HelpCircle },

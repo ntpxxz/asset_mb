@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { Flower } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,16 +44,17 @@ export default function LoginPage() {
     <main className="flex items-center justify-center min-h-screen bg-gray-50">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">AssetFlow Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            AssetFlow Login</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="employee_id">Employee ID</Label>
+              <Label htmlFor="employee_id">Username</Label>
               <Input
                 id="employee_id"
                 type="text"
-                placeholder="e.g., EMP-101 or ADMIN-001"
+                placeholder="e.g., EMP-101"
                 required
                 value={employee_id}
                 onChange={(e) => setEmployeeId(e.target.value)}
