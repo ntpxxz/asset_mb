@@ -96,7 +96,7 @@ export default function EditInventoryPage() {
       {/* Re-use the form component in "edit" mode */}
       <InventoryForm 
         onSave={() => router.push('/inventory')} 
-        initialData={initialData} 
+        initialData={{ ...initialData, id: initialData.id.toString() }} 
         mode="edit"
         onSubmit={handleEditSubmit}
       />

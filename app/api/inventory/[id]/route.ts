@@ -65,3 +65,36 @@ export async function PUT(request: NextRequest, context: Ctx) {
     client.release();
   }
 }
+export async function DELETE(
+  request: NextRequest,
+  context: Ctx,
+) {
+  const params = await context.params;
+  const id = params.id;
+
+  try {
+    // เปลี่ยนจาก DELETE เป็น UPDATE
+    const { rowCount } = await pool.query(
+      'UPDATE inventory_items SET is_active = false, updated_at = NOW() WHERE id = $1',
+      [id],
+    );
+
+    if (rowCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Item not found' },
+        { status: 404 },
+      );
+    }
+
+    // ถ้าสำเร็จ ก็ส่ง message ว่า "deleted" เหมือนเดิม
+    return NextResponse.json({ success: true, message: 'Item deleted (archived) successfully' });
+
+  } catch (error: any) {
+    console.error('Failed to archive item:', error);
+    // Error อื่นๆ ที่ไม่ใช่ Foreign Key (เผื่อไว้)
+    return NextResponse.json(
+      { success: false, error: 'Failed to archive item' },
+      { status: 500 },
+    );
+  }
+}

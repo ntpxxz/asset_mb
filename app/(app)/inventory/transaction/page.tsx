@@ -260,7 +260,7 @@ export default function NewTransactionPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="user">{isDispense ? 'Recipient' : 'Returned By'} (Optional)</Label>
-                                    <Select value={user} onValueChange={setUser}><SelectTrigger id="user" className="h-12"><SelectValue placeholder="Select a user" /></SelectTrigger><SelectContent>{users.map(u => (<SelectItem key={u.id} value={u.id}>{u.firstname} {u.lastname}</SelectItem>))}</SelectContent></Select>
+                                    <Input id="user" type="text" value={user} onChange={(e) => setUser} required className="text-lg h-12"/>
                                 </div>
                             </div>
                         )}

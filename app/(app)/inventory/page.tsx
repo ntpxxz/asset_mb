@@ -17,6 +17,8 @@ import {
   ArrowRightLeft,
   Printer,
   Download,
+  Trash,
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -28,13 +30,13 @@ import {
 } from "@/components/ui/table";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, } from "@/components/ui/dialog";
 
 // --- FIX 1: Import the correct hooks and components ---
 import { useReactToPrint } from "react-to-print";
 import Barcode from "react-barcode";
 import { BarcodePrintLayout } from "./components/barcode-print-layout";
-
+import { toast } from "sonner"
 
 type InventoryItem = {
   id: number;
@@ -57,11 +59,50 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [itemToPrint, setItemToPrint] = useState<InventoryItem | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isDeleteModelOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const printComponentRef = useRef<HTMLDivElement | null >(null);
+
+
 
   useEffect(() => {
     fetchItems();
   }, []);
+// +++ 6. เพิ่มฟังก์ชันสำหรับเปิด Modal ลบ +++
+const openDeleteModal = (item: InventoryItem) => {
+  setItemToDelete(item);
+  setIsDeleteModalOpen(true);
+};
+
+// +++ 7. เพิ่มฟังก์ชันยืนยันการลบ +++
+const handleConfirmDelete = async () => {
+  if (!itemToDelete) return;
+
+  setIsDeleting(true);
+  const toastId = toast.loading("Deleting item...");
+
+  try {
+    const response = await fetch(`/api/inventory/${itemToDelete.id}`, {
+      method: "DELETE",
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Failed to delete item.");
+    }
+
+    toast.success("Item deleted successfully.", { id: toastId });
+    setIsDeleteModalOpen(false);
+    setItemToDelete(null);
+    fetchItems(); // โหลดข้อมูลใหม่
+  } catch (error: any) {
+    console.error("Failed to delete item", error);
+    toast.error(error.message, { id: toastId });
+  } finally {
+    setIsDeleting(false);
+  }
+};
 
   const fetchItems = async () => {
     setLoading(true);
@@ -228,6 +269,14 @@ export default function InventoryPage() {
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/inventory/${item.id}/edit`)}><Edit className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/inventory/history/${item.id}`)}><History className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => openPrintModal(item)} disabled={!item.barcode}><Printer className="h-4 w-4" /></Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => openDeleteModal(item)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -282,6 +331,40 @@ export default function InventoryPage() {
             <Button onClick={handlePrintClick}>
                 <Printer className="h-4 w-4 mr-2"/>
                 Print
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* +++ 9. เพิ่ม Delete Confirmation Dialog +++ */}
+      <Dialog open={isDeleteModelOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete 
+              <strong className="mx-1">{itemToDelete?.name}</strong>
+              and all its related history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash className="h-4 w-4 mr-2" />
+              )}
+              Yes, delete item
             </Button>
           </DialogFooter>
         </DialogContent>

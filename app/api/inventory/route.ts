@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
 
   try {
     if (barcode) {
-      const { rows } = await pool.query('SELECT * FROM inventory_items WHERE barcode = $1', [barcode]);
+      const { rows } = await pool.query('SELECT * FROM inventory_items WHERE barcode = $1 AND is_active = true', [barcode]);
       if (rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Item with this barcode not found' }, { status: 404 });
       }
       return NextResponse.json({ success: true, data: rows[0] });
     }
-    const { rows } = await pool.query('SELECT * FROM inventory_items ORDER BY name ASC');
+    const { rows } = await pool.query('SELECT * FROM inventory_items WHERE is_active = true ORDER BY name ASC');
     return NextResponse.json({ success: true, data: rows });
   } catch (error) {
     console.error('Failed to fetch inventory items:', error);

@@ -9,11 +9,26 @@ services:
       PORT: "3092"
       POSTGRES_SSL: "false"
       DATABASE_URL: "postgresql://rootpg:123456@pg-main:5432/asset_management" 
-    ports:
-      - "3092:3092"
     networks:
       - app-net      
       - db-net       
+    restart: unless-stopped
+    volumes:
+      - uploads_data:/app/public/uploads
+  nginx:
+    image: nginx:latest
+    ports:
+      # Nginx จะเป็นคนรับพอร์ต 3092 จากภายนอก
+      - "3092:80"
+    volumes:
+      # 1. เชื่อมไฟล์ config ที่เราสร้างไว้
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      # 2. เชื่อม Volume กลาง ให้ Nginx "อ่าน" ไฟล์เพื่อเสิร์ฟ
+      - uploads_data:/var/www/uploads
+    networks:
+      - app-net
+    depends_on:
+      - nextjs-app # สั่งให้ Nginx เริ่มทีหลัง Next.js
     restart: unless-stopped
 
 networks:
@@ -21,3 +36,5 @@ networks:
     driver: bridge
   db-net:
     external: true   
+volumes:
+  uploads_data:

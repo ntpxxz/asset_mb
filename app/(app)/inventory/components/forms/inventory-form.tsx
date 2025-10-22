@@ -16,9 +16,11 @@ import {
   Edit,
   Upload,
   X,
+  Trash,
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type FormData = {
   barcode: string;
@@ -35,9 +37,10 @@ type FormData = {
 interface InventoryFormProps {
   onSave: () => void;
   mode?: "add" | "edit";
-  initialData?: Partial<FormData>;
+  initialData?: Partial<FormData> & { id?: string };
   onSubmit?: (data: Partial<FormData>) => Promise<void>;
 }
+
 
 export default function InventoryForm({
   onSave,
@@ -63,7 +66,7 @@ export default function InventoryForm({
   const [isExistingItem, setIsExistingItem] = useState(mode === "edit");
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMessage, setLookupMessage] = useState<string | null>(null);
-
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.image_url || null
   );
@@ -214,6 +217,31 @@ export default function InventoryForm({
       setSubmitting(false);
     }
   };
+  const handleConfirmDelete = async () => {
+    if (mode !== "edit" || !initialData?.id) return;
+
+    setSubmitting(true);
+    const toastId = toast.loading("Deleting item...");
+
+    try {
+      const response = await fetch(`/api/inventory/${initialData.id}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete item.");
+      }
+
+      toast.success("Item deleted successfully!", { id: toastId });
+      setIsDeleteModalOpen(false);
+      onSave(); // เรียก onSave เพื่อ redirect หรือ refresh
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleInputChange = (field: keyof FormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -224,6 +252,7 @@ export default function InventoryForm({
   const title = isEditMode ? "Edit Item Details" : "Add or Receive Stock";
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
@@ -399,8 +428,8 @@ export default function InventoryForm({
                 <Label htmlFor="price_per_unit">Price Per Unit</Label>
                 <Input
                   id="price_per_unit"
-                  type="number"
-                  step="0.01"
+                  type="text"
+              
                   value={formData.price_per_unit}
                   onChange={(e) =>
                     handleInputChange(
@@ -480,7 +509,21 @@ export default function InventoryForm({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6 border-t">
+          <div className="flex justify-between space-x-3 pt-6 border-t">
+          <div>
+              {mode === "edit" && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  disabled={submitting}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete Item
+                </Button>
+              )}
+            </div>
+            <div className="flex space-x-3">
             <Button
               type="button"
               variant="outline"
@@ -503,9 +546,45 @@ export default function InventoryForm({
                 ? "Add Stock"
                 : "Create New Item"}
             </Button>
+            </div>
           </div>
         </form>
       </CardContent>
     </Card>
+    {/* +++ 7. เพิ่ม Delete Confirmation Dialog +++ */}
+    <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Are you absolutely sure?</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently delete
+            <strong className="mx-1">{formData.name}</strong>
+            and all its related history.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setIsDeleteModalOpen(false)}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirmDelete}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash className="h-4 w-4 mr-2" />
+            )}
+            Yes, delete item
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

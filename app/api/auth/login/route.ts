@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       // --- CORRECTED CODE ---
       // Set a session cookie
       cookies()).set('session', user.id, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
