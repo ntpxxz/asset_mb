@@ -1,7 +1,9 @@
+// app/api/inventory/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { z } from 'zod';
 
+// (Schema ไม่เปลี่ยนแปลง)
 const itemSchema = z.object({
   barcode: z.string().optional().nullable(),
   name: z.string().min(1, "Item name is required"),
@@ -14,12 +16,18 @@ const itemSchema = z.object({
   image_url: z.string().optional().nullable(), 
 });
 
-// GET /api/inventory - (No changes needed)
+// --- vvvv GET FUNCTION ที่แก้ไขแล้ว vvvv ---
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const barcode = searchParams.get('barcode');
+  
+  // --- Pagination and Search Params ---
+  const limit = parseInt(searchParams.get('limit') || '20', 10);
+  const offset = parseInt(searchParams.get('offset') || '0', 10);
+  const search = searchParams.get('search');
 
   try {
+    // 1. Logic สำหรับ Barcode Lookup (คงเดิม)
     if (barcode) {
       const { rows } = await pool.query('SELECT * FROM inventory_items WHERE barcode = $1 AND is_active = true', [barcode]);
       if (rows.length === 0) {
@@ -27,15 +35,50 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ success: true, data: rows[0] });
     }
-    const { rows } = await pool.query('SELECT * FROM inventory_items WHERE is_active = true ORDER BY name ASC');
-    return NextResponse.json({ success: true, data: rows });
+    
+    // 2. Logic สำหรับการดึงรายการ (แก้ไขใหม่)
+    const whereClauses: string[] = ['is_active = true'];
+    const queryParams: any[] = [];
+    let paramIndex = 1;
+
+    if (search) {
+      whereClauses.push(`(name ILIKE $${paramIndex} OR barcode ILIKE $${paramIndex} OR category ILIKE $${paramIndex})`);
+      queryParams.push(`%${search}%`);
+      paramIndex++;
+    }
+    
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // --- Query 1: นับจำนวนทั้งหมด (สำหรับ TotalPages) ---
+    const totalQuery = `SELECT COUNT(*) FROM inventory_items ${whereSql}`;
+    const totalResult = await pool.query(totalQuery, queryParams);
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    // --- Query 2: ดึงข้อมูลทีละหน้า ---
+    queryParams.push(limit, offset);
+    const dataQuery = `
+      SELECT * FROM inventory_items 
+      ${whereSql} 
+      ORDER BY name ASC 
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+    `;
+    const dataResult = await pool.query(dataQuery, queryParams);
+
+    return NextResponse.json({ 
+      success: true, 
+      data: dataResult.rows,
+      total: total // <-- ส่ง Total กลับไปด้วย
+    });
+
   } catch (error) {
     console.error('Failed to fetch inventory items:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch inventory items' }, { status: 500 });
   }
 }
+// --- ^^^^ GET FUNCTION ที่แก้ไขแล้ว ^^^^ ---
 
-// POST /api/inventory - Add new item or receive stock
+
+// POST /api/inventory - (ฟังก์ชันนี้เหมือนเดิม ไม่ต้องแก้ไข)
 export async function POST(request: NextRequest) {
   const client = await pool.connect();
   try {

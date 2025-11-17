@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 const navigation = [
   { name: 'Home', href: '/dashboard', icon: Home },
   { name: 'Hardware', href: '/assets', icon: Laptop },
-  { name: 'Software', href: '/software', icon: Shield },
+  //{ name: 'Software', href: '/software', icon: Shield },
   { name: 'Borrowing', href: '/borrowing', icon: Activity },
   { name: 'Inventory', href: '/inventory', icon: Box },
   //{ name: 'Patches', href: '/patches', icon: RefreshCw },

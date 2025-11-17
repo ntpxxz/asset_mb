@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"; // 1. Import useCallback, useMemo
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   Printer,
   Download,
   Trash,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import {
   Table,
@@ -30,13 +30,29 @@ import {
 } from "@/components/ui/table";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
-// --- FIX 1: Import the correct hooks and components ---
 import { useReactToPrint } from "react-to-print";
 import Barcode from "react-barcode";
 import { BarcodePrintLayout } from "./components/barcode-print-layout";
-import { toast } from "sonner"
+import { toast } from "sonner";
+
+// 2. Import Pagination components
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 type InventoryItem = {
   id: number;
@@ -57,85 +73,120 @@ export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // --- 3. Add Pagination State ---
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20; // กำหนดจำนวนรายการต่อหน้า
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  }, [totalItems, itemsPerPage]);
+
+  // --- 4. Add Debounced Search State ---
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  // (State สำหรับ Print และ Delete ไม่เปลี่ยนแปลง)
   const [itemToPrint, setItemToPrint] = useState<InventoryItem | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isDeleteModelOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const printComponentRef = useRef<HTMLDivElement | null >(null);
+  const printComponentRef = useRef<HTMLDivElement | null>(null);
 
-
-
+  // --- 5. Create Debounce Effect ---
   useEffect(() => {
-    fetchItems();
-  }, []);
-// +++ 6. เพิ่มฟังก์ชันสำหรับเปิด Modal ลบ +++
-const openDeleteModal = (item: InventoryItem) => {
-  setItemToDelete(item);
-  setIsDeleteModalOpen(true);
-};
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
 
-// +++ 7. เพิ่มฟังก์ชันยืนยันการลบ +++
-const handleConfirmDelete = async () => {
-  if (!itemToDelete) return;
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
-  setIsDeleting(true);
-  const toastId = toast.loading("Deleting item...");
 
-  try {
-    const response = await fetch(`/api/inventory/${itemToDelete.id}`, {
-      method: "DELETE",
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || "Failed to delete item.");
-    }
-
-    toast.success("Item deleted successfully.", { id: toastId });
-    setIsDeleteModalOpen(false);
-    setItemToDelete(null);
-    fetchItems(); // โหลดข้อมูลใหม่
-  } catch (error: any) {
-    console.error("Failed to delete item", error);
-    toast.error(error.message, { id: toastId });
-  } finally {
-    setIsDeleting(false);
-  }
-};
-
-  const fetchItems = async () => {
+  // --- 6. Update fetchItems to loadItems with pagination ---
+  const loadItems = useCallback(async (page: number, search: string) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/inventory", { cache: "no-store" });
+      const offset = (page - 1) * itemsPerPage;
+      
+      const params = new URLSearchParams();
+      params.set('limit', String(itemsPerPage));
+      params.set('offset', String(offset));
+      if (search) {
+        params.set('search', search);
+      }
+
+      const response = await fetch(`/api/inventory?${params.toString()}`, { cache: "no-store" });
       const data = await response.json();
+      
       if (data.success) {
         setItems(data.data);
+        setTotalItems(data.total); // <-- รับ Total จาก API
       }
     } catch (error) {
       console.error("Failed to fetch inventory items", error);
+      toast.error("Failed to load inventory items.");
     } finally {
       setLoading(false);
     }
+  }, [itemsPerPage]); // <-- useCallback จะถูกสร้างใหม่ถ้า itemsPerPage เปลี่ยน
+
+  // --- 7. Update main useEffects for data fetching ---
+  useEffect(() => {
+    // เมื่อ search term เปลี่ยน, ให้กลับไปหน้า 1
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    // ดึงข้อมูลใหม่ทุกครั้งที่ page หรือ search term เปลี่ยน
+    loadItems(currentPage, debouncedSearchTerm);
+  }, [currentPage, debouncedSearchTerm, loadItems]);
+  
+  // (ฟังก์ชัน Delete, Print, Export ไม่เปลี่ยนแปลง)
+  const openDeleteModal = (item: InventoryItem) => {
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
   };
   
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    const toastId = toast.loading("Deleting item...");
+    try {
+      const response = await fetch(`/api/inventory/${itemToDelete.id}`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to delete item.");
+      toast.success("Item deleted successfully.", { id: toastId });
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+      // โหลดหน้าปัจจุบันใหม่
+      loadItems(currentPage, debouncedSearchTerm);
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handlePrintClick = useReactToPrint({
     contentRef: printComponentRef,
     documentTitle: itemToPrint?.name || "barcode",
-    onAfterPrint: () => {
-      setIsPrintModalOpen(false);
-    },
+    onAfterPrint: () => setIsPrintModalOpen(false),
   });
-
-
 
   const openPrintModal = (item: InventoryItem) => {
     setItemToPrint(item);
     setIsPrintModalOpen(true);
   };
+  
   const handleExport = () => {
+    // (ฟังก์ชันนี้ควรจะดึงข้อมูลทั้งหมดถ้าต้องการ export, แต่สำหรับตอนนี้จะ export แค่หน้าปัจจุบัน)
     const headers = ["ID", "Barcode", "Name", "Quantity", "Min Stock", "Unit Price", "Total Value", "Location", "Category"];
-    const rows = filteredItems.map(item => [
+    const rows = items.map(item => [ // <-- 8. เปลี่ยนจาก filteredItems เป็น items
       item.id,
       item.barcode || '',
       `"${item.name}"`,
@@ -149,7 +200,6 @@ const handleConfirmDelete = async () => {
     let csvContent = "data:text/csv;charset=utf-8," 
       + headers.join(",") + "\n" 
       + rows.map(e => e.join(",")).join("\n");
-
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -158,18 +208,17 @@ const handleConfirmDelete = async () => {
     link.click();
     document.body.removeChild(link);
   };
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.barcode &&
-        item.barcode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.category &&
-        item.category.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
 
-  const lowStockItems = items.filter(
-    (item) => item.quantity <= item.min_stock_level
-  );
+  // --- 9. ลบ filteredItems ---
+  // const filteredItems = items.filter(...) // <--- ลบบรรทัดนี้
+
+  const lowStockItems = useMemo(() => {
+    // การคำนวณนี้ยังโอเค เพราะมันแค่ไฮไลท์ ไม่ได้กรอง
+    return items.filter(
+      (item) => item.quantity <= item.min_stock_level
+    );
+  }, [items]);
+
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "฿0.00";
@@ -178,9 +227,18 @@ const handleConfirmDelete = async () => {
       currency: "THB",
     }).format(value);
   };
+  
+  // --- 10. Handler สำหรับปุ่ม Pagination ---
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
 
   return (
     <div className="space-y-6">
+      {/* (Header ไม่เปลี่ยนแปลง) */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
@@ -201,11 +259,10 @@ const handleConfirmDelete = async () => {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Stock
             </Button>
-
-
         </div>
       </div>
 
+      {/* (Low Stock Alert ไม่เปลี่ยนแปลง) */}
       {lowStockItems.length > 0 && (
         <Card className="border-orange-400 bg-orange-50">
             <CardHeader><CardTitle className="flex items-center text-orange-800"><AlertTriangle className="h-5 w-5 mr-2" />Low Stock Alert</CardTitle></CardHeader>
@@ -219,7 +276,8 @@ const handleConfirmDelete = async () => {
       )}
       <Card>
         <CardHeader>
-          <CardTitle>Stock Items</CardTitle>
+          {/* 11. อัปเดต Title ให้แสดง totalItems */}
+          <CardTitle>Stock Items ({totalItems} items)</CardTitle>
           <div className="relative pt-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input placeholder="Search by name, barcode, or category..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -229,6 +287,7 @@ const handleConfirmDelete = async () => {
           <div className="rounded-md border">
             <Table>
               <TableHeader>
+                {/* (TableHeader ไม่เปลี่ยนแปลง) */}
                 <TableRow>
                   <TableHead className="w-[80px]">Image</TableHead>
                   <TableHead>Item Name</TableHead>
@@ -242,11 +301,11 @@ const handleConfirmDelete = async () => {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center">Loading...</TableCell></TableRow>
-                ) : filteredItems.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                ) : items.length === 0 ? ( // <-- 12. เปลี่ยนเป็น items.length
                   <TableRow><TableCell colSpan={8} className="h-24 text-center">No items found.</TableCell></TableRow>
                 ) : (
-                  filteredItems.map((item) => {
+                  items.map((item) => { // <-- 13. เปลี่ยนเป็น items.map
                     const isLowStock = item.quantity <= item.min_stock_level;
                     return (
                       <TableRow key={item.id} className={isLowStock ? "bg-orange-50 hover:bg-orange-100" : ""}>
@@ -286,11 +345,38 @@ const handleConfirmDelete = async () => {
               </TableBody>
             </Table>
           </div>
+          
+          {/* --- 14. Add Pagination Controls --- */}
+          <div className="flex items-center justify-between mt-4">
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+          {/* --- End Pagination Controls --- */}
+          
         </CardContent>
       </Card>
-      
-       {/* Print Modal Dialog */}
-       <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
+
+      {/* (Print Modal ไม่เปลี่ยนแปลง) */}
+      <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Print Barcode Label</DialogTitle>
@@ -299,49 +385,45 @@ const handleConfirmDelete = async () => {
             <p className="mb-4 text-sm text-muted-foreground">
               Preview of the label for: <strong>{itemToPrint?.name}</strong>
             </p>
-            
-            {/* The hidden component that will be printed */}
             <div className="hidden">
               {itemToPrint && (
                 <BarcodePrintLayout ref={printComponentRef} items={[itemToPrint]} />
               )}
             </div>
-
-            {/* A visible preview for the user, styled to be centered */}
             <div className="flex justify-center items-center p-4 border rounded-md">
-                 {itemToPrint && itemToPrint.barcode ? (
-                    <div className="flex flex-col items-center gap-2">
-                        <p className="font-semibold text-center">{itemToPrint.name}</p>
-                        <Barcode 
-                            value={itemToPrint.barcode}
-                            displayValue={false} // Hide the default text
-                            width={2}
-                            height={50}
-                        />
-                        <p className="font-mono tracking-widest text-lg">{itemToPrint.barcode}</p>
-                    </div>
-                 ) : (
-                    <p>No barcode available for this item.</p>
-                 )}
+              {itemToPrint && itemToPrint.barcode ? (
+                <div className="flex flex-col items-center gap-2">
+                  <p className="font-semibold text-center">{itemToPrint.name}</p>
+                  <Barcode
+                    value={itemToPrint.barcode}
+                    displayValue={false}
+                    width={2}
+                    height={50}
+                  />
+                  <p className="font-mono tracking-widest text-lg">{itemToPrint.barcode}</p>
+                </div>
+              ) : (
+                <p>No barcode available for this item.</p>
+              )}
             </div>
-            
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPrintModalOpen(false)}>Cancel</Button>
             <Button onClick={handlePrintClick}>
-                <Printer className="h-4 w-4 mr-2"/>
-                Print
+              <Printer className="h-4 w-4 mr-2" />
+              Print
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* +++ 9. เพิ่ม Delete Confirmation Dialog +++ */}
+      
+      {/* (Delete Modal ไม่เปลี่ยนแปลง) */}
       <Dialog open={isDeleteModelOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Are you absolutely sure?</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. This will permanently delete 
+              This action cannot be undone. This will permanently delete
               <strong className="mx-1">{itemToDelete?.name}</strong>
               and all its related history.
             </DialogDescription>
@@ -372,4 +454,3 @@ const handleConfirmDelete = async () => {
     </div>
   );
 }
-
