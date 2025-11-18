@@ -3,12 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: "3092"
-      POSTGRES_SSL: "false"
-      DATABASE_URL: "postgresql://rootpg:123456@pg-main:5432/asset_management" 
+    env_file:
+      - .env.local
     networks:
       - app-net      
       - db-net       
