@@ -24,16 +24,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // --- CORRECTED CODE ---
-    // Set a session cookie
-    (await
-      // --- CORRECTED CODE ---
-      // Set a session cookie
-      cookies()).set('session', user.id, {
+    // Set session cookie - ปรับ settings สำหรับการใช้งานแบบ local network
+    const cookieStore = await cookies();
+    cookieStore.set('session', String(user.id), {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // ปิด secure เพื่อให้ทำงานกับ HTTP
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
+      sameSite: 'lax', // ใช้ lax แทน strict
     });
 
     // Remove password from user object before sending back to the client
