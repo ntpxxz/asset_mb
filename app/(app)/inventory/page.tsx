@@ -73,7 +73,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // --- 3. Add Pagination State ---
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,7 +110,7 @@ export default function InventoryPage() {
     setLoading(true);
     try {
       const offset = (page - 1) * itemsPerPage;
-      
+
       const params = new URLSearchParams();
       params.set('limit', String(itemsPerPage));
       params.set('offset', String(offset));
@@ -120,7 +120,7 @@ export default function InventoryPage() {
 
       const response = await fetch(`/api/inventory?${params.toString()}`, { cache: "no-store" });
       const data = await response.json();
-      
+
       if (data.success) {
         setItems(data.data);
         setTotalItems(data.total); // <-- รับ Total จาก API
@@ -145,13 +145,13 @@ export default function InventoryPage() {
     // ดึงข้อมูลใหม่ทุกครั้งที่ page หรือ search term เปลี่ยน
     loadItems(currentPage, debouncedSearchTerm);
   }, [currentPage, debouncedSearchTerm, loadItems]);
-  
+
   // (ฟังก์ชัน Delete, Print, Export ไม่เปลี่ยนแปลง)
   const openDeleteModal = (item: InventoryItem) => {
     setItemToDelete(item);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
@@ -182,7 +182,7 @@ export default function InventoryPage() {
     setItemToPrint(item);
     setIsPrintModalOpen(true);
   };
-  
+
   const handleExport = () => {
     // (ฟังก์ชันนี้ควรจะดึงข้อมูลทั้งหมดถ้าต้องการ export, แต่สำหรับตอนนี้จะ export แค่หน้าปัจจุบัน)
     const headers = ["ID", "Barcode", "Name", "Quantity", "Min Stock", "Unit Price", "Total Value", "Location", "Category"];
@@ -197,8 +197,8 @@ export default function InventoryPage() {
       item.location || '',
       item.category || ''
     ]);
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
+    let csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
       + rows.map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -227,7 +227,7 @@ export default function InventoryPage() {
       currency: "THB",
     }).format(value);
   };
-  
+
   // --- 10. Handler สำหรับปุ่ม Pagination ---
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -247,10 +247,11 @@ export default function InventoryPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-            <Button size="sm" variant= "outline" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-            </Button>
+          <Button size="sm" variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          {/*
             <Button size="sm" variant="outline" onClick={() => router.push('/inventory/transaction')}>
                 <ArrowRightLeft className="h-4 w-4 mr-2" />
                 New Transaction
@@ -259,19 +260,20 @@ export default function InventoryPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Stock
             </Button>
+            */}
         </div>
       </div>
 
       {/* (Low Stock Alert ไม่เปลี่ยนแปลง) */}
       {lowStockItems.length > 0 && (
         <Card className="border-orange-400 bg-orange-50">
-            <CardHeader><CardTitle className="flex items-center text-orange-800"><AlertTriangle className="h-5 w-5 mr-2" />Low Stock Alert</CardTitle></CardHeader>
-            <CardContent>
-                <p className="text-sm text-orange-700">The following {lowStockItems.length} item(s) are at or below the minimum stock level:</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {lowStockItems.map((item) => (<Badge key={item.id} variant="outline" className="border-orange-300 text-orange-800">{item.name} (Qty: {item.quantity})</Badge>))}
-                </div>
-            </CardContent>
+          <CardHeader><CardTitle className="flex items-center text-orange-800"><AlertTriangle className="h-5 w-5 mr-2" />Low Stock Alert</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-sm text-orange-700">The following {lowStockItems.length} item(s) are at or below the minimum stock level:</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {lowStockItems.map((item) => (<Badge key={item.id} variant="outline" className="border-orange-300 text-orange-800">{item.name} (Qty: {item.quantity})</Badge>))}
+            </div>
+          </CardContent>
         </Card>
       )}
       <Card>
@@ -345,33 +347,33 @@ export default function InventoryPage() {
               </TableBody>
             </Table>
           </div>
-          
+
           {/* --- 14. Add Pagination Controls --- */}
           <div className="flex items-center justify-between mt-4">
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                    disabled={currentPage >= totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
           {/* --- End Pagination Controls --- */}
-          
+
         </CardContent>
       </Card>
 
@@ -416,7 +418,7 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* (Delete Modal ไม่เปลี่ยนแปลง) */}
       <Dialog open={isDeleteModelOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[425px]">

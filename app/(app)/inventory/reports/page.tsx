@@ -1,7 +1,6 @@
-// app/(app)/inventory/reports/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Download, Filter, Loader2, BarChart3 } from "lucide-react";
+import { ArrowLeft, Download, Filter, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { User } from "@/lib/data-store";
 
@@ -40,6 +39,12 @@ export default function InventoryReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination State
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -59,10 +64,15 @@ export default function InventoryReportsPage() {
     }
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async (page: number) => {
     setLoading(true);
     try {
+      const offset = (page - 1) * itemsPerPage;
       const params = new URLSearchParams();
+
+      params.append('limit', String(itemsPerPage));
+      params.append('offset', String(offset));
+
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.type !== 'all') params.append('type', filters.type);
@@ -72,6 +82,7 @@ export default function InventoryReportsPage() {
       const data = await response.json();
       if (data.success) {
         setTransactions(data.data);
+        setTotalItems(data.total || 0);
       } else {
         toast.error("Failed to load transactions.");
       }
@@ -80,19 +91,23 @@ export default function InventoryReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, itemsPerPage]);
 
   useEffect(() => {
     fetchUsers();
-    fetchTransactions();
   }, []);
+
+  useEffect(() => {
+    fetchTransactions(currentPage);
+  }, [fetchTransactions, currentPage]);
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
-  
+
   const handleApplyFilters = () => {
-    fetchTransactions();
+    setCurrentPage(1); // Reset to page 1 when filtering
+    fetchTransactions(1);
   };
 
   const handleExport = () => {
@@ -105,8 +120,8 @@ export default function InventoryReportsPage() {
       t.user_name || "System",
       `"${t.notes || ''}"`
     ]);
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
+    let csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
       + rows.map(e => e.join(",")).join("\n");
 
     const encodedUri = encodeURI(csvContent);
@@ -117,6 +132,8 @@ export default function InventoryReportsPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
   return (
     <div className="space-y-6">
@@ -131,7 +148,7 @@ export default function InventoryReportsPage() {
             <p className="text-gray-600">View and export inventory transaction history.</p>
           </div>
         </div>
-        <Button size="sm" variant = "outline" onClick={handleExport} disabled={transactions.length === 0}>
+        <Button size="sm" variant="outline" onClick={handleExport} disabled={transactions.length === 0}>
           <Download className="h-4 w-4 mr-2" />
           Export CSV
         </Button>
@@ -165,13 +182,12 @@ export default function InventoryReportsPage() {
             <Filter className="h-4 w-4 mr-2" />
             Apply Filters
           </Button>
-
-        </CardContent>       
+        </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Transaction Log</CardTitle>
+          <CardTitle>Transaction Log ({totalItems})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
@@ -206,6 +222,32 @@ export default function InventoryReportsPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1 || loading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                disabled={currentPage >= totalPages || loading}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+
         </CardContent>
       </Card>
     </div>

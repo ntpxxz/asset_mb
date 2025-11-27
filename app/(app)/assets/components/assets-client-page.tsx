@@ -43,20 +43,20 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"; // Import Pagination
-import type { AssetFormData } from "@/lib/data-store"; // Import type
+} from "@/components/ui/pagination";
+import type { AssetFormData } from "@/lib/data-store";
 
-// --- 1. สร้าง Interface สำหรับ Props ---
+// Props – optional defaultCategory lets the page start with a pre‑selected filter (e.g. "computer" or "network")
 interface AssetsClientPageProps {
   initialData: {
     assets: AssetFormData[];
     total: number;
   };
+  defaultCategory?: string;
 }
 
-// --- 2. แก้ไข Helper functions (เหมือนเดิม) ---
+// Helper to render a colored badge based on asset status
 const getStatusBadge = (status: string) => {
-  // ... (โค้ด getStatusBadge เหมือนเดิม) ...
   switch (status) {
     case "assigned":
       return <Badge className="bg-green-100 text-green-800">Assigned</Badge>;
@@ -71,8 +71,8 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+// Icon selector based on asset type
 const getAssetIcon = (type: string) => {
-  // ... (โค้ด getAssetIcon เหมือนเดิม) ...
   switch (type) {
     case "laptop":
       return Laptop;
@@ -93,50 +93,45 @@ const getAssetIcon = (type: string) => {
   }
 };
 
-// --- 3. เปลี่ยนชื่อ Component และรับ Props ---
-export default function AssetsClientPage({ initialData }: AssetsClientPageProps) {
+export default function AssetsClientPage({ initialData, defaultCategory }: AssetsClientPageProps) {
   const router = useRouter();
 
-  // --- 4. ใช้ initialData เป็นค่าเริ่มต้น ---
+  // Initial state from server‑side props
   const [assets, setAssets] = useState<AssetFormData[]>(initialData.assets);
   const [total, setTotal] = useState(initialData.total);
-  const [loading, setLoading] = useState(false); // <-- เปลี่ยนเป็น false
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // (State อื่นๆ เหมือนเดิม)
+  // UI state
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState(defaultCategory ? defaultCategory : "all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // --- 5. เพิ่ม Debounced Search (สำหรับ Server-side search) ---
+  // Debounced search term for server queries
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300); // หน่วง 300ms
+    const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // --- 6. แก้ไข loadAssets ให้นำ search term ไปใช้ ---
+  // Load assets from API with filters & pagination
   const loadAssets = async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
       const limit = itemsPerPage;
       const offset = (page - 1) * itemsPerPage;
-
       const qs = new URLSearchParams();
       qs.set("limit", String(limit));
       qs.set("offset", String(offset));
       if (statusFilter !== "all") qs.set("status", statusFilter);
       if (categoryFilter !== "all") qs.set("type", categoryFilter);
-      if (debouncedSearchTerm) qs.set("search", debouncedSearchTerm); // <-- เพิ่ม Search
+      if (debouncedSearchTerm) qs.set("search", debouncedSearchTerm);
 
       const res = await fetch(`/api/assets?${qs.toString()}`);
       const json = await res.json();
-
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
 
       setAssets(Array.isArray(json.data) ? json.data : []);
@@ -150,22 +145,20 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
     }
   };
 
-  // --- 7. ลบ useEffect ตัวแรกทิ้ง (เพราะเราได้ initialData แล้ว) ---
-  // useEffect(() => { loadAssets(1); }, []); // <-- ลบอันนี้
-
-  // --- 8. แก้ไข useEffects ให้ทำงานกับ debouncedSearchTerm ---
+  // Reload when filters change (reset to page 1)
   useEffect(() => {
-    setCurrentPage(1); // กลับไปหน้า 1 เมื่อ Filter หรือ Search
+    setCurrentPage(1);
     loadAssets(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, categoryFilter, debouncedSearchTerm]); // <-- เพิ่ม debouncedSearchTerm
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, categoryFilter, debouncedSearchTerm]);
 
+  // Reload when page changes
   useEffect(() => {
     loadAssets(currentPage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // <-- ตัวนี้เหมือนเดิม
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
-  // --- (ฟังก์ชัน handleDelete, handleView, handleEdit เหมือนเดิม) ---
+  // CRUD helpers
   const handleDelete = async (assetId: string) => {
     if (!confirm("Are you sure you want to delete this asset?")) return;
     try {
@@ -180,20 +173,13 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
       alert(`Failed to delete asset: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   };
-  
+
   const handleView = (asset: any) => router.push(`/assets/${asset.id}`);
   const handleEdit = (asset: any) => router.push(`/assets/${asset.id}/edit`);
 
-  // --- 9. ลบ filteredAssets (เพราะเรากรองที่ Server แล้ว) ---
-  // const filteredAssets = assets.filter(...) // <-- ลบส่วนนี้
-
-  // --- 10. ใช้ 'assets' โดยตรง และคำนวณ totalPages ---
-  const paginatedAssets = assets; // <-- ใช้ assets โดยตรง
-  const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(total / itemsPerPage));
-  }, [total, itemsPerPage]);
-
-  // (if (loading) ... ลบออกได้เลย เพราะเรามี Suspense ที่หน้า page)
+  // Direct assets array (server already filtered)
+  const paginatedAssets = assets;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / itemsPerPage)), [total, itemsPerPage]);
 
   return (
     <div className="space-y-6">
@@ -205,7 +191,7 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
         </div>
         <div className="flex gap-3">
           <Button variant="outline" size="sm" onClick={() => loadAssets(currentPage)} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Button variant="outline" size="sm">
@@ -234,7 +220,7 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
         </Card>
       )}
 
-      {/* Filters (Search Input เปลี่ยนไปใช้ State ของตัวเอง) */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -243,14 +229,13 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search by model, serial, user, or tag..."
-                  value={searchTerm} // <-- ใช้ searchTerm (State)
-                  onChange={(e) => setSearchTerm(e.target.value)} // <-- อัปเดต searchTerm
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              {/* ... Select Status ... */}
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -263,7 +248,6 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              {/* ... Select Category ... */}
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -292,7 +276,6 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
         <CardContent>
           {paginatedAssets.length === 0 ? (
             <div className="text-center py-8">
-              {/* ... (UI ตอนไม่มีข้อมูล เหมือนเดิม) ... */}
               <Monitor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No assets found</p>
             </div>
@@ -300,7 +283,6 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
             <div className="space-y-4">
               <div className="rounded-md border">
                 <Table>
-                  {/* ... (TableHeader เหมือนเดิม) ... */}
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
@@ -315,7 +297,6 @@ export default function AssetsClientPage({ initialData }: AssetsClientPageProps)
                   </TableHeader>
                   <TableBody>
                     {paginatedAssets.map((asset) => {
-                      // ... (การแสดง Row เหมือนเดิม) ...
                       const Icon = getAssetIcon(asset.type!);
                       return (
                         <TableRow key={asset.id}>

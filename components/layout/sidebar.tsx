@@ -5,16 +5,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  Shield,
+import {
+  Package,
   Activity,
-  RefreshCw,
-  BarChart3,
-  Settings, 
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -22,29 +15,53 @@ import {
   Laptop,
   BarChart2,
   Home,
-  FileText
+  FileText,
+  PlusCircle,
+  ArrowRightLeft,
+  Monitor,
+  Network
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Define the structure for navigation items
+type NavItem = {
+  name: string;
+  href: string;
+  icon: any;
+  submenu?: { name: string; href: string; icon: any }[];
+};
 
-const navigation = [
+const navigation: NavItem[] = [
   { name: 'Home', href: '/dashboard', icon: Home },
-  { name: 'Hardware', href: '/assets', icon: Laptop },
-  //{ name: 'Software', href: '/software', icon: Shield },
+  {
+    name: 'Computers & Network',
+    href: '/assets',
+    icon: Laptop,
+    submenu: [
+      { name: 'Computers', href: '/assets?type=desktop', icon: Monitor }, // Linking to desktops/laptops via query param
+      { name: 'Network', href: '/assets?type=switch', icon: Network }, // Linking to network devices via query param
+    ]
+  },
   { name: 'Borrowing', href: '/borrowing', icon: Activity },
-  { name: 'Inventory', href: '/inventory', icon: Box },
-  //{ name: 'Patches', href: '/patches', icon: RefreshCw },
-  //{ name: 'Users', href: '/users', icon: Users },
-  //{ name: 'Reports', href: '/reports', icon: BarChart3 },
-  //{ name: 'Settings', href: '/settings', icon: Settings, classname:'hidden'},
-  //{ name: 'Help', href: '/help', icon: HelpCircle },
+  {
+    name: 'Hardware',
+    href: '/inventory',
+    icon: Box,
+    submenu: [
+      { name: 'Stock Items', href: '/inventory', icon: Box },
+      { name: 'Dashboard', href: '/inventory/dashboard', icon: BarChart2 },
+      { name: 'Add Stock', href: '/inventory/add', icon: PlusCircle },
+      { name: 'New Transaction', href: '/inventory/transaction', icon: ArrowRightLeft },
+      { name: 'Reports', href: '/inventory/reports', icon: FileText },
+    ]
+  },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  
+
   const handleLogout = async () => {
     const tid = toast.loading('Logging out...');
     try {
@@ -59,6 +76,7 @@ export function Sidebar() {
       toast.error(err instanceof Error ? err.message : 'An error occurred', { id: tid });
     }
   }
+
   return (
     <div className={cn(
       "bg-white border-r border-gray-200 flex flex-col transition-all duration-300",
@@ -89,51 +107,53 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname.startsWith(item.href);
-          
+          // Check if current path matches main item or any submenu item
+          const isMainActive = pathname === item.href;
+          const isChildActive = item.submenu?.some(sub => pathname === sub.href.split('?')[0]); // Ignore query params for active check
+          const isActive = isMainActive || isChildActive;
+
           return (
             <div key={item.name}>
               <Link href={item.href}>
                 <div className={cn(
                   "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-                  isActive 
-                    ? "bg-blue-50 text-blue-700" 
+                  isActive
+                    ? "bg-blue-50 text-blue-700"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}>
                   <Icon className="h-5 w-5 flex-shrink-0" />
                   {!collapsed && <span className="font-medium">{item.name}</span>}
                 </div>
               </Link>
-              
-              {/* Add Sub-menu for Inventory */}
-              {item.name === 'Inventory' && isActive && !collapsed && (
-                <div className="pl-8 pt-2 space-y-1">
-                   <Link href="/inventory/dashboard">
-                     <div className={cn(
-                       "flex items-center space-x-3 px-3 py-1.5 rounded-md text-sm transition-colors",
-                       pathname === '/inventory/dashboard'
-                         ? "text-blue-700 font-semibold"
-                         : "text-gray-500 hover:text-gray-900"
-                     )}>
-                       <BarChart2 className="h-4 w-4" />
-                       <span>Dashboard</span>
-                     </div>
-                   </Link>
-                   {/* New Reports Link */}
-                   <Link href="/inventory/reports">
-                     <div className={cn(
-                       "flex items-center space-x-3 px-3 py-1.5 rounded-md text-sm transition-colors",
-                       pathname === '/inventory/reports'
-                         ? "text-blue-700 font-semibold"
-                         : "text-gray-500 hover:text-gray-900"
-                     )}>
-                       <FileText className="h-4 w-4" />
-                       <span>Reports</span>
-                     </div>
-                   </Link>
+
+              {/* Render Submenu if exists and not collapsed */}
+              {item.submenu && !collapsed && (
+                <div className={cn(
+                  "pl-4 pt-1 space-y-1 overflow-hidden transition-all",
+                  // Show submenu if parent is active or it's the Inventory/Hardware section to allow easy access
+                  isActive ? "block" : "hidden"
+                )}>
+                  {item.submenu.map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isSubActive = pathname === sub.href.split('?')[0];
+
+                    return (
+                      <Link key={sub.name} href={sub.href}>
+                        <div className={cn(
+                          "flex items-center space-x-3 px-3 py-1.5 rounded-md text-sm transition-colors",
+                          isSubActive
+                            ? "text-blue-700 font-medium bg-blue-50/50"
+                            : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                        )}>
+                          <SubIcon className="h-4 w-4" />
+                          <span>{sub.name}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -141,33 +161,18 @@ export function Sidebar() {
         })}
       </nav>
 
-
-    
       {/* Footer with Logout Button */}
       <div className="p-4 border-t border-gray-200">
-         <div 
-            onClick={handleLogout}
-            className={cn(
-              "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            )}
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span className="font-medium">Logout</span>}
-          </div>
-      </div>
-
-      {/*{!collapsed && (
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
-            <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Admin User</p>
-              <p className="text-xs text-gray-500">admin@company.com</p>
-            </div>
-          </div>
+        <div
+          onClick={handleLogout}
+          className={cn(
+            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors cursor-pointer text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          )}
+        >
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+          {!collapsed && <span className="font-medium">Logout</span>}
         </div>
-      )}*/}
-      
+      </div>
     </div>
   );
 }

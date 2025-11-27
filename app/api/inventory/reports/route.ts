@@ -1,4 +1,3 @@
-// app/api/inventory/reports/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
@@ -13,6 +12,46 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type');
     const userId = searchParams.get('userId');
 
+    // Pagination Params
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    // 1. Construct WHERE clause
+    const whereClauses = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (startDate) {
+      whereClauses.push(`t.transaction_date >= $${paramIndex++}`);
+      queryParams.push(startDate);
+    }
+    if (endDate) {
+      // Adjust end date to cover the full day
+      whereClauses.push(`t.transaction_date <= $${paramIndex++}::timestamp + INTERVAL '1 day'`);
+      queryParams.push(endDate);
+    }
+    if (type && type !== 'all') {
+      whereClauses.push(`t.transaction_type = $${paramIndex++}`);
+      queryParams.push(type);
+    }
+    if (userId && userId !== 'all') {
+      whereClauses.push(`t.user_id = $${paramIndex++}`);
+      queryParams.push(userId);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // 2. Count Total Query
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM inventory_transactions t
+      ${whereSql}
+    `;
+    // Use a separate params array for count to avoid index mismatch if we reused queryParams blindly
+    const countResult = await pool.query(countQuery, queryParams);
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    // 3. Data Query with Pagination
     let query = `
       SELECT
         t.id,
@@ -25,38 +64,23 @@ export async function GET(req: NextRequest) {
       FROM inventory_transactions t
       JOIN inventory_items i ON t.item_id = i.id
       LEFT JOIN users u ON t.user_id = u.id
+      ${whereSql}
+      ORDER BY t.transaction_date DESC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
     `;
 
-    const whereClauses = [];
-    const queryParams = [];
-    let paramIndex = 1;
-
-    if (startDate) {
-      whereClauses.push(`t.transaction_date >= $${paramIndex++}`);
-      queryParams.push(startDate);
-    }
-    if (endDate) {
-      whereClauses.push(`t.transaction_date <= $${paramIndex++}`);
-      queryParams.push(endDate);
-    }
-    if (type && type !== 'all') {
-      whereClauses.push(`t.transaction_type = $${paramIndex++}`);
-      queryParams.push(type);
-    }
-    if (userId && userId !== 'all') {
-      whereClauses.push(`t.user_id = $${paramIndex++}`);
-      queryParams.push(userId);
-    }
-
-    if (whereClauses.length > 0) {
-      query += ` WHERE ${whereClauses.join(' AND ')}`;
-    }
-
-    query += ' ORDER BY t.transaction_date DESC';
+    // Add pagination params to the main query params
+    queryParams.push(limit, offset);
 
     const result = await pool.query(query, queryParams);
 
-    return NextResponse.json({ success: true, data: result.rows });
+    return NextResponse.json({
+      success: true,
+      data: result.rows,
+      total,
+      limit,
+      offset
+    });
 
   } catch (error: any) {
     console.error('[GET /api/inventory/reports] error:', error);
