@@ -47,7 +47,8 @@ export default function DashboardPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          cache: 'no-store',
+          next: { revalidate: 60 }
+         
         });
 
         console.log('Response status:', response.status);
