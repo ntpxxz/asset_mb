@@ -38,9 +38,9 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         setError(null);
-        
+
         console.log('Fetching dashboard data from client...');
-        
+
         // ใน Client-Side ใช้ relative URL ได้เลย
         const response = await fetch('/api/dashboard?days=60', {
           method: 'GET',
@@ -48,7 +48,7 @@ export default function DashboardPage() {
             'Content-Type': 'application/json',
           },
           next: { revalidate: 60 }
-         
+
         });
 
         console.log('Response status:', response.status);
@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
         const json = await response.json();
         console.log('Response data:', json);
-        
+
         if (!json.success) {
           throw new Error(json.error || 'API returned success: false');
         }
@@ -86,7 +86,7 @@ export default function DashboardPage() {
     users: { total: 0, active: 0, inactive: 0 },
     borrowing: { checkedOut: 0, overdue: 0 },
   };
-  
+
   const warranties = data?.warranties ?? [];
   const utilization =
     stats.software.totalLicenses > 0
@@ -97,27 +97,27 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">IT Asset Management Overview</p>
-        
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground">IT Asset Management Overview</p>
+
         {loading && (
-          <div className="mt-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-blue-700 text-sm">
+          <div className="mt-3 rounded-md border border-blue-500/20 bg-blue-500/10 p-3 text-blue-700 dark:text-blue-400 text-sm">
             <div className="flex items-center space-x-2">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Loading dashboard data...</span>
             </div>
           </div>
         )}
-        
+
         {error && (
-          <div className="mt-3 rounded-md border border-red-300 bg-red-50 p-3 text-red-700 text-sm">
+          <div className="mt-3 rounded-md border border-red-500/20 bg-red-500/10 p-3 text-red-700 dark:text-red-400 text-sm">
             <strong>Error:</strong> {error}
             <div className="mt-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => window.location.reload()}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
               >
                 Retry
               </Button>
@@ -132,7 +132,7 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Hardware</p>
+                <p className="text-sm text-muted-foreground">Total Hardware</p>
                 <p className="text-xl font-bold">{stats.hardware.total}</p>
               </div>
               <Package className="h-6 w-6 text-blue-600" />
@@ -143,29 +143,18 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Software Licenses</p>
+                <p className="text-sm text-muted-foreground">Software Licenses</p>
                 <p className="text-xl font-bold">{stats.software.totalLicenses}</p>
               </div>
               <Shield className="h-6 w-6 text-green-600" />
             </div>
           </CardContent>
         </Card>
-        {/* <Card className={loading ? 'opacity-50' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active Users</p>
-                <p className="text-xl font-bold">{stats.users.active}</p>
-              </div>
-              <Users className="h-6 w-6 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card> */}
         <Card className={loading ? 'opacity-50' : ''}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Items on Loan</p>
+                <p className="text-sm text-muted-foreground">Items on Loan</p>
                 <p className="text-xl font-bold">{stats.borrowing.checkedOut}</p>
               </div>
               <Activity className="h-6 w-6 text-orange-600" />
@@ -187,16 +176,16 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               {[
-                { label: 'In Use', color: 'bg-green-500', badge: 'bg-green-100 text-green-800', value: stats.hardware.inUse },
-                { label: 'Available', color: 'bg-blue-500', badge: 'bg-blue-100 text-blue-800', value: stats.hardware.available },
-                { label: 'Under Repair', color: 'bg-yellow-500', badge: 'bg-yellow-100 text-yellow-800', value: stats.hardware.underRepair },
-                { label: 'Retired', color: 'bg-gray-500', badge: 'bg-gray-100 text-gray-800', value: stats.hardware.retired },
+                { label: 'In Use', color: 'bg-green-500', badge: 'bg-green-500/10 text-green-700 dark:text-green-400', value: stats.hardware.inUse },
+                { label: 'Available', color: 'bg-blue-500', badge: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', value: stats.hardware.available },
+                { label: 'Under Repair', color: 'bg-yellow-500', badge: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400', value: stats.hardware.underRepair },
+                { label: 'Retired', color: 'bg-gray-500', badge: 'bg-gray-500/10 text-gray-700 dark:text-gray-400', value: stats.hardware.retired },
               ].map((row) => (
                 <div key={row.label} className="flex justify-between items-center">
-                  <span className="text-sm">{row.label}</span>
+                  <span className="text-sm text-muted-foreground">{row.label}</span>
                   <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 rounded-full ${row.color}`} />
-                    <Badge className={row.badge}>{row.value}</Badge>
+                    <Badge className={row.badge} variant="outline">{row.value}</Badge>
                   </div>
                 </div>
               ))}
@@ -215,23 +204,23 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Total Licenses</span>
-                <Badge className="bg-blue-100 text-blue-800">{stats.software.totalLicenses}</Badge>
+                <span className="text-sm text-muted-foreground">Total Licenses</span>
+                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.software.totalLicenses}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Assigned</span>
-                <Badge className="bg-green-100 text-green-800">{stats.software.assignedLicenses}</Badge>
+                <span className="text-sm text-muted-foreground">Assigned</span>
+                <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.software.assignedLicenses}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Available</span>
-                <Badge className="bg-orange-100 text-orange-800">{stats.software.availableLicenses}</Badge>
+                <span className="text-sm text-muted-foreground">Available</span>
+                <Badge className="bg-orange-500/10 text-orange-700 dark:text-orange-400" variant="outline">{stats.software.availableLicenses}</Badge>
               </div>
               <div className="mt-4 pt-3 border-t">
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Utilization</span>
                   <span>{utilization}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                <div className="w-full bg-muted rounded-full h-2 mt-1">
                   <div
                     className="bg-green-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${utilization}%` }}
@@ -253,16 +242,16 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Checked Out</span>
-                <Badge className="bg-orange-100 text-orange-800">{stats.borrowing.checkedOut}</Badge>
+                <span className="text-sm text-muted-foreground">Checked Out</span>
+                <Badge className="bg-orange-500/10 text-orange-700 dark:text-orange-400" variant="outline">{stats.borrowing.checkedOut}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Overdue</span>
-                <Badge className="bg-red-100 text-red-800">{stats.borrowing.overdue}</Badge>
+                <span className="text-sm text-muted-foreground">Overdue</span>
+                <Badge className="bg-red-500/10 text-red-700 dark:text-red-400" variant="outline">{stats.borrowing.overdue}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Available to Borrow</span>
-                <Badge className="bg-blue-100 text-blue-800">{stats.hardware.available}</Badge>
+                <span className="text-sm text-muted-foreground">Available to Borrow</span>
+                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.hardware.available}</Badge>
               </div>
             </div>
           </CardContent>
@@ -280,35 +269,35 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                 <div className="flex items-center space-x-3">
                   <div className="w-3 h-3 bg-green-500 rounded-full" />
                   <div>
-                    <p className="font-medium text-green-900">Up-to-Date</p>
-                    <p className="text-sm text-green-700">Systems current</p>
+                    <p className="font-medium text-green-900 dark:text-green-300">Up-to-Date</p>
+                    <p className="text-sm text-green-700 dark:text-green-400">Systems current</p>
                   </div>
                 </div>
-                <Badge className="bg-green-100 text-green-800">—</Badge>
+                <Badge className="bg-green-500/20 text-green-800 dark:text-green-300" variant="outline">—</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                 <div className="flex items-center space-x-3">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full" />
                   <div>
-                    <p className="font-medium text-yellow-900">Needs Review</p>
-                    <p className="text-sm text-yellow-700">Manual check required</p>
+                    <p className="font-medium text-yellow-900 dark:text-yellow-300">Needs Review</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">Manual check required</p>
                   </div>
                 </div>
-                <Badge className="bg-yellow-100 text-yellow-800">—</Badge>
+                <Badge className="bg-yellow-500/20 text-yellow-800 dark:text-yellow-300" variant="outline">—</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg border border-red-500/20">
                 <div className="flex items-center space-x-3">
                   <div className="w-3 h-3 bg-red-500 rounded-full" />
                   <div>
-                    <p className="font-medium text-red-900">Update Pending</p>
-                    <p className="text-sm text-red-700">Action required</p>
+                    <p className="font-medium text-red-900 dark:text-red-300">Update Pending</p>
+                    <p className="text-sm text-red-700 dark:text-red-400">Action required</p>
                   </div>
                 </div>
-                <Badge className="bg-red-100 text-red-800">—</Badge>
+                <Badge className="bg-red-500/20 text-red-800 dark:text-red-300" variant="outline">—</Badge>
               </div>
             </div>
           </CardContent>
@@ -325,21 +314,21 @@ export default function DashboardPage() {
             {warranties.length > 0 ? (
               <div className="space-y-3">
                 {warranties.slice(0, 3).map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
                     <div>
                       <p className="font-medium text-sm">{item.model}</p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-muted-foreground">
                         {item.asset_tag} • Expires: {item.warranty_expiry}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-orange-700 border-orange-300">
+                    <Badge variant="outline" className="text-orange-700 dark:text-orange-400 border-orange-500/30">
                       {item.days_left} days
                     </Badge>
                   </div>
                 ))}
                 {warranties.length > 3 && (
                   <div className="text-center pt-2">
-                    <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700">
+                    <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300">
                       View all {warranties.length} expiring warranties
                     </Button>
                   </div>
@@ -348,14 +337,12 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-6">
                 <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No warranties expiring soon</p>
+                <p className="text-sm text-muted-foreground">No warranties expiring soon</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-
-      
     </div>
   );
 }

@@ -30,9 +30,10 @@ interface Props {
   onCancel?: () => void;
   onSaved?: (asset: any) => void;
   loading?: boolean;
+  category?: 'computer' | 'network';
 }
 
-export default function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onCancel, onSaved, loading }: Props) {
+export default function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onCancel, onSaved, loading, category }: Props) {
   const [formData, setFormData] = useState<AssetFormData>({
     asset_tag: '',
     type: '',
@@ -183,7 +184,9 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
       });
 
       onSaved?.(json.data);
-      setTimeout(() => router.push("/assets"), 2100);
+      // If category is set, redirect to that category page
+      const redirectPath = category ? `/assets/${category}` : "/assets";
+      setTimeout(() => router.push(redirectPath), 2100);
 
       if (mode === "create") {
         // Reset form
@@ -222,7 +225,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Icon className="h-5 w-5" />
-          <span>{mode === 'create' ? 'Add Asset' : 'Edit Asset'}</span>
+          <span>{mode === 'create' ? 'Add Asset (เพิ่มทรัพย์สิน)' : 'Edit Asset (แก้ไขทรัพย์สิน)'}</span>
         </CardTitle>
       </CardHeader>
 
@@ -237,48 +240,54 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* 1. Basic Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Basic Information (ข้อมูลพื้นฐาน)</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="type">Asset Type *</Label>
+                <Label htmlFor="type">Asset Type (ประเภททรัพย์สิน) *</Label>
                 <Select
                   value={formData.type || ''}
                   onValueChange={(value) => handleInputChange('type', value)}
                   disabled={submitting}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder="เลือกประเภท" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Computer</SelectLabel>
-                      <SelectItem value="laptop">Laptop</SelectItem>
-                      <SelectItem value="desktop">Desktop</SelectItem>
-                      <SelectItem value="server">Server</SelectItem>
-                      <SelectItem value="tablet">Tablet</SelectItem>
-                    </SelectGroup>
-                    <SelectGroup>
-                      <SelectLabel>Network</SelectLabel>
-                      <SelectItem value="router">Router</SelectItem>
-                      <SelectItem value="switch">Switch</SelectItem>
-                      <SelectItem value="firewall">Firewall</SelectItem>
-                      <SelectItem value="access-point">Access Point</SelectItem>
-                    </SelectGroup>
-                    <SelectGroup>
-                      <SelectLabel>Peripherals & Others</SelectLabel>
-                      <SelectItem value="monitor">Monitor</SelectItem>
-                      <SelectItem value="printer">Printer</SelectItem>
-                      <SelectItem value="projector">Projector</SelectItem>
-                      <SelectItem value="storage">Storage</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectGroup>
+                    {(!category || category === 'computer') && (
+                      <SelectGroup>
+                        <SelectLabel>Computer</SelectLabel>
+                        <SelectItem value="laptop">Laptop</SelectItem>
+                        <SelectItem value="desktop">Desktop</SelectItem>
+                        <SelectItem value="server">Server</SelectItem>
+                        <SelectItem value="tablet">Tablet</SelectItem>
+                      </SelectGroup>
+                    )}
+                    {(!category || category === 'network') && (
+                      <SelectGroup>
+                        <SelectLabel>Network</SelectLabel>
+                        <SelectItem value="router">Router</SelectItem>
+                        <SelectItem value="switch">Switch</SelectItem>
+                        <SelectItem value="firewall">Firewall</SelectItem>
+                        <SelectItem value="access-point">Access Point</SelectItem>
+                      </SelectGroup>
+                    )}
+                    {!category && (
+                      <SelectGroup>
+                        <SelectLabel>Peripherals & Others</SelectLabel>
+                        <SelectItem value="monitor">Monitor</SelectItem>
+                        <SelectItem value="printer">Printer</SelectItem>
+                        <SelectItem value="projector">Projector</SelectItem>
+                        <SelectItem value="storage">Storage</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectGroup>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="asset_tag">Asset Tag</Label>
+                <Label htmlFor="asset_tag">Asset Tag (รหัสทรัพย์สิน)</Label>
                 <Input
                   id="asset_tag"
                   value={formData.asset_tag || ''}
@@ -288,14 +297,14 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">Status (สถานะ)</Label>
                 <Select
                   value={formData.status || 'available'}
                   onValueChange={(value) => handleInputChange('status', value as any)}
                   disabled={submitting}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="เลือกสถานะ" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="available">Available</SelectItem>
@@ -309,7 +318,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="manufacturer">Manufacturer *</Label>
+                <Label htmlFor="manufacturer">Manufacturer (ผู้ผลิต) *</Label>
                 <Input
                   id="manufacturer"
                   value={formData.manufacturer || ''}
@@ -319,7 +328,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="model">Model *</Label>
+                <Label htmlFor="model">Model (รุ่น) *</Label>
                 <Input
                   id="model"
                   value={formData.model || ''}
@@ -329,7 +338,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="serialnumber">Serial Number *</Label>
+                <Label htmlFor="serialnumber">Serial Number (หมายเลขซีเรียล) *</Label>
                 <Input
                   id="serialnumber"
                   value={formData.serialnumber || ''}
@@ -345,16 +354,16 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
           {(isComputer || isNetwork) && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                {isNetwork ? "Network Specifications" : "Technical Specifications"}
+                {isNetwork ? "Network Specifications (สเปคเครือข่าย)" : "Technical Specifications (ข้อมูลทางเทคนิค)"}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* OS / Firmware - ใช้ร่วมกัน */}
                 <div className="space-y-2">
-                  <Label htmlFor="operatingsystem">{isNetwork ? 'Firmware / OS' : 'Operating System'}</Label>
+                  <Label htmlFor="operatingsystem">{isNetwork ? 'Firmware / OS (เฟิร์มแวร์ / ระบบปฏิบัติการ)' : 'Operating System (ระบบปฏิบัติการ)'}</Label>
                   <Input
                     id="operatingsystem"
-                    placeholder={isNetwork ? "e.g., IOS 15, RouterOS" : "e.g., Windows 11, macOS"}
+                    placeholder={isNetwork ? "เช่น IOS 15, RouterOS" : "เช่น Windows 11, macOS"}
                     value={formData.operatingsystem || ''}
                     onChange={(e) => handleInputChange('operatingsystem', e.target.value)}
                     disabled={submitting}
@@ -364,10 +373,10 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 {/* CPU - เฉพาะ Computer */}
                 {isComputer && (
                   <div className="space-y-2">
-                    <Label htmlFor="processor">CPU / Processor</Label>
+                    <Label htmlFor="processor">CPU / Processor (หน่วยประมวลผล)</Label>
                     <Input
                       id="processor"
-                      placeholder="e.g., Intel Core i7"
+                      placeholder="เช่น Intel Core i7"
                       value={formData.processor || ''}
                       onChange={(e) => handleInputChange('processor', e.target.value)}
                       disabled={submitting}
@@ -380,20 +389,20 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
               {isComputer && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="memory">Memory (RAM)</Label>
+                    <Label htmlFor="memory">Memory (RAM) (หน่วยความจำ)</Label>
                     <Input
                       id="memory"
-                      placeholder="e.g., 16GB"
+                      placeholder="เช่น 16GB"
                       value={formData.memory || ''}
                       onChange={(e) => handleInputChange('memory', e.target.value)}
                       disabled={submitting}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="storage">Storage</Label>
+                    <Label htmlFor="storage">Storage (พื้นที่จัดเก็บ)</Label>
                     <Input
                       id="storage"
-                      placeholder="e.g., 512GB SSD"
+                      placeholder="เช่น 512GB SSD"
                       value={formData.storage || ''}
                       onChange={(e) => handleInputChange('storage', e.target.value)}
                       disabled={submitting}
@@ -407,10 +416,10 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
           {/* 3. Network Information (แสดงทั้ง Computer และ Network Equipment) */}
           {(isComputer || isNetwork) && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Network Configuration</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Network Configuration (การตั้งค่าเครือข่าย)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hostname">Hostname</Label>
+                  <Label htmlFor="hostname">Hostname (ชื่อเครื่อง)</Label>
                   <Input
                     id="hostname"
                     value={formData.hostname || ''}
@@ -419,7 +428,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ipaddress">IP Address</Label>
+                  <Label htmlFor="ipaddress">IP Address (ที่อยู่ IP)</Label>
                   <Input
                     id="ipaddress"
                     value={formData.ipaddress || ''}
@@ -428,7 +437,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="macaddress">MAC Address</Label>
+                  <Label htmlFor="macaddress">MAC Address (ที่อยู่ MAC)</Label>
                   <Input
                     id="macaddress"
                     value={formData.macaddress || ''}
@@ -442,20 +451,20 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
 
           {/* 4. Assignment & Purchase (ทุกประเภทมีเหมือนกัน) */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Assignment & Location</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Assignment & Location (การมอบหมายและสถานที่)</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="assigneduser">Assigned To (Employee ID)</Label>
+                <Label htmlFor="assigneduser">Assigned To (Employee ID) (ผู้รับผิดชอบ)</Label>
                 <Input
                   id="assigneduser"
-                  placeholder="e.g., EMP-123"
+                  placeholder="เช่น EMP-123"
                   value={formData.assigneduser || ''}
                   onChange={(e) => handleInputChange('assigneduser', e.target.value)}
                   disabled={submitting}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location">Location (สถานที่)</Label>
                 <Input
                   id="location"
                   value={formData.location || ''}
@@ -464,7 +473,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
+                <Label htmlFor="department">Department (แผนก)</Label>
                 <Input
                   id="department"
                   value={formData.department || ''}
@@ -476,10 +485,10 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty (การจัดซื้อและประกัน)</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="purchasedate">Purchase Date</Label>
+                <Label htmlFor="purchasedate">Purchase Date (วันที่ซื้อ)</Label>
                 <Input
                   id="purchasedate"
                   type="date"
@@ -489,7 +498,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="purchaseprice">Price</Label>
+                <Label htmlFor="purchaseprice">Price (ราคา)</Label>
                 <Input
                   id="purchaseprice"
                   type="number"
@@ -500,7 +509,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier</Label>
+                <Label htmlFor="supplier">Supplier (ผู้จัดจำหน่าย)</Label>
                 <Input
                   id="supplier"
                   value={formData.supplier || ''}
@@ -509,7 +518,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="warrantyexpiry">Warranty Expiry</Label>
+                <Label htmlFor="warrantyexpiry">Warranty Expiry (วันหมดประกัน)</Label>
                 <Input
                   id="warrantyexpiry"
                   type="date"
@@ -523,10 +532,10 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
 
           {/* 5. Additional Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Additional Information (ข้อมูลเพิ่มเติม)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">Description (รายละเอียด)</Label>
                 <Textarea
                   id="description"
                   rows={3}
@@ -536,7 +545,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">Notes (หมายเหตุ)</Label>
                 <Textarea
                   id="notes"
                   rows={3}
@@ -553,7 +562,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 onCheckedChange={(v) => handleInputChange('isloanable', !!v)}
                 disabled={submitting}
               />
-              <Label htmlFor="isloanable">Available for loan (Borrowable)</Label>
+              <Label htmlFor="isloanable">Available for loan (สามารถยืมได้)</Label>
             </div>
           </div>
 
@@ -561,12 +570,12 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
           <div className="flex items-center justify-end space-x-2 pt-4 border-t">
             {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
-                Cancel
+                Cancel (ยกเลิก)
               </Button>
             )}
             <Button type="submit" disabled={submitting || loading}>
               <Save className="h-4 w-4 mr-2" />
-              {submitting ? 'Saving...' : mode === 'create' ? 'Add Asset' : 'Save Changes'}
+              {submitting ? 'Saving... (กำลังบันทึก)' : mode === 'create' ? 'Add Asset (เพิ่มทรัพย์สิน)' : 'Save Changes (บันทึกการเปลี่ยนแปลง)'}
             </Button>
           </div>
         </form>

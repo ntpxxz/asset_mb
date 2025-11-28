@@ -1,0 +1,75 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { AssetForm } from '../../components/forms/asset-form';
+import { toast } from 'sonner';
+
+export default function AddComputerAssetPage() {
+    const router = useRouter();
+
+    const handleSubmit = async (formData: any) => {
+        const tid = toast.loading("Adding computer asset...", {
+            description: "Saving to database",
+            className: "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
+            duration: 10000,
+        });
+
+        try {
+            const res = await fetch('/api/assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                throw new Error(result.error || 'Failed to create asset');
+            }
+
+            toast.success("Computer asset added successfully", {
+                id: tid,
+                description: `New Computer Added Successfully`,
+                icon: "✅",
+                className: "rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-900 shadow-lg",
+                duration: 2000,
+            });
+
+            setTimeout(() => router.push('/assets/computer'), 2200);
+            return { success: true };
+        } catch (err) {
+            toast.error("Failed to add asset", {
+                id: tid,
+                description: "Please try again.",
+                icon: "⚠️",
+                className: "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
+                duration: 4000,
+            });
+
+            return { success: false, error: err instanceof Error ? err.message : 'Failed to create asset' };
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center space-x-4">
+                <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                </Button>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Add Computer Asset</h1>
+                    <p className="text-gray-600">Create a new computer asset record</p>
+                </div>
+            </div>
+
+            <AssetForm
+                mode="create"
+                category="computer"
+                onSubmit={handleSubmit}
+                onCancel={() => router.back()}
+            />
+        </div>
+    );
+}

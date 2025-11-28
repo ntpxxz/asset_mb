@@ -30,7 +30,7 @@ const assetCreateSchema = z.object({
   patchstatus: z.string().default('needs-review'),
   lastpatch_check: z.string().optional().nullable(),
   isloanable: z.boolean().default(false),
-  condition: z.enum(['new','good','fair','poor','broken']).default('good'),
+  condition: z.enum(['new', 'good', 'fair', 'poor', 'broken']).default('good'),
   description: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
@@ -38,11 +38,11 @@ const assetCreateSchema = z.object({
 // Helper function to clean data
 function cleanCreateData(data: any) {
   const cleaned: any = {};
-  
+
   Object.entries(data).forEach(([key, value]) => {
     // Skip undefined values
     if (value === undefined) return;
-    
+
     // Convert empty strings to null for optional fields
     if (value === '') {
       cleaned[key] = null;
@@ -50,7 +50,7 @@ function cleanCreateData(data: any) {
       cleaned[key] = value;
     }
   });
-  
+
   return cleaned;
 }
 
@@ -70,7 +70,20 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
     const conds: string[] = [];
     if (status) { params.push(status); conds.push(`a.status = $${params.length}`); }
-    if (type)   { params.push(type);   conds.push(`a.type   = $${params.length}`); }
+    if (type && type !== 'all') {
+      if (type === 'computer') {
+        const computerTypes = ['laptop', 'desktop', 'phone', 'tablet', 'PC', 'NB'];
+        params.push(computerTypes);
+        conds.push(`a.type = ANY($${params.length}::text[])`);
+      } else if (type === 'network') {
+        const networkTypes = ['router', 'switch', 'monitor', 'server'];
+        params.push(networkTypes);
+        conds.push(`a.type = ANY($${params.length}::text[])`);
+      } else {
+        params.push(type);
+        conds.push(`a.type = $${params.length}`);
+      }
+    }
     const whereSql = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
     // จับคู่ employee_id ใน a.assigneduser กับ users.employee_id
