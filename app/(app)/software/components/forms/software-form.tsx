@@ -17,8 +17,6 @@ import { Save, Plus, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 import { SoftwareFormData } from '@/lib/data-store';
 type Mode = 'create' | 'edit';
 
-
-
 export interface SoftwareFormProps {
   mode: Mode;
   initialData?: Partial<SoftwareFormData> | null;
@@ -80,7 +78,7 @@ const toInt = (v: unknown) => {
   const n = typeof v === 'number' ? v : parseInt(String(v), 10);
   return Number.isFinite(n) ? n : 0;
 };
-const toNull = (v: unknown) => (v === '' || v === undefined || v === null ? null : v);
+const toNull = (v: unknown): string | null => (v === '' || v === undefined || v === null ? null : String(v));
 
 export default function SoftwareForm({ mode, initialData, onSubmit, onCancel }: SoftwareFormProps) {
   const [formData, setFormData] = useState<SoftwareFormData>({

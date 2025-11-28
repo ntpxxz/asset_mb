@@ -111,10 +111,10 @@ export async function GET(req: NextRequest) {
         `
         SELECT
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE status ILIKE 'In Use' OR status ILIKE 'assigned')::int                AS in_use,
-          COUNT(*) FILTER (WHERE status ILIKE 'In Stock' OR status ILIKE 'Available')::int  AS available,
-          COUNT(*) FILTER (WHERE status ILIKE 'Under Repair' OR status ILIKE 'maintenance')::int      AS under_repair,
-          COUNT(*) FILTER (WHERE status ILIKE 'Retired')::int                               AS retired
+          SUM(CASE WHEN status ILIKE 'In Use' OR status ILIKE 'assigned' THEN 1 ELSE 0 END)::int AS in_use,
+          SUM(CASE WHEN status ILIKE 'In Stock' OR status ILIKE 'Available' THEN 1 ELSE 0 END)::int AS available,
+          SUM(CASE WHEN status ILIKE 'Under Repair' OR status ILIKE 'maintenance' THEN 1 ELSE 0 END)::int AS under_repair,
+          SUM(CASE WHEN status ILIKE 'Retired' THEN 1 ELSE 0 END)::int AS retired
         FROM assets;
         `,
         { total: 0, in_use: 0, available: 0, under_repair: 0, retired: 0 }
@@ -124,9 +124,9 @@ export async function GET(req: NextRequest) {
         `
         SELECT
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE type ILIKE 'laptop' OR type ILIKE 'nb')::int AS laptop,
-          COUNT(*) FILTER (WHERE type ILIKE 'desktop' OR type ILIKE 'pc')::int AS desktop,
-          COUNT(*) FILTER (WHERE type ILIKE 'server')::int AS server
+          SUM(CASE WHEN type ILIKE 'laptop' OR type ILIKE 'nb' THEN 1 ELSE 0 END)::int AS laptop,
+          SUM(CASE WHEN type ILIKE 'desktop' OR type ILIKE 'pc' THEN 1 ELSE 0 END)::int AS desktop,
+          SUM(CASE WHEN type ILIKE 'server' THEN 1 ELSE 0 END)::int AS server
         FROM assets
         WHERE type ILIKE 'laptop' 
            OR type ILIKE 'nb'
@@ -143,9 +143,9 @@ export async function GET(req: NextRequest) {
         `
         SELECT
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE type ILIKE 'router')::int AS router,
-          COUNT(*) FILTER (WHERE type ILIKE 'switch')::int AS switch,
-          COUNT(*) FILTER (WHERE type NOT ILIKE 'router' AND type NOT ILIKE 'switch')::int AS other
+          SUM(CASE WHEN type ILIKE 'router' THEN 1 ELSE 0 END)::int AS router,
+          SUM(CASE WHEN type ILIKE 'switch' THEN 1 ELSE 0 END)::int AS switch,
+          SUM(CASE WHEN type NOT ILIKE 'router' AND type NOT ILIKE 'switch' THEN 1 ELSE 0 END)::int AS other
         FROM assets
         WHERE type ILIKE 'router' 
            OR type ILIKE 'switch'
@@ -161,8 +161,8 @@ export async function GET(req: NextRequest) {
         SELECT
           COUNT(*)::int AS total_items,
           COALESCE(SUM(quantity), 0)::int AS total_quantity,
-          COUNT(*) FILTER (WHERE quantity > 0 AND quantity <= min_stock_level)::int AS low_stock,
-          COUNT(*) FILTER (WHERE quantity = 0)::int AS out_of_stock
+          SUM(CASE WHEN quantity > 0 AND quantity <= min_stock_level THEN 1 ELSE 0 END)::int AS low_stock,
+          SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END)::int AS out_of_stock
         FROM inventory_items;
         `,
         { total_items: 0, total_quantity: 0, low_stock: 0, out_of_stock: 0 }
