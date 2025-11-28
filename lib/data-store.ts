@@ -34,6 +34,7 @@ export interface HardwareAsset {
   division?: string;
   section?: string;
   area?: string;
+  pc_name?: string;
   os_key?: string;
   os_version?: string;
   ms_office_apps?: string;
@@ -75,6 +76,7 @@ export type AssetFormData = {
   division?: string;
   section?: string;
   area?: string;
+  pc_name?: string;
   os_key?: string;
   os_version?: string;
   ms_office_apps?: string;

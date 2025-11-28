@@ -172,6 +172,105 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
     const handleView = (asset: any) => router.push(`${basePath}/${asset.id}`);
     const handleEdit = (asset: any) => router.push(`${basePath}/${asset.id}/edit`);
 
+    // Export to CSV function
+    const handleExportCSV = () => {
+        if (assets.length === 0) {
+            alert('No data to export');
+            return;
+        }
+
+        // Define CSV headers including new fields
+        const headers = [
+            'Asset Tag',
+            'Type',
+            'Manufacturer',
+            'Model',
+            'Serial Number',
+            'Status',
+            'Assigned User',
+            'Building',
+            'Division',
+            'Section',
+            'Area',
+            'PC Name',
+            'OS',
+            'OS Version',
+            'OS Key',
+            'MS Office Apps',
+            'MS Office Version',
+            'Legally Purchased',
+            'Processor',
+            'Memory',
+            'Storage',
+            'Hostname',
+            'IP Address',
+            'MAC Address',
+            'Purchase Date',
+            'Purchase Price',
+            'Supplier',
+            'Warranty Expiry',
+            'Location',
+            'Department',
+            'Description',
+            'Notes'
+        ];
+
+        // Map assets to CSV rows
+        const rows = assets.map(asset => [
+            asset.asset_tag || '',
+            asset.type || '',
+            asset.manufacturer || '',
+            asset.model || '',
+            asset.serialnumber || '',
+            asset.status || '',
+            asset.assigneduser || '',
+            asset.building || '',
+            asset.division || '',
+            asset.section || '',
+            asset.area || '',
+            asset.pc_name || '',
+            asset.operatingsystem || '',
+            asset.os_version || '',
+            asset.os_key || '',
+            asset.ms_office_apps || '',
+            asset.ms_office_version || '',
+            asset.is_legally_purchased || '',
+            asset.processor || '',
+            asset.memory || '',
+            asset.storage || '',
+            asset.hostname || '',
+            asset.ipaddress || '',
+            asset.macaddress || '',
+            asset.purchasedate || '',
+            asset.purchaseprice?.toString() || '',
+            asset.supplier || '',
+            asset.warrantyexpiry || '',
+            asset.location || '',
+            asset.department || '',
+            asset.description || '',
+            asset.notes || ''
+        ]);
+
+        // Create CSV content
+        const csvContent = [
+            headers.map(h => `"${h}"`).join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        // Create and download file
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        const filename = `assets-${categoryFilter !== 'all' ? categoryFilter : 'all'}-${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const totalPages = useMemo(() => Math.max(1, Math.ceil(total / itemsPerPage)), [total, itemsPerPage]);
 
     return (
@@ -187,7 +286,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                         <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
                         Refresh
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
                         <Download className="h-4 w-4 mr-2" />
                         Export CSV
                     </Button>

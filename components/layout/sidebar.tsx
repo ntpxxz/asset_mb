@@ -38,14 +38,14 @@ const navigation: NavItem[] = [
   { name: 'Computer Assets', href: '/assets/computer', icon: Laptop },
   { name: 'Network Assets', href: '/assets/network', icon: Network },
   {
-    name: 'Hardware',
+    name: 'Other Assets',
     href: '/inventory',
     icon: Box,
     submenu: [
-      { name: 'Stock Items', href: '/inventory', icon: Box },
+      { name: 'Stock', href: '/inventory', icon: Box },
       { name: 'Dashboard', href: '/inventory/dashboard', icon: BarChart2 },
-      { name: 'Add Stock', href: '/inventory/add', icon: PlusCircle },
-      { name: 'New Transaction', href: '/inventory/transaction', icon: ArrowRightLeft },
+      { name: 'Add New', href: '/inventory/add', icon: PlusCircle },
+      { name: 'Transaction', href: '/inventory/transaction', icon: ArrowRightLeft },
       { name: 'Reports', href: '/inventory/reports', icon: FileText },
     ],
   },

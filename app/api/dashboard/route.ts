@@ -1,6 +1,5 @@
 // app/api/dashboard/route.ts
 
-
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
@@ -9,9 +8,9 @@ export const revalidate = 0;
 
 type Stats = {
   hardware: { total: number; inUse: number; available: number; underRepair: number; retired: number };
-  software: { total: number; totalLicenses: number; assignedLicenses: number; availableLicenses: number };
-  users: { total: number; active: number; inactive: number };
-  borrowing: { checkedOut: number; overdue: number };
+  computerAssets: { total: number; laptop: number; desktop: number; server: number };
+  networkAssets: { total: number; router: number; switch: number; other: number };
+  inventory: { totalItems: number; totalQuantity: number; lowStock: number; outOfStock: number };
 };
 
 // ---------- helpers ----------
@@ -106,40 +105,68 @@ export async function GET(req: NextRequest) {
     const daysParam = parseInt(url.searchParams.get('days') || '60', 10);
     const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 1), 365) : 60;
 
-    const [hw, sw, us, bor, warranties] = await Promise.all([
+    const [hw, computers, networks, inv, warranties] = await Promise.all([
+      // Hardware stats
       safeQuery(
         `
         SELECT
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE status ILIKE 'In Use')::int                                AS in_use,
+          COUNT(*) FILTER (WHERE status ILIKE 'In Use' OR status ILIKE 'assigned')::int                AS in_use,
           COUNT(*) FILTER (WHERE status ILIKE 'In Stock' OR status ILIKE 'Available')::int  AS available,
-          COUNT(*) FILTER (WHERE status ILIKE 'Under Repair')::int                          AS under_repair,
+          COUNT(*) FILTER (WHERE status ILIKE 'Under Repair' OR status ILIKE 'maintenance')::int      AS under_repair,
           COUNT(*) FILTER (WHERE status ILIKE 'Retired')::int                               AS retired
         FROM assets;
         `,
         { total: 0, in_use: 0, available: 0, under_repair: 0, retired: 0 }
       ),
+      // Computer assets breakdown
       safeQuery(
         `
         SELECT
-          COUNT(*)::int                                        AS total,
-          COALESCE(SUM(licenses_total), 0)::int                AS total_licenses,
-          COALESCE(SUM(licenses_assigned), 0)::int             AS assigned_licenses
-        FROM software;
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE type ILIKE 'laptop' OR type ILIKE 'nb')::int AS laptop,
+          COUNT(*) FILTER (WHERE type ILIKE 'desktop' OR type ILIKE 'pc')::int AS desktop,
+          COUNT(*) FILTER (WHERE type ILIKE 'server')::int AS server
+        FROM assets
+        WHERE type ILIKE 'laptop' 
+           OR type ILIKE 'nb'
+           OR type ILIKE 'desktop' 
+           OR type ILIKE 'pc'
+           OR type ILIKE 'server'
+           OR type ILIKE 'workstation'
+           OR type ILIKE 'tablet';
         `,
-        { total: 0, total_licenses: 0, assigned_licenses: 0 }
+        { total: 0, laptop: 0, desktop: 0, server: 0 }
       ),
+      // Network assets breakdown
       safeQuery(
         `
         SELECT
-          COUNT(*)::int                                                   AS total,
-          COUNT(*) FILTER (WHERE status ILIKE 'active')::int              AS active,
-          COUNT(*) FILTER (WHERE status ILIKE 'inactive')::int            AS inactive
-        FROM users;
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE type ILIKE 'router')::int AS router,
+          COUNT(*) FILTER (WHERE type ILIKE 'switch')::int AS switch,
+          COUNT(*) FILTER (WHERE type NOT ILIKE 'router' AND type NOT ILIKE 'switch')::int AS other
+        FROM assets
+        WHERE type ILIKE 'router' 
+           OR type ILIKE 'switch'
+           OR type ILIKE 'firewall'
+           OR type ILIKE 'access-point'
+           OR type ILIKE 'gateway';
         `,
-        { total: 0, active: 0, inactive: 0 }
+        { total: 0, router: 0, switch: 0, other: 0 }
       ),
-      getBorrowingStats(),
+      // Inventory/Stock stats
+      safeQuery(
+        `
+        SELECT
+          COUNT(*)::int AS total_items,
+          COALESCE(SUM(quantity), 0)::int AS total_quantity,
+          COUNT(*) FILTER (WHERE quantity > 0 AND quantity <= min_stock_level)::int AS low_stock,
+          COUNT(*) FILTER (WHERE quantity = 0)::int AS out_of_stock
+        FROM inventory_items;
+        `,
+        { total_items: 0, total_quantity: 0, low_stock: 0, out_of_stock: 0 }
+      ),
       getWarranties(days),
     ]);
 
@@ -151,20 +178,23 @@ export async function GET(req: NextRequest) {
         underRepair: hw.under_repair ?? 0,
         retired: hw.retired ?? 0,
       },
-      software: {
-        total: sw.total ?? 0,
-        totalLicenses: sw.total_licenses ?? 0,
-        assignedLicenses: sw.assigned_licenses ?? 0,
-        availableLicenses: Math.max(0, (sw.total_licenses ?? 0) - (sw.assigned_licenses ?? 0)),
+      computerAssets: {
+        total: computers.total ?? 0,
+        laptop: computers.laptop ?? 0,
+        desktop: computers.desktop ?? 0,
+        server: computers.server ?? 0,
       },
-      users: {
-        total: us.total ?? 0,
-        active: us.active ?? 0,
-        inactive: us.inactive ?? 0,
+      networkAssets: {
+        total: networks.total ?? 0,
+        router: networks.router ?? 0,
+        switch: networks.switch ?? 0,
+        other: networks.other ?? 0,
       },
-      borrowing: {
-        checkedOut: (bor as any).checkedOut ?? (bor as any).checked_out ?? 0,
-        overdue: (bor as any).overdue ?? 0,
+      inventory: {
+        totalItems: (inv as any).total_items ?? 0,
+        totalQuantity: (inv as any).total_quantity ?? 0,
+        lowStock: (inv as any).low_stock ?? 0,
+        outOfStock: (inv as any).out_of_stock ?? 0,
       },
     };
 

@@ -5,15 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Package, Users, Shield, AlertTriangle, Activity,
-  CheckCircle, Clock, RefreshCw, Loader2,
+  Package, Laptop, Network, AlertTriangle, Box,
+  CheckCircle, Loader2,
 } from 'lucide-react';
 
 type Stats = {
   hardware: { total: number; inUse: number; available: number; underRepair: number; retired: number };
-  software: { total: number; totalLicenses: number; assignedLicenses: number; availableLicenses: number };
-  users: { total: number; active: number; inactive: number };
-  borrowing: { checkedOut: number; overdue: number };
+  computerAssets: { total: number; laptop: number; desktop: number; server: number };
+  networkAssets: { total: number; router: number; switch: number; other: number };
+  inventory: { totalItems: number; totalQuantity: number; lowStock: number; outOfStock: number };
 };
 
 type DashboardData = {
@@ -39,34 +39,25 @@ export default function DashboardPage() {
         setLoading(true);
         setError(null);
 
-        console.log('Fetching dashboard data from client...');
-
-        // ใน Client-Side ใช้ relative URL ได้เลย
         const response = await fetch('/api/dashboard?days=60', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
           next: { revalidate: 60 }
-
         });
-
-        console.log('Response status:', response.status);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Response error:', errorText);
-          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const json = await response.json();
-        console.log('Response data:', json);
 
         if (!json.success) {
           throw new Error(json.error || 'API returned success: false');
         }
 
-        console.log('Dashboard data loaded successfully');
         setData(json.data);
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);
@@ -82,16 +73,12 @@ export default function DashboardPage() {
   // Default stats when loading or error
   const stats: Stats = data?.stats ?? {
     hardware: { total: 0, inUse: 0, available: 0, underRepair: 0, retired: 0 },
-    software: { total: 0, totalLicenses: 0, assignedLicenses: 0, availableLicenses: 0 },
-    users: { total: 0, active: 0, inactive: 0 },
-    borrowing: { checkedOut: 0, overdue: 0 },
+    computerAssets: { total: 0, laptop: 0, desktop: 0, server: 0 },
+    networkAssets: { total: 0, router: 0, switch: 0, other: 0 },
+    inventory: { totalItems: 0, totalQuantity: 0, lowStock: 0, outOfStock: 0 },
   };
 
   const warranties = data?.warranties ?? [];
-  const utilization =
-    stats.software.totalLicenses > 0
-      ? Math.round((stats.software.assignedLicenses / stats.software.totalLicenses) * 100)
-      : 0;
 
   return (
     <div className="space-y-6">
@@ -127,15 +114,15 @@ export default function DashboardPage() {
       </div>
 
       {/* Key Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className={loading ? 'opacity-50' : ''}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Hardware</p>
-                <p className="text-xl font-bold">{stats.hardware.total}</p>
+                <p className="text-2xl font-bold">{stats.hardware.total}</p>
               </div>
-              <Package className="h-6 w-6 text-blue-600" />
+              <Package className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -143,10 +130,10 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Software Licenses</p>
-                <p className="text-xl font-bold">{stats.software.totalLicenses}</p>
+                <p className="text-sm text-muted-foreground">Computer Assets</p>
+                <p className="text-2xl font-bold">{stats.computerAssets.total}</p>
               </div>
-              <Shield className="h-6 w-6 text-green-600" />
+              <Laptop className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -154,10 +141,21 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Items on Loan</p>
-                <p className="text-xl font-bold">{stats.borrowing.checkedOut}</p>
+                <p className="text-sm text-muted-foreground">Network Assets</p>
+                <p className="text-2xl font-bold">{stats.networkAssets.total}</p>
               </div>
-              <Activity className="h-6 w-6 text-orange-600" />
+              <Network className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={loading ? 'opacity-50' : ''}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Stock Items</p>
+                <p className="text-2xl font-bold">{stats.inventory.totalItems}</p>
+              </div>
+              <Box className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -193,116 +191,100 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Software Licenses */}
+        {/* Computer Assets Breakdown */}
         <Card className={loading ? 'opacity-50' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-green-600" />
-              <span>Software Licenses</span>
+              <Laptop className="h-5 w-5 text-green-600" />
+              <span>Computer Assets</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total Licenses</span>
-                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.software.totalLicenses}</Badge>
+                <span className="text-sm text-muted-foreground">Total</span>
+                <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.computerAssets.total}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Assigned</span>
-                <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.software.assignedLicenses}</Badge>
+                <span className="text-sm text-muted-foreground">Laptops</span>
+                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.computerAssets.laptop}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Available</span>
-                <Badge className="bg-orange-500/10 text-orange-700 dark:text-orange-400" variant="outline">{stats.software.availableLicenses}</Badge>
+                <span className="text-sm text-muted-foreground">Desktops</span>
+                <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400" variant="outline">{stats.computerAssets.desktop}</Badge>
               </div>
-              <div className="mt-4 pt-3 border-t">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Utilization</span>
-                  <span>{utilization}%</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2 mt-1">
-                  <div
-                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${utilization}%` }}
-                  />
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Servers</span>
+                <Badge className="bg-orange-500/10 text-orange-700 dark:text-orange-400" variant="outline">{stats.computerAssets.server}</Badge>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Borrowing Status */}
+        {/* Network Assets Breakdown */}
         <Card className={loading ? 'opacity-50' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-orange-600" />
-              <span>Borrowing Status</span>
+              <Network className="h-5 w-5 text-purple-600" />
+              <span>Network Assets</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Checked Out</span>
-                <Badge className="bg-orange-500/10 text-orange-700 dark:text-orange-400" variant="outline">{stats.borrowing.checkedOut}</Badge>
+                <span className="text-sm text-muted-foreground">Total</span>
+                <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400" variant="outline">{stats.networkAssets.total}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Overdue</span>
-                <Badge className="bg-red-500/10 text-red-700 dark:text-red-400" variant="outline">{stats.borrowing.overdue}</Badge>
+                <span className="text-sm text-muted-foreground">Routers</span>
+                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.networkAssets.router}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Available to Borrow</span>
-                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.hardware.available}</Badge>
+                <span className="text-sm text-muted-foreground">Switches</span>
+                <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.networkAssets.switch}</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Others</span>
+                <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400" variant="outline">{stats.networkAssets.other}</Badge>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Patch Management & Warranty Alerts */}
+      {/* Lower Section: Inventory/Stock Status & Warranty Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Inventory/Stock Status */}
         <Card className={loading ? 'opacity-50' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <RefreshCw className="h-5 w-5 text-purple-600" />
-              <span>Patch Management</span>
+              <Box className="h-5 w-5 text-orange-600" />
+              <span>Inventory Stock</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full" />
-                  <div>
-                    <p className="font-medium text-green-900 dark:text-green-300">Up-to-Date</p>
-                    <p className="text-sm text-green-700 dark:text-green-400">Systems current</p>
-                  </div>
-                </div>
-                <Badge className="bg-green-500/20 text-green-800 dark:text-green-300" variant="outline">—</Badge>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total Items</span>
+                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.inventory.totalItems}</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-                  <div>
-                    <p className="font-medium text-yellow-900 dark:text-yellow-300">Needs Review</p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400">Manual check required</p>
-                  </div>
-                </div>
-                <Badge className="bg-yellow-500/20 text-yellow-800 dark:text-yellow-300" variant="outline">—</Badge>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total Quantity</span>
+                <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.inventory.totalQuantity}</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-red-500 rounded-full" />
-                  <div>
-                    <p className="font-medium text-red-900 dark:text-red-300">Update Pending</p>
-                    <p className="text-sm text-red-700 dark:text-red-400">Action required</p>
-                  </div>
-                </div>
-                <Badge className="bg-red-500/20 text-red-800 dark:text-red-300" variant="outline">—</Badge>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Low Stock</span>
+                <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" variant="outline">{stats.inventory.lowStock}</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Out of Stock</span>
+                <Badge className="bg-red-500/10 text-red-700 dark:text-red-400" variant="outline">{stats.inventory.outOfStock}</Badge>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Warranty Alerts */}
         <Card className={loading ? 'opacity-50' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">

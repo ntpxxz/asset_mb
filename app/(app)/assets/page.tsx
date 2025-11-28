@@ -99,12 +99,11 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
   }
 }
 
-// Page Component
-export default async function AssetsServerPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
+// Page Component - Next.js 15 compatible
+export default async function AssetsServerPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const searchParams = await props.searchParams;
   const initialData = await getAssets(searchParams);
 
   return (

@@ -61,6 +61,17 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
     isloanable: false,
     description: '',
     notes: '',
+    // New fields from spreadsheet
+    building: '',
+    division: '',
+    section: '',
+    area: '',
+    pc_name: '',
+    os_key: '',
+    os_version: '',
+    ms_office_apps: '',
+    ms_office_version: '',
+    is_legally_purchased: '',
     ...(initialData || {}),
   });
   const router = useRouter();
@@ -72,17 +83,11 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
   const typeLower = (formData.type || '').toLowerCase();
 
   // กลุ่มประเภท
-  const computerTypes = new Set(['laptop', 'desktop', 'server', 'workstation', 'tablet']);
+  const computerTypes = new Set(['laptop', 'desktop', 'server', 'workstation', 'tablet', 'pc']);
   const networkTypes = new Set(['router', 'switch', 'firewall', 'access-point', 'gateway']);
-  // const peripheralTypes = new Set(['monitor', 'printer', 'projector', 'scanner']);
 
   const isComputer = computerTypes.has(typeLower);
   const isNetwork = networkTypes.has(typeLower);
-
-  // Logic การแสดงผลฟิลด์
-  // Computer: แสดง Specs + Network
-  // Network: แสดง Network (Specs อาจจะไม่จำเป็นมาก หรือแสดงแค่บางส่วน)
-  // Other: ซ่อน Specs/Network
 
   // ===== Helpers =====
   const handleInputChange = (key: keyof AssetFormData, value: any) => {
@@ -112,18 +117,6 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
         if (v === undefined || v === null || v === '') missing.push(String(k));
       }
     );
-
-    // เงื่อนไขเฉพาะประเภท
-    if (isComputer) {
-      // Computer ควรมี Spec พื้นฐาน แต่บางทีอาจจะยังไม่ใส่ก็ได้ ปล่อยผ่านแต่แจ้งเตือน optional ได้
-      // ถ้าต้องการบังคับ:
-      // if (!formData.processor) missing.push('processor');
-    }
-
-    if (isNetwork) {
-      // Network อุปกรณ์ network ควรมี IP หรือ MAC อย่างน้อย
-      // if (!formData.ipaddress && !formData.macaddress) missing.push('IP Address or MAC Address');
-    }
 
     if (missing.length) {
       setError(`Please fill in required fields: ${missing.join(', ')}`);
@@ -184,16 +177,13 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
       });
 
       onSaved?.(json.data);
-      // If category is set, redirect to that category page
       const redirectPath = category ? `/assets/${category}` : "/assets";
       setTimeout(() => router.push(redirectPath), 2100);
 
       if (mode === "create") {
-        // Reset form
         setFormData(prev => ({
           ...prev,
           asset_tag: "", manufacturer: "", model: "", serialnumber: "",
-          // reset other fields...
           description: "", notes: ""
         }));
       }
@@ -238,13 +228,77 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* 1. Basic Information */}
+          {/* 1. Location & Organization */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Basic Information (ข้อมูลพื้นฐาน)</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Location & Organization (ที่ตั้งและหน่วยงาน)</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="building">Building or Factory (อาคารหรือโรงงาน)</Label>
+                <Input
+                  id="building"
+                  placeholder="เช่น Spindle Assembly"
+                  value={formData.building || ''}
+                  onChange={(e) => handleInputChange('building', e.target.value)}
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="division">Division (ฝ่าย)</Label>
+                <Input
+                  id="division"
+                  placeholder="เช่น Production"
+                  value={formData.division || ''}
+                  onChange={(e) => handleInputChange('division', e.target.value)}
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="section">Section (แผนก)</Label>
+                <Input
+                  id="section"
+                  placeholder="เช่น Big Office"
+                  value={formData.section || ''}
+                  onChange={(e) => handleInputChange('section', e.target.value)}
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="area">Area (พื้นที่)</Label>
+                <Input
+                  id="area"
+                  placeholder="เช่น CALL_02"
+                  value={formData.area || ''}
+                  onChange={(e) => handleInputChange('area', e.target.value)}
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pc_name">PC Name (ชื่อเครื่อง)</Label>
+                <Input
+                  id="pc_name"
+                  placeholder="เช่น BAS-999"
+                  value={formData.pc_name || ''}
+                  onChange={(e) => handleInputChange('pc_name', e.target.value)}
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Basic Hardware Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Hardware Information (ข้อมูลฮาร์ดแวร์)</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="type">Asset Type (ประเภททรัพย์สิน) *</Label>
+                <Label htmlFor="type">Type (ประเภท) *</Label>
                 <Select
                   value={formData.type || ''}
                   onValueChange={(value) => handleInputChange('type', value)}
@@ -257,7 +311,8 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                     {(!category || category === 'computer') && (
                       <SelectGroup>
                         <SelectLabel>Computer</SelectLabel>
-                        <SelectItem value="laptop">Laptop</SelectItem>
+                        <SelectItem value="pc">PC</SelectItem>
+                        <SelectItem value="laptop">Laptop / NB</SelectItem>
                         <SelectItem value="desktop">Desktop</SelectItem>
                         <SelectItem value="server">Server</SelectItem>
                         <SelectItem value="tablet">Tablet</SelectItem>
@@ -287,11 +342,50 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="asset_tag">Asset Tag (รหัสทรัพย์สิน)</Label>
+                <Label htmlFor="manufacturer">Maker (ยี่ห้อ) *</Label>
                 <Input
-                  id="asset_tag"
-                  value={formData.asset_tag || ''}
-                  onChange={(e) => handleInputChange('asset_tag', e.target.value)}
+                  id="manufacturer"
+                  placeholder="เช่น Lenovo, Dell, HP"
+                  value={formData.manufacturer || ''}
+                  onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+                  disabled={submitting}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="model">Model (รุ่น) *</Label>
+                <Input
+                  id="model"
+                  placeholder="เช่น Lenovo 105X"
+                  value={formData.model || ''}
+                  onChange={(e) => handleInputChange('model', e.target.value)}
+                  disabled={submitting}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="serialnumber">Serial Number (หมายเลขซีเรียล) *</Label>
+                <Input
+                  id="serialnumber"
+                  placeholder="เช่น NXB7-SB17-4X2F-8ZTM"
+                  value={formData.serialnumber || ''}
+                  onChange={(e) => handleInputChange('serialnumber', e.target.value)}
+                  disabled={submitting}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="assigneduser">User Owner (ผู้ใช้งาน)</Label>
+                <Input
+                  id="assigneduser"
+                  placeholder="ชื่อผู้ใช้งาน"
+                  value={formData.assigneduser || ''}
+                  onChange={(e) => handleInputChange('assigneduser', e.target.value)}
                   disabled={submitting}
                 />
               </div>
@@ -315,105 +409,134 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 </Select>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="manufacturer">Manufacturer (ผู้ผลิต) *</Label>
-                <Input
-                  id="manufacturer"
-                  value={formData.manufacturer || ''}
-                  onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-                  disabled={submitting}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model">Model (รุ่น) *</Label>
-                <Input
-                  id="model"
-                  value={formData.model || ''}
-                  onChange={(e) => handleInputChange('model', e.target.value)}
-                  disabled={submitting}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="serialnumber">Serial Number (หมายเลขซีเรียล) *</Label>
-                <Input
-                  id="serialnumber"
-                  value={formData.serialnumber || ''}
-                  onChange={(e) => handleInputChange('serialnumber', e.target.value)}
-                  disabled={submitting}
-                  required
-                />
-              </div>
-            </div>
           </div>
 
-          {/* 2. Technical Specs (แสดงเฉพาะ Computer และบางส่วนของ Network) */}
-          {(isComputer || isNetwork) && (
+          {/* 3. Operating System & Software */}
+          {isComputer && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {isNetwork ? "Network Specifications (สเปคเครือข่าย)" : "Technical Specifications (ข้อมูลทางเทคนิค)"}
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Operating System & Software (ระบบปฏิบัติการและซอ
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* OS / Firmware - ใช้ร่วมกัน */}
+                ฟต์แวร์)</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="operatingsystem">{isNetwork ? 'Firmware / OS (เฟิร์มแวร์ / ระบบปฏิบัติการ)' : 'Operating System (ระบบปฏิบัติการ)'}</Label>
+                  <Label htmlFor="operatingsystem">Operating System (OS) (ระบบปฏิบัติการ)</Label>
                   <Input
                     id="operatingsystem"
-                    placeholder={isNetwork ? "เช่น IOS 15, RouterOS" : "เช่น Windows 11, macOS"}
+                    placeholder="เช่น Win10, Win11"
                     value={formData.operatingsystem || ''}
                     onChange={(e) => handleInputChange('operatingsystem', e.target.value)}
                     disabled={submitting}
                   />
                 </div>
 
-                {/* CPU - เฉพาะ Computer */}
-                {isComputer && (
-                  <div className="space-y-2">
-                    <Label htmlFor="processor">CPU / Processor (หน่วยประมวลผล)</Label>
-                    <Input
-                      id="processor"
-                      placeholder="เช่น Intel Core i7"
-                      value={formData.processor || ''}
-                      onChange={(e) => handleInputChange('processor', e.target.value)}
-                      disabled={submitting}
-                    />
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="os_version">Window Ver (เวอร์ชัน Windows)</Label>
+                  <Input
+                    id="os_version"
+                    placeholder="เช่น Win10, Win11"
+                    value={formData.os_version || ''}
+                    onChange={(e) => handleInputChange('os_version', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="os_key">Key (รหัสลิขสิทธิ์ Windows)</Label>
+                  <Input
+                    id="os_key"
+                    placeholder="เช่น Free, XXXXX-XXXXX-XXXXX"
+                    value={formData.os_key || ''}
+                    onChange={(e) => handleInputChange('os_key', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
               </div>
 
-              {/* Memory & Storage - เฉพาะ Computer หรือถ้า Network จำเป็นก็เพิ่มได้ */}
-              {isComputer && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="memory">Memory (RAM) (หน่วยความจำ)</Label>
-                    <Input
-                      id="memory"
-                      placeholder="เช่น 16GB"
-                      value={formData.memory || ''}
-                      onChange={(e) => handleInputChange('memory', e.target.value)}
-                      disabled={submitting}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="storage">Storage (พื้นที่จัดเก็บ)</Label>
-                    <Input
-                      id="storage"
-                      placeholder="เช่น 512GB SSD"
-                      value={formData.storage || ''}
-                      onChange={(e) => handleInputChange('storage', e.target.value)}
-                      disabled={submitting}
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ms_office_apps">MS Office (แอปพลิเคชัน)</Label>
+                  <Input
+                    id="ms_office_apps"
+                    placeholder="เช่น Excel,PowerPoint,Word"
+                    value={formData.ms_office_apps || ''}
+                    onChange={(e) => handleInputChange('ms_office_apps', e.target.value)}
+                    disabled={submitting}
+                  />
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="ms_office_version">Version (เวอร์ชัน MS Office)</Label>
+                  <Input
+                    id="ms_office_version"
+                    placeholder="เช่น 2013, 2007"
+                    value={formData.ms_office_version || ''}
+                    onChange={(e) => handleInputChange('ms_office_version', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="is_legally_purchased">Legally Purchased (ซื้อถูกต้องตามกฎหมาย)</Label>
+                  <Select
+                    value={formData.is_legally_purchased || ''}
+                    onValueChange={(value) => handleInputChange('is_legally_purchased', value)}
+                    disabled={submitting}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="เลือก" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes (ใช่)</SelectItem>
+                      <SelectItem value="no">No (ไม่ใช่)</SelectItem>
+                      <SelectItem value="unknown">Unknown (ไม่ทราบ)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* 3. Network Information (แสดงทั้ง Computer และ Network Equipment) */}
+          {/* 4. Technical Specs (for computers) */}
+          {isComputer && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Technical Specifications (ข้อมูลทางเทคนิค)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="processor">CPU / Processor (หน่วยประมวลผล)</Label>
+                  <Input
+                    id="processor"
+                    placeholder="เช่น Intel Core i7"
+                    value={formData.processor || ''}
+                    onChange={(e) => handleInputChange('processor', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="memory">Memory (RAM) (หน่วยความจำ)</Label>
+                  <Input
+                    id="memory"
+                    placeholder="เช่น 16GB"
+                    value={formData.memory || ''}
+                    onChange={(e) => handleInputChange('memory', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="storage">Storage (พื้นที่จัดเก็บ)</Label>
+                  <Input
+                    id="storage"
+                    placeholder="เช่น 512GB SSD"
+                    value={formData.storage || ''}
+                    onChange={(e) => handleInputChange('storage', e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 5. Network Information (for both computer and network) */}
           {(isComputer || isNetwork) && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Network Configuration (การตั้งค่าเครือข่าย)</h3>
@@ -449,41 +572,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
             </div>
           )}
 
-          {/* 4. Assignment & Purchase (ทุกประเภทมีเหมือนกัน) */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Assignment & Location (การมอบหมายและสถานที่)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="assigneduser">Assigned To (Employee ID) (ผู้รับผิดชอบ)</Label>
-                <Input
-                  id="assigneduser"
-                  placeholder="เช่น EMP-123"
-                  value={formData.assigneduser || ''}
-                  onChange={(e) => handleInputChange('assigneduser', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location (สถานที่)</Label>
-                <Input
-                  id="location"
-                  value={formData.location || ''}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department (แผนก)</Label>
-                <Input
-                  id="department"
-                  value={formData.department || ''}
-                  onChange={(e) => handleInputChange('department', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-          </div>
-
+          {/* 6. Purchase & Warranty */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty (การจัดซื้อและประกัน)</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -530,7 +619,7 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
             </div>
           </div>
 
-          {/* 5. Additional Info */}
+          {/* 7. Additional Info */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Additional Information (ข้อมูลเพิ่มเติม)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
