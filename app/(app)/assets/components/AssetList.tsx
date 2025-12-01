@@ -37,6 +37,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import type { AssetFormData } from "@/lib/data-store";
+import { useI18n } from "@/lib/i18n-context";
 
 interface AssetListProps {
     /** Optional default category (e.g. "computer" or "network") */
@@ -51,16 +52,16 @@ interface AssetListProps {
 }
 
 // Helper to render a colored badge based on asset status
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, t: (key: string) => string) => {
     switch (status) {
         case "assigned":
-            return <Badge className="bg-green-100 text-green-800">Assigned</Badge>;
+            return <Badge className="bg-green-100 text-green-800">{t('assigned')}</Badge>;
         case "available":
-            return <Badge className="bg-blue-100 text-blue-800">Available</Badge>;
+            return <Badge className="bg-blue-100 text-blue-800">{t('available')}</Badge>;
         case "maintenance":
-            return <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>;
+            return <Badge className="bg-yellow-100 text-yellow-800">{t('maintenance')}</Badge>;
         case "retired":
-            return <Badge className="bg-gray-100 text-gray-800">Retired</Badge>;
+            return <Badge className="bg-gray-100 text-gray-800">{t('retired')}</Badge>;
         default:
             return <Badge variant="secondary">{status}</Badge>;
     }
@@ -90,6 +91,7 @@ const getAssetIcon = (type: string) => {
 
 export default function AssetList({ defaultCategory, initialData, basePath = "/assets" }: AssetListProps) {
     const router = useRouter();
+    const { t } = useI18n();
 
     // If initial data is provided (SSR) use it, otherwise start empty
     const [assets, setAssets] = useState<AssetFormData[]>(initialData?.assets ?? []);
@@ -155,17 +157,17 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
 
     // CRUD helpers
     const handleDelete = async (assetId: string) => {
-        if (!confirm("Are you sure you want to delete this asset?")) return;
+        if (!confirm(t('confirmDelete'))) return;
         try {
             const response = await fetch(`/api/assets/${assetId}`, { method: "DELETE" });
             const result = await response.json();
             if (response.ok && result.success) {
                 loadAssets(currentPage);
             } else {
-                throw new Error(result.error || "Failed to delete asset");
+                throw new Error(result.error || t('deleteFailed'));
             }
         } catch (err) {
-            alert(`Failed to delete asset: ${err instanceof Error ? err.message : "Unknown error"}`);
+            alert(`${t('deleteFailed')}: ${err instanceof Error ? err.message : "Unknown error"}`);
         }
     };
 
@@ -175,7 +177,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
     // Export to CSV function
     const handleExportCSV = () => {
         if (assets.length === 0) {
-            alert('No data to export');
+            alert(t('noDataToExport'));
             return;
         }
 
@@ -278,21 +280,21 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Hardware Assets</h1>
-                    <p className="text-gray-600">Manage your IT assets and track their lifecycle</p>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('hardwareAssets')}</h1>
+                    <p className="text-gray-600">{t('manageAssets')}</p>
                 </div>
                 <div className="flex gap-3">
                     <Button variant="outline" size="sm" onClick={() => loadAssets(currentPage)} disabled={loading}>
                         <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                        Refresh
+                        {t('refresh')}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleExportCSV}>
                         <Download className="h-4 w-4 mr-2" />
-                        Export CSV
+                        {t('exportCSV')}
                     </Button>
                     <Button size="sm" onClick={() => router.push(`${basePath}/add`)}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Add New
+                        {t('addNew')}
                     </Button>
                 </div>
             </div>
@@ -305,7 +307,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                             <AlertCircle className="h-4 w-4 mr-2" />
                             <span>{error}</span>
                             <Button variant="outline" size="sm" className="ml-auto" onClick={() => loadAssets(currentPage)}>
-                                Retry
+                                {t('retry')}
                             </Button>
                         </div>
                     </CardContent>
@@ -320,7 +322,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
-                                    placeholder="Search by model, serial, user, or tag..."
+                                    placeholder={t('searchPlaceholderAssets')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10"
@@ -329,31 +331,31 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                         </div>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                             <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Status" />
+                                <SelectValue placeholder={t('status')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="available">Available</SelectItem>
-                                <SelectItem value="assigned">Assigned</SelectItem>
-                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                                <SelectItem value="retired">Retired</SelectItem>
+                                <SelectItem value="all">{t('allStatus')}</SelectItem>
+                                <SelectItem value="available">{t('available')}</SelectItem>
+                                <SelectItem value="assigned">{t('assigned')}</SelectItem>
+                                <SelectItem value="maintenance">{t('maintenance')}</SelectItem>
+                                <SelectItem value="retired">{t('retired')}</SelectItem>
                             </SelectContent>
                         </Select>
                         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                             <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Category" />
+                                <SelectValue placeholder={t('category')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Categories</SelectItem>
-                                <SelectItem value="laptop">Laptop</SelectItem>
-                                <SelectItem value="desktop">Desktop</SelectItem>
-                                <SelectItem value="phone">Phone</SelectItem>
-                                <SelectItem value="tablet">Tablet</SelectItem>
-                                <SelectItem value="printer">Printer</SelectItem>
-                                <SelectItem value="monitor">Monitor</SelectItem>
-                                <SelectItem value="server">Server</SelectItem>
-                                <SelectItem value="router">Router</SelectItem>
-                                <SelectItem value="switch">Network Switch</SelectItem>
+                                <SelectItem value="all">{t('allCategories')}</SelectItem>
+                                <SelectItem value="laptop">{t('laptop')}</SelectItem>
+                                <SelectItem value="desktop">{t('desktop')}</SelectItem>
+                                <SelectItem value="phone">{t('phoneDevice')}</SelectItem>
+                                <SelectItem value="tablet">{t('tablet')}</SelectItem>
+                                <SelectItem value="printer">{t('printer')}</SelectItem>
+                                <SelectItem value="monitor">{t('monitor')}</SelectItem>
+                                <SelectItem value="server">{t('server')}</SelectItem>
+                                <SelectItem value="router">{t('router')}</SelectItem>
+                                <SelectItem value="switch">{t('networkSwitch')}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -363,13 +365,13 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
             {/* Assets Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Hardware Inventory ({total} items)</CardTitle>
+                    <CardTitle>{t('hardwareInventory')} ({total} {t('items')})</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {assets.length === 0 ? (
                         <div className="text-center py-8">
                             <Monitor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500">No assets found</p>
+                            <p className="text-gray-500">{t('noAssetsFound')}</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -377,14 +379,14 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Model</TableHead>
-                                            <TableHead>Serial Number</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>Location</TableHead>
-                                            <TableHead>Price</TableHead>
-                                            <TableHead>Actions</TableHead>
+                                            <TableHead>{t('name')}</TableHead>
+                                            <TableHead>{t('model')}</TableHead>
+                                            <TableHead>{t('serialNumber')}</TableHead>
+                                            <TableHead>{t('status')}</TableHead>
+                                            <TableHead>{t('user')}</TableHead>
+                                            <TableHead>{t('location')}</TableHead>
+                                            <TableHead>{t('price')}</TableHead>
+                                            <TableHead>{t('actions')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -411,7 +413,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="font-mono text-sm">{asset.serialnumber || "-"}</TableCell>
-                                                    <TableCell>{getStatusBadge(asset.status!)}</TableCell>
+                                                    <TableCell>{getStatusBadge(asset.status!, t)}</TableCell>
                                                     <TableCell>{asset.assigneduser || "-"}</TableCell>
                                                     <TableCell>{asset.location || "-"}</TableCell>
                                                     <TableCell className="font-medium">
@@ -419,13 +421,13 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center space-x-2">
-                                                            <Button variant="ghost" size="sm" onClick={() => handleView(asset)} title="View Details">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleView(asset)} title={t('viewDetails')}>
                                                                 <Eye className="h-4 w-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(asset)} title="Edit Asset">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(asset)} title={t('editAsset')}>
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(asset.id!)} title="Delete Asset">
+                                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(asset.id!)} title={t('deleteAsset')}>
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
@@ -440,7 +442,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                             {/* Pagination controls */}
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">
-                                    Page {currentPage} of {totalPages}
+                                    {t('page')} {currentPage} {t('of')} {totalPages}
                                 </span>
                                 <div className="space-x-2">
                                     <Button
@@ -449,7 +451,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                         onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                                         disabled={currentPage === 1 || loading}
                                     >
-                                        Previous
+                                        {t('previous')}
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -457,7 +459,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                         onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                                         disabled={currentPage >= totalPages || loading}
                                     >
-                                        Next
+                                        {t('next')}
                                     </Button>
                                 </div>
                             </div>

@@ -18,7 +18,7 @@ import { useI18n } from '@/lib/i18n-context';
 export function Header() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { language, setLanguage } = useI18n();
+  const { language, setLanguage, t } = useI18n();
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'th' : 'en');
@@ -32,7 +32,7 @@ export function Header() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={language === 'th' ? "ค้นหาทรัพย์สิน, ผู้ใช้งาน หรือ Serial Number..." : "Search assets, users, or serial numbers..."}
+              placeholder={t('searchPlaceholder')}
               className="pl-10 pr-4"
             />
           </div>
@@ -45,7 +45,7 @@ export function Header() {
             size="icon"
             onClick={toggleLanguage}
             className="rounded-full"
-            title={language === 'en' ? "Switch to Thai" : "สลับเป็นภาษาอังกฤษ"}
+            title={language === 'en' ? t('switchToThai') : 'Switch to English'}
           >
             <span className="font-bold text-xs">{language.toUpperCase()}</span>
           </Button>
@@ -58,29 +58,29 @@ export function Header() {
           >
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
+            <span className="sr-only">{t('toggleTheme')}</span>
           </Button>
 
           {/*<DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                {language === 'th' ? "เพิ่มด่วน" : "Quick Add"}
+                {t('quickAdd')}
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => router.push('/assets/add')}>
                 <Package className="h-4 w-4 mr-2" />
-                {language === 'th' ? "ทรัพย์สิน (Hardware)" : "Hardware Asset"}
+                {t('hardwareAsset')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push('/software/add')}>
                 <Shield className="h-4 w-4 mr-2" />
-                {language === 'th' ? "ลิขสิทธิ์ซอฟต์แวร์" : "Software License"}
+                {t('softwareLicense')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push('/users/add')}>
                 <Users className="h-4 w-4 mr-2" />
-                {language === 'th' ? "บัญชีผู้ใช้" : "User Account"}
+                {t('userAccount')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>*/}

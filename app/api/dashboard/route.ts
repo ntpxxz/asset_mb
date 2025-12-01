@@ -65,29 +65,37 @@ async function getBorrowingStats(): Promise<{ checkedOut: number; overdue: numbe
   return { checkedOut: rows[0]?.checked_out ?? 0, overdue: rows[0]?.overdue ?? 0 };
 }
 
+// Add try/catch inside this function so it returns [] instead of crashing
 async function getWarranties(days: number) {
-  const assetCols = await listColumns('assets');
-  const warrantyCol = pickExistingColumn(assetCols, ['warrantyexpiry', 'warranty_expiry']);
-  if (!warrantyCol) return [];
+  try {
+    const assetCols = await listColumns('assets');
+    const warrantyCol = pickExistingColumn(assetCols, ['warrantyexpiry', 'warranty_expiry']);
+    
+    // If we can't find the column, return empty array immediately
+    if (!warrantyCol) return [];
 
-  const assetTagCol = pickExistingColumn(assetCols, ['asset_tag', 'tag']) ?? 'asset_tag';
-  const modelCol = pickExistingColumn(assetCols, ['model', 'name']) ?? 'model';
+    const assetTagCol = pickExistingColumn(assetCols, ['asset_tag', 'tag']) ?? 'asset_tag';
+    const modelCol = pickExistingColumn(assetCols, ['model', 'name']) ?? 'model';
 
-  const sql = `
-    SELECT
-      id,
-      ${assetTagCol} AS asset_tag,
-      ${modelCol} AS model,
-      ${warrantyCol}::date AS warranty_expiry,
-      GREATEST(0, (${warrantyCol}::date - CURRENT_DATE))::int AS days_left
-    FROM assets
-    WHERE ${warrantyCol} IS NOT NULL
-      AND ${warrantyCol}::date BETWEEN CURRENT_DATE AND (CURRENT_DATE + make_interval(days => $1))
-    ORDER BY ${warrantyCol} ASC
-    LIMIT 50;
-  `;
-  const { rows } = await pool.query(sql, [days]);
-  return rows;
+    const sql = `
+      SELECT
+        id,
+        ${assetTagCol} AS asset_tag,
+        ${modelCol} AS model,
+        ${warrantyCol}::date AS warranty_expiry,
+        GREATEST(0, (${warrantyCol}::date - CURRENT_DATE))::int AS days_left
+      FROM assets
+      WHERE ${warrantyCol} IS NOT NULL
+        AND ${warrantyCol}::date BETWEEN CURRENT_DATE AND (CURRENT_DATE + make_interval(days => $1))
+      ORDER BY ${warrantyCol} ASC
+      LIMIT 50;
+    `;
+    const { rows } = await pool.query(sql, [days]);
+    return rows;
+  } catch (error) {
+    console.error('Error fetching warranties:', error);
+    return []; // Return empty array on error so the rest of the dashboard loads
+  }
 }
 
 async function safeQuery<T>(sql: string, defaults: T): Promise<T> {

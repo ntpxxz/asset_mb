@@ -8,6 +8,7 @@ import { ArrowLeft, DollarSign, Archive, AlertTriangle, Boxes, Loader2, Trending
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n-context";
 
 // FIX 1: Update types to reflect that API can send numbers as strings
 type InventoryStats = {
@@ -35,6 +36,7 @@ type DashboardData = {
 
 export default function InventoryDashboardPage() {
     const router = useRouter();
+    const { t } = useI18n();
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -53,25 +55,26 @@ export default function InventoryDashboardPage() {
                     toast.error("Failed to load dashboard data: " + (result.error || 'Unknown error'));
                 }
             } catch (error: any) {
-                toast.error("An error occurred while fetching data: " + error.message);
+                toast.error(t('fetchError') + ": " + error.message);
             } finally {
                 setLoading(false);
             }
         };
         fetchDashboardData();
-    }, []);
+    }, [t]);
+
     const handleExport = () => {
         if (!data || !data.stats) {
-          toast.error("No data to export.");
-          return;
+            toast.error(t('noDataToExport'));
+            return;
         }
-    
+
         const headers = ["Category", "Value"];
         const rows = data.valueByCategory.map(item => [item.category, item.value]);
-        const csvContent = "data:text/csv;charset=utf-8," 
-          + headers.join(",") + "\n" 
-          + rows.map(e => e.join(",")).join("\n");
-    
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -79,7 +82,8 @@ export default function InventoryDashboardPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      };
+    };
+
     // FIX 2: Create a robust currency formatter that handles both strings and numbers
     const formatCurrency = (value: number | string | null | undefined) => {
         if (value === null || value === undefined) return '฿0.00';
@@ -100,46 +104,46 @@ export default function InventoryDashboardPage() {
 
     const stats = data?.stats;
     const kpiCards = [
-        { title: "Total Stock Value", value: stats ? formatCurrency(stats.total_stock_value) : '฿0.00', icon: DollarSign, color: "text-green-600" },
-        { title: "Items Running Low", value: stats ? Number(stats.items_running_low) : 0, icon: AlertTriangle, color: "text-orange-600" },
-        { title: "Total Unique Items", value: stats ? Number(stats.total_unique_items) : 0, icon: Archive, color: "text-blue-600" },
-        { title: "Total Quantity", value: stats ? Number(stats.total_quantity) : 0, icon: Boxes, color: "text-purple-600" },
+        { title: t('totalStockValue'), value: stats ? formatCurrency(stats.total_stock_value) : '฿0.00', icon: DollarSign, color: "text-green-600" },
+        { title: t('itemsRunningLow'), value: stats ? Number(stats.items_running_low) : 0, icon: AlertTriangle, color: "text-orange-600" },
+        { title: t('totalUniqueItems'), value: stats ? Number(stats.total_unique_items) : 0, icon: Archive, color: "text-blue-600" },
+        { title: t('totalQuantityInv'), value: stats ? Number(stats.total_quantity) : 0, icon: Boxes, color: "text-purple-600" },
     ];
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" onClick={() => router.push('/inventory')}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Inventory
-                </Button>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Inventory Dashboard</h1>
-                    <p className="text-gray-600">A quick overview of your stock status.</p>
-                </div>
+                    <Button variant="ghost" size="sm" onClick={() => router.push('/inventory')}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        {t('backToInventory')}
+                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">{t('inventoryDashboardTitle')}</h1>
+                        <p className="text-gray-600">{t('inventoryDashboardSubtitle')}</p>
+                    </div>
                 </div>
                 <div className="flex gap-3">
-                <Button size="sm" variant = "outline" onClick={handleExport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
+                    <Button size="sm" variant="outline" onClick={handleExport}>
+                        <Download className="h-4 w-4 mr-2" />
+                        {t('exportCSV')}
+                    </Button>
 
-                <Button size="sm" onClick={() => router.push('/inventory/reports')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Go to Reports
-                </Button>
-              </div>
+                    <Button size="sm" onClick={() => router.push('/inventory/reports')}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        {t('goToReports')}
+                    </Button>
+                </div>
             </div>
 
             {loading ? (
-                 <div className="flex justify-center items-center h-64">
+                <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                 </div>
+                </div>
             ) : !data ? (
-                 <div className="text-center py-10">
-                    <p className="text-muted-foreground">Could not load dashboard data. Please try again.</p>
-                 </div>
+                <div className="text-center py-10">
+                    <p className="text-muted-foreground">{t('loadDashboardFailed')}</p>
+                </div>
             ) : (
                 <>
                     {/* KPI Cards */}
@@ -159,29 +163,29 @@ export default function InventoryDashboardPage() {
                             );
                         })}
                     </div>
-                    
+
                     {/* Charts and Lists */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Stock Value by Category</CardTitle>
+                                <CardTitle>{t('stockValueByCategory')}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={chartData}  margin={{ left: 20, right: 30, top: 5, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" opacity={0.5}/>
-                                        <XAxis 
-                                            dataKey="category" 
+                                    <BarChart data={chartData} margin={{ left: 20, right: 30, top: 5, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                                        <XAxis
+                                            dataKey="category"
                                             angle={-45} // Rotate labels
                                             textAnchor="end" // Align rotated labels
                                             height={60} // Increase height to fit labels
                                             interval={0}
                                             tick={{ fontSize: 12 }}
                                         />
-                                        <YAxis 
+                                        <YAxis
                                             tickFormatter={(value) => `฿${value / 1000}k`}
-                                        />                                   
-                                        <Tooltip formatter={(value) => [formatCurrency(value as number), "Value"]} cursor={{ fill: 'rgba(243, 244, 246, 0.5)' }}/>
+                                        />
+                                        <Tooltip formatter={(value) => [formatCurrency(value as number), t('totalValue')]} cursor={{ fill: 'rgba(243, 244, 246, 0.5)' }} />
                                         <Bar dataKey="value" fill="#3b82f6" barSize={20} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -192,21 +196,21 @@ export default function InventoryDashboardPage() {
                             <CardHeader>
                                 <CardTitle className="flex items-center">
                                     <TrendingUp className="h-5 w-5 mr-2" />
-                                    Most Dispensed Items (Last 90 Days)
+                                    {t('mostDispensedItems')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Item Name</TableHead>
-                                            <TableHead className="text-right">Quantity Dispensed</TableHead>
+                                            <TableHead>{t('itemName')}</TableHead>
+                                            <TableHead className="text-right">{t('quantityDispensed')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {data.mostDispensed.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">No dispense data in the last 90 days.</TableCell>
+                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">{t('noDispenseData')}</TableCell>
                                             </TableRow>
                                         ) : data.mostDispensed.map((item, index) => (
                                             <TableRow key={index}>

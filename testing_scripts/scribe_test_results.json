@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-11-28T16:13:17.893053",
+  "base_url": "http://localhost:3093",
+  "total_workflows": 4,
+  "passed": 4,
+  "failed": 0,
+  "results": [
+    {
+      "workflow": "Login",
+      "status": "SUCCESS",
+      "timestamp": "2025-11-28T16:11:48.757252"
+    },
+    {
+      "workflow": "View Users",
+      "status": "SUCCESS"
+    },
+    {
+      "workflow": "Inventory Management",
+      "status": "SUCCESS"
+    },
+    {
+      "workflow": "View Reports",
+      "status": "SUCCESS"
+    }
+  ]
+}

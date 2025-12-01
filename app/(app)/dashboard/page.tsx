@@ -8,6 +8,7 @@ import {
   Package, Laptop, Network, AlertTriangle, Box,
   CheckCircle, Loader2,
 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n-context';
 
 type Stats = {
   hardware: { total: number; inUse: number; available: number; underRepair: number; retired: number };
@@ -32,6 +33,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     async function fetchDashboard() {
@@ -84,21 +86,21 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">IT Asset Management Overview</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('dashboardTitle')}</h1>
+        <p className="text-muted-foreground">{t('dashboardSubtitle')}</p>
 
         {loading && (
           <div className="mt-3 rounded-md border border-blue-500/20 bg-blue-500/10 p-3 text-blue-700 dark:text-blue-400 text-sm">
             <div className="flex items-center space-x-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading dashboard data...</span>
+              <span>{t('loadingDashboard')}</span>
             </div>
           </div>
         )}
 
         {error && (
           <div className="mt-3 rounded-md border border-red-500/20 bg-red-500/10 p-3 text-red-700 dark:text-red-400 text-sm">
-            <strong>Error:</strong> {error}
+            <strong>{t('error')}:</strong> {error}
             <div className="mt-2">
               <Button
                 variant="outline"
@@ -106,7 +108,7 @@ export default function DashboardPage() {
                 onClick={() => window.location.reload()}
                 className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
               >
-                Retry
+                {t('retry')}
               </Button>
             </div>
           </div>
@@ -119,7 +121,7 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Hardware</p>
+                <p className="text-sm text-muted-foreground">{t('totalHardware')}</p>
                 <p className="text-2xl font-bold">{stats.hardware.total}</p>
               </div>
               <Package className="h-8 w-8 text-blue-600" />
@@ -130,7 +132,7 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Computer Assets</p>
+                <p className="text-sm text-muted-foreground">{t('totalComputer')}</p>
                 <p className="text-2xl font-bold">{stats.computerAssets.total}</p>
               </div>
               <Laptop className="h-8 w-8 text-green-600" />
@@ -141,7 +143,7 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Network Assets</p>
+                <p className="text-sm text-muted-foreground">{t('totalNetwork')}</p>
                 <p className="text-2xl font-bold">{stats.networkAssets.total}</p>
               </div>
               <Network className="h-8 w-8 text-purple-600" />
@@ -152,7 +154,7 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Stock Items</p>
+                <p className="text-sm text-muted-foreground">{t('stockItems')}</p>
                 <p className="text-2xl font-bold">{stats.inventory.totalItems}</p>
               </div>
               <Box className="h-8 w-8 text-orange-600" />
@@ -168,16 +170,16 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Package className="h-5 w-5 text-blue-600" />
-              <span>Hardware Status</span>
+              <span>{t('hardwareStatus')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {[
-                { label: 'In Use', color: 'bg-green-500', badge: 'bg-green-500/10 text-green-700 dark:text-green-400', value: stats.hardware.inUse },
-                { label: 'Available', color: 'bg-blue-500', badge: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', value: stats.hardware.available },
-                { label: 'Under Repair', color: 'bg-yellow-500', badge: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400', value: stats.hardware.underRepair },
-                { label: 'Retired', color: 'bg-gray-500', badge: 'bg-gray-500/10 text-gray-700 dark:text-gray-400', value: stats.hardware.retired },
+                { label: t('inUse'), color: 'bg-green-500', badge: 'bg-green-500/10 text-green-700 dark:text-green-400', value: stats.hardware.inUse },
+                { label: t('available'), color: 'bg-blue-500', badge: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', value: stats.hardware.available },
+                { label: t('underRepair'), color: 'bg-yellow-500', badge: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400', value: stats.hardware.underRepair },
+                { label: t('retired'), color: 'bg-gray-500', badge: 'bg-gray-500/10 text-gray-700 dark:text-gray-400', value: stats.hardware.retired },
               ].map((row) => (
                 <div key={row.label} className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">{row.label}</span>
@@ -196,25 +198,25 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Laptop className="h-5 w-5 text-green-600" />
-              <span>Computer Assets</span>
+              <span>{t('computerAssetsBreakdown')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-sm text-muted-foreground">{t('total')}</span>
                 <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.computerAssets.total}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Laptops</span>
+                <span className="text-sm text-muted-foreground">{t('laptops')}</span>
                 <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.computerAssets.laptop}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Desktops</span>
+                <span className="text-sm text-muted-foreground">{t('desktops')}</span>
                 <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400" variant="outline">{stats.computerAssets.desktop}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Servers</span>
+                <span className="text-sm text-muted-foreground">{t('servers')}</span>
                 <Badge className="bg-orange-500/10 text-orange-700 dark:text-orange-400" variant="outline">{stats.computerAssets.server}</Badge>
               </div>
             </div>
@@ -226,25 +228,25 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Network className="h-5 w-5 text-purple-600" />
-              <span>Network Assets</span>
+              <span>{t('networkAssetsBreakdown')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-sm text-muted-foreground">{t('total')}</span>
                 <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400" variant="outline">{stats.networkAssets.total}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Routers</span>
+                <span className="text-sm text-muted-foreground">{t('routers')}</span>
                 <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.networkAssets.router}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Switches</span>
+                <span className="text-sm text-muted-foreground">{t('switches')}</span>
                 <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.networkAssets.switch}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Others</span>
+                <span className="text-sm text-muted-foreground">{t('others')}</span>
                 <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400" variant="outline">{stats.networkAssets.other}</Badge>
               </div>
             </div>
@@ -259,25 +261,25 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Box className="h-5 w-5 text-orange-600" />
-              <span>Inventory Stock</span>
+              <span>{t('inventoryStock')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total Items</span>
+                <span className="text-sm text-muted-foreground">{t('totalItems')}</span>
                 <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400" variant="outline">{stats.inventory.totalItems}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total Quantity</span>
+                <span className="text-sm text-muted-foreground">{t('totalQuantity')}</span>
                 <Badge className="bg-green-500/10 text-green-700 dark:text-green-400" variant="outline">{stats.inventory.totalQuantity}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Low Stock</span>
+                <span className="text-sm text-muted-foreground">{t('lowStock')}</span>
                 <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" variant="outline">{stats.inventory.lowStock}</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Out of Stock</span>
+                <span className="text-sm text-muted-foreground">{t('outOfStock')}</span>
                 <Badge className="bg-red-500/10 text-red-700 dark:text-red-400" variant="outline">{stats.inventory.outOfStock}</Badge>
               </div>
             </div>
@@ -289,7 +291,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-orange-600" />
-              <span>Warranty Expiring Soon</span>
+              <span>{t('warrantyExpiring')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -300,18 +302,18 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-medium text-sm">{item.model}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.asset_tag} • Expires: {item.warranty_expiry}
+                        {item.asset_tag} • {t('expires')}: {item.warranty_expiry}
                       </p>
                     </div>
                     <Badge variant="outline" className="text-orange-700 dark:text-orange-400 border-orange-500/30">
-                      {item.days_left} days
+                      {item.days_left} {t('days')}
                     </Badge>
                   </div>
                 ))}
                 {warranties.length > 3 && (
                   <div className="text-center pt-2">
                     <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300">
-                      View all {warranties.length} expiring warranties
+                      {t('viewAll')} {warranties.length} {t('expiringWarranties')}
                     </Button>
                   </div>
                 )}
@@ -319,7 +321,7 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-6">
                 <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No warranties expiring soon</p>
+                <p className="text-sm text-muted-foreground">{t('noWarrantiesExpiring')}</p>
               </div>
             )}
           </CardContent>
