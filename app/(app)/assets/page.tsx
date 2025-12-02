@@ -57,7 +57,11 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
           a.manufacturer ILIKE $${searchIndex} OR 
           a.serialnumber ILIKE $${searchIndex} OR 
           a.assigneduser ILIKE $${searchIndex} OR
-          a.asset_tag ILIKE $${searchIndex}
+          a.asset_tag ILIKE $${searchIndex} OR
+          a.hostname ILIKE $${searchIndex} OR
+          a.ipaddress ILIKE $${searchIndex} OR
+          a.macaddress ILIKE $${searchIndex} OR
+          a.location ILIKE $${searchIndex}
         )`
       );
     }
@@ -72,8 +76,13 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
     // Query 2: Fetch data
     params.push(limit, offset);
     const sql = `
-      SELECT a.*
+      SELECT
+        a.*,
+        u.firstname AS assigned_firstname,
+        u.employee_id AS assigned_employee_id_resolved,
+        COALESCE(u.firstname, a.assigneduser, '-') AS assigneduser
       FROM assets a
+      LEFT JOIN users u ON a.assigneduser = u.employee_id
       ${whereSql}
       ORDER BY a.created_at DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}
@@ -90,6 +99,8 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
       created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
       updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
       purchaseprice: row.purchaseprice ? parseFloat(row.purchaseprice) : null,
+      assigned_firstname: row.assigned_firstname ?? null,
+      assigned_employee_id: row.assigned_employee_id_resolved ?? null,
     }));
 
     return { assets: assets as AssetFormData[], total };

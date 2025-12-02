@@ -280,6 +280,15 @@ export default function InventoryPage() {
                         <TableCell>{item.location || "N/A"}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/inventory/transaction?itemId=${item.id}&barcode=${item.barcode || ''}`)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Create Transaction"
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/inventory/${item.id}/edit`)}><Edit className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/inventory/history/${item.id}`)}><History className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => openPrintModal(item)} disabled={!item.barcode}><Printer className="h-4 w-4" /></Button>
