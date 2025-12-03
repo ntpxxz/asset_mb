@@ -67,7 +67,7 @@ export function Sidebar() {
 
     navigation.forEach((item) => {
       if (item.submenu) {
-        const isChildActive = item.submenu.some((sub) => pathname === sub.href.split('?')[0]);
+        const isChildActive = item.submenu.some((sub) => pathname.startsWith(sub.href.split('?')[0]));
         if (isChildActive && !openSubmenus[item.nameKey]) {
           newOpenState[item.nameKey] = true;
           hasChanges = true;
@@ -136,8 +136,9 @@ export function Sidebar() {
           const hasSubmenu = item.submenu && item.submenu.length > 0;
           const isOpen = openSubmenus[item.nameKey] || false;
 
-          const isMainActive = pathname === item.href;
-          const isChildActive = item.submenu?.some((sub) => pathname === sub.href.split('?')[0]);
+          // Updated active logic: check if pathname starts with href (unless it's root dashboard)
+          const isMainActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');
+          const isChildActive = item.submenu?.some((sub) => pathname.startsWith(sub.href.split('?')[0]));
           const isActive = isMainActive || isChildActive;
 
           const menuItemClasses = cn(
@@ -187,7 +188,7 @@ export function Sidebar() {
                   <div className="pl-4 space-y-1">
                     {item.submenu!.map((sub) => {
                       const SubIcon = sub.icon;
-                      const isSubActive = pathname === sub.href.split('?')[0];
+                      const isSubActive = pathname.startsWith(sub.href.split('?')[0]);
                       return (
                         <Link key={sub.nameKey} href={sub.href}>
                           <div

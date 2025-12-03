@@ -84,6 +84,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const search = searchParams.get('search');
+    if (search) {
+      params.push(`%${search}%`);
+      const idx = params.length;
+      conds.push(`(
+        a.asset_tag ILIKE $${idx} OR
+        a.model ILIKE $${idx} OR
+        a.serialnumber ILIKE $${idx} OR
+        a.assigneduser ILIKE $${idx} OR
+        u.firstname ILIKE $${idx} OR
+        a.pc_name ILIKE $${idx}
+      )`);
+    }
+
     const whereSql = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
     params.push(limit, offset);
 
