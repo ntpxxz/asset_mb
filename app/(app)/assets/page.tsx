@@ -34,7 +34,7 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
     // Type Filter (including virtual categories)
     if (type && type !== 'all') {
       if (type === 'computer') {
-        const computerTypes = ['laptop', 'desktop', 'phone', 'tablet', 'pc'];
+        const computerTypes = ['laptop', 'desktop', 'phone', 'tablet', 'PC'];
         params.push(computerTypes);
         conds.push(`a.type = ANY($${params.length}::text[])`);
       } else if (type === 'network') {

@@ -358,6 +358,19 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                 <SelectItem value="switch">{t('networkSwitch')}</SelectItem>
                             </SelectContent>
                         </Select>
+                        {(searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setStatusFilter('all');
+                                    setCategoryFilter('all');
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                                Clear Filters
+                            </Button>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -377,23 +390,23 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                         <div className="space-y-4">
                             <div className="rounded-md border">
                                 <Table>
-                                    <TableHeader>
+                                    <TableHeader className="bg-gray-50/50">
                                         <TableRow>
-                                            <TableHead>{t('name')}</TableHead>
-                                            <TableHead>{t('model')}</TableHead>
-                                            <TableHead>{t('serialNumber')}</TableHead>
-                                            <TableHead>{t('status')}</TableHead>
-                                            <TableHead>{t('user')}</TableHead>
-                                            <TableHead>{t('location')}</TableHead>
-                                            <TableHead>{t('price')}</TableHead>
-                                            <TableHead>{t('actions')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('name')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('model')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('serialNumber')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('status')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('user')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('location')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('price')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('actions')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {assets.map((asset) => {
                                             const Icon = getAssetIcon(asset.type!);
                                             return (
-                                                <TableRow key={asset.id}>
+                                                <TableRow key={asset.id} className="hover:bg-gray-50/80 transition-colors">
                                                     <TableCell className="font-mono text-sm">
                                                         <div className="flex items-center space-x-3">
                                                             <div className="p-2 bg-gray-100 rounded-lg">

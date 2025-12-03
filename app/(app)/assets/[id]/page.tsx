@@ -139,7 +139,7 @@ export default function AssetViewPage() {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     if (params.id) {
       const id = params.id as string;
@@ -257,7 +257,7 @@ export default function AssetViewPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
             {/* Main Information */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Basic Information */}          
+              {/* Basic Information */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -466,7 +466,7 @@ export default function AssetViewPage() {
                       <label className="text-sm font-medium text-gray-500">
                         Purchase Date
                       </label>
-                      <p className="text-lg">                    
+                      <p className="text-lg">
                         {asset.purchasedate ? asset.purchasedate.split("T")[0] : ""}
                       </p>
                     </div>

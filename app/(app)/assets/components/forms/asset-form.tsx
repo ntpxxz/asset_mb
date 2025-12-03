@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,12 +16,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Save, AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Package, Save, AlertCircle, MapPin, Monitor, ShieldCheck,
+  Receipt, RefreshCw, Cpu, Network, Server, Info
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { AssetFormData } from "@/lib/data-store";
+import { Separator } from '@radix-ui/react-dropdown-menu';
+import { useI18n } from '@/lib/i18n-context';
 
 type Mode = 'create' | 'edit';
+
 interface Props {
   mode?: Mode;
   initialData?: Partial<AssetFormData> & { id?: string };
@@ -33,71 +40,73 @@ interface Props {
   category?: 'computer' | 'network';
 }
 
-export default function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onCancel, onSaved, loading, category }: Props) {
+export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onCancel, onSaved, loading, category }: Props) {
+  const router = useRouter();
+  const { t } = useI18n();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+
   const [formData, setFormData] = useState<AssetFormData>({
     asset_tag: '',
+    serialnumber: '',
     type: '',
     manufacturer: '',
     model: '',
-    serialnumber: '',
+    status: 'available',
+    condition: 'good',
+    image_url: null,
+    assigneduser: '',
+    location: '',
+    building: '',
+    division: '',
+    section: '',
+    area: '',
+    department: '',
+    pc_name: '',
+    hostname: '',
+    ipaddress: '',
+    macaddress: '',
+    processor: '',
+    memory: '',
+    storage: '',
+    operatingsystem: '',
+    os_version: '',
+    os_key: '',
+    ms_office_apps: '',
+    ms_office_version: '',
+    is_legally_purchased: 'unknown',
     purchasedate: '',
     purchaseprice: null,
     supplier: '',
     warrantyexpiry: '',
-    assigneduser: '',
-    location: '',
-    department: '',
-    status: 'available',
-    condition: 'good',
-    operatingsystem: '',
-    processor: '',
-    memory: '',
-    storage: '',
-    hostname: '',
-    ipaddress: '',
-    macaddress: '',
     patchstatus: 'needs-review',
     lastpatch_check: '',
     isloanable: false,
     description: '',
     notes: '',
-    // New fields from spreadsheet
-    building: '',
-    division: '',
-    section: '',
-    area: '',
-    pc_name: '',
-    os_key: '',
-    os_version: '',
-    ms_office_apps: '',
-    ms_office_version: '',
-    is_legally_purchased: '',
     ...(initialData || {}),
   });
-  const router = useRouter();
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const showComputerOptions = !category || category === 'computer';
+  const showNetworkOptions = !category || category === 'network';
+  const showPeripheralOptions = !category || category === 'computer';
 
-  // ===== Logic แยกประเภท =====
-  const typeLower = (formData.type || '').toLowerCase();
+  const isComputer = useMemo(() => {
+    const t = (formData.type || '').toLowerCase();
+    if (category === 'computer' && !t) return true;
+    return ['laptop', 'desktop', 'server', 'workstation', 'pc', 'notebook', 'all-in-one', 'aio', 'computer', 'mac', 'tablet'].includes(t);
+  }, [formData.type, category]);
 
-  // กลุ่มประเภท
-  const computerTypes = new Set(['laptop', 'desktop', 'server', 'workstation', 'tablet', 'pc']);
-  const networkTypes = new Set(['router', 'switch', 'firewall', 'access-point', 'gateway']);
+  const isNetwork = useMemo(() => {
+    const t = (formData.type || '').toLowerCase();
+    if (category === 'network' && !t) return true;
+    return ['router', 'switch', 'firewall', 'access-point', 'gateway', 'modem'].includes(t);
+  }, [formData.type, category]);
 
-  const isComputer = computerTypes.has(typeLower);
-  const isNetwork = networkTypes.has(typeLower);
-
-  // ===== Helpers =====
   const handleInputChange = (key: keyof AssetFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const normalizeDate = (v: unknown) => {
-    if (!v) return '';
-    const s = String(v);
-    return s.includes('T') ? s.split('T')[0] : s;
+    if (fieldErrors[key]) setFieldErrors(prev => ({ ...prev, [key]: false }));
   };
 
   const normalizeNumber = (v: unknown): number | null => {
@@ -106,489 +115,427 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
     return Number.isFinite(n) ? n : null;
   };
 
-  // ===== Validate =====
   const validateForm = (): boolean => {
-    const missing: string[] = [];
+    const errors: Record<string, boolean> = {};
+    let hasError = false;
+    const requiredFields = ['type', 'manufacturer', 'model', 'serialnumber', 'asset_tag'];
 
-    // ฟิลด์บังคับพื้นฐาน
-    (['type', 'manufacturer', 'model', 'serialnumber'] as Array<keyof AssetFormData>).forEach(
-      (k) => {
-        const v = (formData as any)[k];
-        if (v === undefined || v === null || v === '') missing.push(String(k));
+    requiredFields.forEach((k) => {
+      // @ts-ignore
+      if (!formData[k] || String(formData[k]).trim() === '') {
+        errors[k] = true;
+        hasError = true;
       }
-    );
+    });
 
-    if (missing.length) {
-      setError(`Please fill in required fields: ${missing.join(', ')}`);
+    setFieldErrors(errors);
+    if (hasError) {
+      setError(t('requiredFields'));
+      toast.error(t('validationError'), { description: t('checkFields') });
       return false;
     }
     setError(null);
     return true;
   };
 
-  // ===== Submit =====
+  const handleGenerateTag = () => {
+    const prefix = category === 'network' ? "NET" : "AST";
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    handleInputChange('asset_tag', `${prefix}-${timestamp}${random}`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    if (onSubmit) {
-      setSubmitting(true);
-      const result = await onSubmit(formData);
-      setSubmitting(false);
-      if (!result.success) setError(result.error || 'Failed to save asset');
-      return;
-    }
-
     setSubmitting(true);
-    setError(null);
-
-    const tid = toast.loading("Saving asset...", {
-      description: "Writing to database…",
-      className: "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
-      duration: 5000,
-    });
+    const tid = toast.loading(t('saving'));
 
     try {
-      const payload: AssetFormData = {
+      const payload = {
         ...formData,
-        purchasedate: normalizeDate(formData.purchasedate),
-        warrantyexpiry: normalizeDate(formData.warrantyexpiry),
-        lastpatch_check: normalizeDate(formData.lastpatch_check),
         purchaseprice: normalizeNumber(formData.purchaseprice),
+        purchasedate: formData.purchasedate || null,
+        warrantyexpiry: formData.warrantyexpiry || null,
+        lastpatch_check: formData.lastpatch_check || null,
       };
+
+      if (onSubmit) {
+        const res = await onSubmit(payload);
+        if (!res.success) throw new Error(res.error);
+        setSubmitting(false);
+        return;
+      }
 
       const url = mode === 'edit' && assetId ? `/api/assets/${assetId}` : '/api/assets';
       const method = mode === 'edit' ? 'PUT' : 'POST';
-
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = await res.json().catch(() => ({} as any));
-      if (!res.ok) {
-        if (res.status === 409) {
-          throw new Error("Duplicate Asset: Asset Tag, Serial Number, or Hostname already exists in the system.");
-        }
-        throw new Error(json?.error || `HTTP ${res.status}`);
-      }
+      const json = await res.json();
 
-      toast.success(`Asset ${mode === "create" ? 'created' : 'updated'} successfully`, {
-        id: tid,
-        description: payload.asset_tag ? `Tag: ${payload.asset_tag}` : undefined,
-        icon: "✅",
-        className: "rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-900 shadow-lg",
-        duration: 2000,
-      });
+      if (!res.ok) throw new Error(json.error || t('saveFailed'));
 
+      toast.success(t('savedSuccess'), { id: tid });
       onSaved?.(json.data);
-      const redirectPath = category ? `/assets/${category}` : "/assets";
-      setTimeout(() => router.push(redirectPath), 2100);
+      setTimeout(() => router.back(), 1000);
 
-      if (mode === "create") {
-        setFormData(prev => ({
-          ...prev,
-          asset_tag: "", manufacturer: "", model: "", serialnumber: "",
-          description: "", notes: ""
-        }));
-      }
     } catch (err: any) {
-      toast.error("Failed to save asset", {
-        id: tid,
-        description: err?.message ?? "Please try again.",
-        icon: "⚠️",
-        className: "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
-        duration: 4000,
-      });
-      setError(err?.message || "Failed to save asset");
+      toast.error(t('saveFailed'), { id: tid, description: err.message });
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if (mode === 'create' && !formData.asset_tag) {
-      handleInputChange('asset_tag', `AST-${Date.now()}`);
+    if (mode === 'create') {
+      if (!formData.asset_tag) handleGenerateTag();
+      if (!formData.type && category) {
+        if (category === 'computer') handleInputChange('type', 'laptop');
+        if (category === 'network') handleInputChange('type', 'switch');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, category]);
 
-  const Icon = Package;
+  const FormIcon = category === 'network' ? Network : (category === 'computer' ? Monitor : Package);
+  const formTitle = category === 'network' ? t('deviceName') : (category === 'computer' ? t('computerName') : t('assetName'));
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Icon className="h-5 w-5" />
-          <span>{mode === 'create' ? 'Add Asset (เพิ่มทรัพย์สิน)' : 'Edit Asset (แก้ไขทรัพย์สิน)'}</span>
-        </CardTitle>
-      </CardHeader>
+    <form onSubmit={handleSubmit} className="w-full max-w-8xl mx-auto space-y-8 pb-24">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span className="font-medium">{error}</span>
+        </div>
+      )}
 
-      <CardContent>
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-800 rounded flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* 1. Location & Organization */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Location & Organization (ที่ตั้งและหน่วยงาน)</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="building">Building or Factory (อาคารหรือโรงงาน)</Label>
+      {/* --- 1. General Information (Combined Identity & Status) --- */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 border-b bg-gray-50/50">
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <FormIcon className="h-5 w-5" />
+            {formTitle}
+          </CardTitle>
+          <CardDescription>{t('description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 pt-6">
+          {/* Row 1: Tag, Type, Status */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="asset_tag" className="after:content-['*'] after:ml-0.5 after:text-red-500">{t('pcName')}</Label>
+              <div className="flex gap-2">
                 <Input
-                  id="building"
-                  placeholder="เช่น Spindle Assembly"
-                  value={formData.building || ''}
-                  onChange={(e) => handleInputChange('building', e.target.value)}
-                  disabled={submitting}
+                  id="asset_tag"
+                  value={formData.asset_tag}
+                  onChange={(e) => handleInputChange('asset_tag', e.target.value)}
+                  className={`font-mono font-medium ${fieldErrors.asset_tag ? "border-red-500" : ""}`}
                 />
+                <Button type="button" variant="outline" size="icon" onClick={handleGenerateTag} title={t('generateReport')}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="division">Division (ฝ่าย)</Label>
-                <Input
-                  id="division"
-                  placeholder="เช่น Production"
-                  value={formData.division || ''}
-                  onChange={(e) => handleInputChange('division', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="section">Section (แผนก)</Label>
-                <Input
-                  id="section"
-                  placeholder="เช่น Big Office"
-                  value={formData.section || ''}
-                  onChange={(e) => handleInputChange('section', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="area">Area (พื้นที่)</Label>
-                <Input
-                  id="area"
-                  placeholder="เช่น CALL_02"
-                  value={formData.area || ''}
-                  onChange={(e) => handleInputChange('area', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <Input
-                id="serialnumber"
-                placeholder="เช่น NXB7-SB17-4X2F-8ZTM"
-                value={formData.serialnumber || ''}
-                onChange={(e) => handleInputChange('serialnumber', e.target.value)}
-                disabled={submitting}
-                required
-              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assigneduser">User Owner (ผู้ใช้งาน)</Label>
-              <Input
-                id="assigneduser"
-                placeholder="ชื่อผู้ใช้งาน"
-                value={formData.assigneduser || ''}
-                onChange={(e) => handleInputChange('assigneduser', e.target.value)}
-                disabled={submitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status (สถานะ)</Label>
-              <Select
-                value={formData.status || 'available'}
-                onValueChange={(value) => handleInputChange('status', value as any)}
-                disabled={submitting}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกสถานะ" />
-                </SelectTrigger>
+              <Label htmlFor="type" className="after:content-['*'] after:ml-0.5 after:text-red-500">{t('type')}</Label>
+              <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v)}>
+                <SelectTrigger className={fieldErrors.type ? "border-red-500" : ""}><SelectValue placeholder={t('selectType')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
+                  {showComputerOptions && (
+                    <SelectGroup>
+                      <SelectLabel>{t('computerAssets')}</SelectLabel>
+                      <SelectItem value="laptop">{t('laptop')}</SelectItem>
+                      <SelectItem value="desktop">{t('desktop')}</SelectItem>
+                      <SelectItem value="workstation">Workstation</SelectItem>
+                      <SelectItem value="server">{t('server')}</SelectItem>
+                      <SelectItem value="tablet">{t('tablet')}</SelectItem>
+                    </SelectGroup>
+                  )}
+                  {showNetworkOptions && (
+                    <SelectGroup>
+                      <SelectLabel>{t('networkAssets')}</SelectLabel>
+                      <SelectItem value="router">{t('router')}</SelectItem>
+                      <SelectItem value="switch">{t('networkSwitch')}</SelectItem>
+                      <SelectItem value="firewall">Firewall</SelectItem>
+                      <SelectItem value="access-point">Access Point</SelectItem>
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">{t('status')}</Label>
+              <Select value={formData.status} onValueChange={(v) => handleInputChange('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">🟢 {t('available')}</SelectItem>
+                  <SelectItem value="assigned">🔵 {t('assigned')}</SelectItem>
+                  <SelectItem value="maintenance">🟠 {t('maintenance')}</SelectItem>
+                  <SelectItem value="retired">⚫ {t('retired')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-        </div>
 
-        {/* 3. Operating System & Software */}
-        {
-          isComputer && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Operating System & Software (ระบบปฏิบัติการและซอ
-
-                ฟต์แวร์)</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="operatingsystem">Operating System (OS) (ระบบปฏิบัติการ)</Label>
-                  <Input
-                    id="operatingsystem"
-                    placeholder="เช่น Win10, Win11"
-                    value={formData.operatingsystem || ''}
-                    onChange={(e) => handleInputChange('operatingsystem', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="os_version">Window Ver (เวอร์ชัน Windows)</Label>
-                  <Input
-                    id="os_version"
-                    placeholder="เช่น Win10, Win11"
-                    value={formData.os_version || ''}
-                    onChange={(e) => handleInputChange('os_version', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="os_key">Key (รหัสลิขสิทธิ์ Windows)</Label>
-                  <Input
-                    id="os_key"
-                    placeholder="เช่น Free, XXXXX-XXXXX-XXXXX"
-                    value={formData.os_key || ''}
-                    onChange={(e) => handleInputChange('os_key', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ms_office_apps">MS Office (แอปพลิเคชัน)</Label>
-                  <Input
-                    id="ms_office_apps"
-                    placeholder="เช่น Excel,PowerPoint,Word"
-                    value={formData.ms_office_apps || ''}
-                    onChange={(e) => handleInputChange('ms_office_apps', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ms_office_version">Version (เวอร์ชัน MS Office)</Label>
-                  <Input
-                    id="ms_office_version"
-                    placeholder="เช่น 2013, 2007"
-                    value={formData.ms_office_version || ''}
-                    onChange={(e) => handleInputChange('ms_office_version', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="is_legally_purchased">Legally Purchased (ซื้อถูกต้องตามกฎหมาย)</Label>
-                  <Select
-                    value={formData.is_legally_purchased || ''}
-                    onValueChange={(value) => handleInputChange('is_legally_purchased', value)}
-                    disabled={submitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="เลือก" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes (ใช่)</SelectItem>
-                      <SelectItem value="no">No (ไม่ใช่)</SelectItem>
-                      <SelectItem value="unknown">Unknown (ไม่ทราบ)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        {/* 4. Technical Specs (for computers) */}
-        {
-          isComputer && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Technical Specifications (ข้อมูลทางเทคนิค)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="processor">CPU / Processor (หน่วยประมวลผล)</Label>
-                  <Input
-                    id="processor"
-                    placeholder="เช่น Intel Core i7"
-                    value={formData.processor || ''}
-                    onChange={(e) => handleInputChange('processor', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="memory">Memory (RAM) (หน่วยความจำ)</Label>
-                  <Input
-                    id="memory"
-                    placeholder="เช่น 16GB"
-                    value={formData.memory || ''}
-                    onChange={(e) => handleInputChange('memory', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="storage">Storage (พื้นที่จัดเก็บ)</Label>
-                  <Input
-                    id="storage"
-                    placeholder="เช่น 512GB SSD"
-                    value={formData.storage || ''}
-                    onChange={(e) => handleInputChange('storage', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        {/* 5. Network Information (for both computer and network) */}
-        {
-          (isComputer || isNetwork) && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Network Configuration (การตั้งค่าเครือข่าย)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hostname">Hostname (ชื่อเครื่อง)</Label>
-                  <Input
-                    id="hostname"
-                    value={formData.hostname || ''}
-                    onChange={(e) => handleInputChange('hostname', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ipaddress">IP Address (ที่อยู่ IP)</Label>
-                  <Input
-                    id="ipaddress"
-                    value={formData.ipaddress || ''}
-                    onChange={(e) => handleInputChange('ipaddress', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="macaddress">MAC Address (ที่อยู่ MAC)</Label>
-                  <Input
-                    id="macaddress"
-                    value={formData.macaddress || ''}
-                    onChange={(e) => handleInputChange('macaddress', e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        {/* 6. Purchase & Warranty */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty (การจัดซื้อและประกัน)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Row 2: Manufacturer, Model, Serial */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="purchasedate">Purchase Date (วันที่ซื้อ)</Label>
+              <Label htmlFor="manufacturer" className="after:content-['*'] after:ml-0.5 after:text-red-500">{t('manufacturer')}</Label>
               <Input
-                id="purchasedate"
-                type="date"
-                value={formData.purchasedate || ''}
-                onChange={(e) => handleInputChange('purchasedate', e.target.value)}
-                disabled={submitting}
+                id="manufacturer"
+                value={formData.manufacturer}
+                onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+                placeholder="e.g. Dell"
+                className={fieldErrors.manufacturer ? "border-red-500" : ""}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="purchaseprice">Price (ราคา)</Label>
+              <Label htmlFor="model" className="after:content-['*'] after:ml-0.5 after:text-red-500">{t('model')}</Label>
               <Input
-                id="purchaseprice"
-                type="number"
-                step="0.01"
-                value={formData.purchaseprice ?? ''}
-                onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))}
-                disabled={submitting}
+                id="model"
+                value={formData.model}
+                onChange={(e) => handleInputChange('model', e.target.value)}
+                placeholder="e.g. Latitude 5420"
+                className={fieldErrors.model ? "border-red-500" : ""}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier (ผู้จัดจำหน่าย)</Label>
+              <Label htmlFor="serialnumber" className="after:content-['*'] after:ml-0.5 after:text-red-500">{t('serialNumber')}</Label>
               <Input
-                id="supplier"
-                value={formData.supplier || ''}
-                onChange={(e) => handleInputChange('supplier', e.target.value)}
-                disabled={submitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="warrantyexpiry">Warranty Expiry (วันหมดประกัน)</Label>
-              <Input
-                id="warrantyexpiry"
-                type="date"
-                value={formData.warrantyexpiry || ''}
-                onChange={(e) => handleInputChange('warrantyexpiry', e.target.value)}
-                disabled={submitting}
+                id="serialnumber"
+                value={formData.serialnumber}
+                onChange={(e) => handleInputChange('serialnumber', e.target.value)}
+                placeholder="Unique S/N"
+                className={fieldErrors.serialnumber ? "border-red-500" : ""}
               />
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* 7. Additional Info */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Additional Information (ข้อมูลเพิ่มเติม)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* --- 2. Location & Assignment --- */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 border-b bg-gray-50/50">
+          <CardTitle className="flex items-center gap-2 text-base text-orange-600">
+            <MapPin className="h-5 w-5" /> {t('locationAssignment')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-6 pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="description">Description (รายละเอียด)</Label>
-              <Textarea
-                id="description"
-                rows={3}
-                value={formData.description || ''}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                disabled={submitting}
+              <Label htmlFor="assigneduser">{t('assignedUser')}</Label>
+              <Input
+                id="assigneduser"
+                value={formData.assigneduser || ''}
+                onChange={(e) => handleInputChange('assigneduser', e.target.value)}
+                placeholder={t('usernamePlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (หมายเหตุ)</Label>
-              <Textarea
-                id="notes"
-                rows={3}
-                value={formData.notes || ''}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                disabled={submitting}
-              />
+              <Label htmlFor="building">{t('building')}</Label>
+              <Input id="building" value={formData.building || ''} onChange={(e) => handleInputChange('building', e.target.value)} />
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isloanable"
-              checked={!!formData.isloanable}
-              onCheckedChange={(v) => handleInputChange('isloanable', !!v)}
-              disabled={submitting}
-            />
-            <Label htmlFor="isloanable">Available for loan (สามารถยืมได้)</Label>
-          </div>
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end space-x-2 pt-4 border-t">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="division">{t('division')}</Label>
+              <Input id="division" value={formData.division || ''} onChange={(e) => handleInputChange('division', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">{t('department')}</Label>
+              <Input id="department" value={formData.department || ''} onChange={(e) => handleInputChange('department', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">{t('location')}</Label>
+              <Input id="location" value={formData.location || ''} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="e.g. Server Room" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {(isComputer || isNetwork) && (
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4 border-b bg-gray-50/50">
+            <CardTitle className="flex items-center gap-2 text-base text-slate-800">
+              {isNetwork ? <Server className="h-5 w-5" /> : <Cpu className="h-5 w-5" />}
+              {isNetwork ? t('deviceConfiguration') : t('systemSpecifications')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-6 pt-6">
+
+            {/* A. Hardware (Computers Only) */}
+            {isComputer && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <Cpu className="h-4 w-4" /> {t('hardware')}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label>{t('processor')}</Label>
+                    <Input value={formData.processor || ''} onChange={(e) => handleInputChange('processor', e.target.value)} placeholder="e.g. i7-12700" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('memory')}</Label>
+                    <Input value={formData.memory || ''} onChange={(e) => handleInputChange('memory', e.target.value)} placeholder="e.g. 16GB" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('storage')}</Label>
+                    <Input value={formData.storage || ''} onChange={(e) => handleInputChange('storage', e.target.value)} placeholder="e.g. 512GB SSD" />
+                  </div>
+                </div>
+                <Separator />
+              </div>
+            )}
+
+            {/* B. Software (Computers Only) */}
+            {isComputer && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <ShieldCheck className="h-4 w-4" /> {t('softwareLicense')}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>{t('osUsage')}</Label>
+                    <Input value={formData.operatingsystem || ''} onChange={(e) => handleInputChange('operatingsystem', e.target.value)} placeholder="e.g. Windows 11" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('osVersion')}</Label>
+                    <Input value={formData.os_version || ''} onChange={(e) => handleInputChange('os_version', e.target.value)} placeholder="e.g. win11" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('productKey')}</Label>
+                  <Input value={formData.os_key || ''} onChange={(e) => handleInputChange('os_key', e.target.value)} className="font-mono text-sm" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>{t('officeVersion')}</Label>
+                    <Input value={formData.ms_office_version || ''} onChange={(e) => handleInputChange('ms_office_version', e.target.value)} placeholder="e.g. Office 2021" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('legallyPurchased')}</Label>
+                    <Select value={formData.is_legally_purchased || 'unknown'} onValueChange={(v) => handleInputChange('is_legally_purchased', v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">{t('yes')}</SelectItem>
+                        <SelectItem value="no">{t('no')}</SelectItem>
+                        <SelectItem value="unknown">{t('unknown')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Separator />
+              </div>
+            )}
+
+            {/* C. Network (Both) */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <Network className="h-4 w-4" /> {t('networkSettings')}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>{isComputer ? t('computerName') : t('deviceName')}</Label>
+                  <Input
+                    value={formData.pc_name || ''}
+                    onChange={(e) => {
+                      handleInputChange('pc_name', e.target.value);
+                      if (!formData.hostname) handleInputChange('hostname', e.target.value);
+                    }}
+                    placeholder={isComputer ? "DESKTOP-ABC" : "SW-CORE-01"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('hostname')}</Label>
+                  <Input value={formData.hostname || ''} onChange={(e) => handleInputChange('hostname', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('ipAddress')}</Label>
+                  <Input value={formData.ipaddress || ''} onChange={(e) => handleInputChange('ipaddress', e.target.value)} placeholder="192.168.x.x" className="font-mono" />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('macAddress')}</Label>
+                  <Input value={formData.macaddress || ''} onChange={(e) => handleInputChange('macaddress', e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" className="font-mono" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>)}
+
+
+
+      {/* --- 4. Financial Info --- */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 border-b bg-gray-50/50">
+          <CardTitle className="flex items-center gap-2 text-base text-green-600">
+            <Receipt className="h-5 w-5" /> {t('financialWarranty')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6">
+          <div className="space-y-2">
+            <Label>{t('purchaseDate')}</Label>
+            <Input type="date" value={formData.purchasedate || ''} onChange={(e) => handleInputChange('purchasedate', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('price')}</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-gray-500">฿</span>
+              <Input type="number" className="pl-8" value={formData.purchaseprice ?? ''} onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))} placeholder="0.00" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{t('supplier')}</Label>
+            <Input value={formData.supplier || ''} onChange={(e) => handleInputChange('supplier', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('warrantyExpiry')}</Label>
+            <Input type="date" value={formData.warrantyexpiry || ''} onChange={(e) => handleInputChange('warrantyexpiry', e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* --- 5. Remarks --- */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 border-b bg-gray-50/50">
+          <CardTitle className="flex items-center gap-2 text-base text-gray-600">
+            <Info className="h-5 w-5" /> {t('remarks')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <div className="space-y-2">
+            <Label>{t('description')}</Label>
+            <Textarea rows={2} value={formData.description || ''} onChange={(e) => handleInputChange('description', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('internalNotes')}</Label>
+            <Textarea rows={2} value={formData.notes || ''} onChange={(e) => handleInputChange('notes', e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* --- Footer Actions --- */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg z-10 md:pl-64">
+        <div className="max-w-4xl mx-auto flex items-center justify-end gap-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
-              Cancel (ยกเลิก)
+              {t('cancel')}
             </Button>
           )}
-          <Button type="submit" disabled={submitting || loading}>
+          <Button type="submit" disabled={submitting || loading} className="min-w-[120px]">
             <Save className="h-4 w-4 mr-2" />
-            {submitting ? 'Saving... (กำลังบันทึก)' : mode === 'create' ? 'Add Asset (เพิ่มทรัพย์สิน)' : 'Save Changes (บันทึกการเปลี่ยนแปลง)'}
+            {submitting ? t('saving') : mode === 'create' ? t('create') : t('save')}
           </Button>
         </div>
-      </form >
-    </CardContent >
-    </Card >
+      </div>
+    </form >
   );
 }
-
-export { AssetForm };

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { AssetForm } from '../../components/forms/asset-form';
+import { AssetForm } from '@/app/(app)/assets/components/forms/asset-form';
 import { toast } from 'sonner';
 
 export default function AddComputerAssetPage() {
