@@ -24,6 +24,7 @@ ALTER TABLE assets ADD COLUMN IF NOT EXISTS patchstatus VARCHAR(50) DEFAULT 'nee
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS lastpatch_check DATE;
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS isloanable BOOLEAN DEFAULT false;
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS notes TEXT;     
 
 -- Rename ms_office to ms_office_apps for clarity
 ALTER TABLE assets RENAME COLUMN ms_office TO ms_office_apps;

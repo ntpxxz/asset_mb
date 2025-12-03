@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { AssetForm } from '../components/forms/asset-form'; // ← ปรับ path ให้ถูกกับโปรเจกต์คุณ
+import AssetForm from '../components/forms/asset-form'; // ← ปรับ path ให้ถูกกับโปรเจกต์คุณ
 import { toast } from 'sonner';
 
 export default function AddAssetPage() {
@@ -39,25 +39,25 @@ export default function AddAssetPage() {
         style: { boxShadow: "0 8px 24px rgba(16,185,129,.25)" },
         duration: 2000,
       });
-finished = true;
+      finished = true;
       setTimeout(() => router.push('/assets'), 2200);
       return { success: true };
     } catch (err) {
       toast.error("Failed to added asset", {
-        id:tid,
-        description:"Please try again.",
-         icon: "⚠️",
-         className:
-           "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
-         style: { boxShadow: "0 8px 24px rgba(244,63,94,.25)" },
-         duration: 4000,
-       });
- 
+        id: tid,
+        description: "Please try again.",
+        icon: "⚠️",
+        className:
+          "rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 shadow-lg",
+        style: { boxShadow: "0 8px 24px rgba(244,63,94,.25)" },
+        duration: 4000,
+      });
+
       return { success: false, error: err instanceof Error ? err.message : 'Failed to create asset' };
     }
     finally {
-  
-  
+
+
     }
   };
 
