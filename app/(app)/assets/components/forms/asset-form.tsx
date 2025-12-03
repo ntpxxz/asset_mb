@@ -166,7 +166,12 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
         body: JSON.stringify(payload),
       });
       const json = await res.json().catch(() => ({} as any));
-      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error("Duplicate Asset: Asset Tag, Serial Number, or Hostname already exists in the system.");
+        }
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
 
       toast.success(`Asset ${mode === "create" ? 'created' : 'updated'} successfully`, {
         id: tid,

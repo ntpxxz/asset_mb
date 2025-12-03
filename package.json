@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3091",
+    "dev": "cross-env DATABASE_URL=postgresql://rootpg:123456@localhost:5432/asset_management next dev -p 3091",
     "build": "next build",
     "start": "next start -p 3092",
     "lint": "next lint",

@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         params.push(computerTypes);
         conds.push(`a.type = ANY($${params.length}::text[])`);
       } else if (type === 'network') {
-        const networkTypes = ['router', 'switch', 'monitor', 'server'];
+        const networkTypes = ['router', 'switch', 'firewall', 'access-point', 'gateway'];
         params.push(networkTypes);
         conds.push(`a.type = ANY($${params.length}::text[])`);
       } else {

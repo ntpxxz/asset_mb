@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ type User = {
 
 export default function NewTransactionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
 
   const [transactionType, setTransactionType] = useState<TransactionType>('dispense');
@@ -48,6 +49,14 @@ export default function NewTransactionPage() {
   const [lookupError, setLookupError] = useState<string | null>(null);
 
   const [users, setUsers] = useState<User[]>([]);
+
+  // Auto-fill from URL
+  useEffect(() => {
+    const barcodeParam = searchParams.get('barcode');
+    if (barcodeParam) {
+      setBarcode(barcodeParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -85,6 +94,14 @@ export default function NewTransactionPage() {
       setLoading(false);
     }
   }, [barcode, t]);
+
+  // Trigger lookup when barcode is set from URL
+  useEffect(() => {
+    const barcodeParam = searchParams.get('barcode');
+    if (barcodeParam && barcode === barcodeParam && !foundItem && !lookupError) {
+      handleBarcodeLookup();
+    }
+  }, [barcode, searchParams, foundItem, lookupError, handleBarcodeLookup]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
