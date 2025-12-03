@@ -133,18 +133,18 @@ export default function EditAssetPage() {
   };
 
   const handleSubmit = async (formData: AssetFormData) => {
-   
-      const payload = normalizeAssetData(formData);
 
-      const tid = toast.loading("Updating asset...", {
-        description: "Saving changes to database",
-        className: "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
-        duration: 5000,
-      });
+    const payload = normalizeAssetData(formData);
 
-      let finished = false;
+    const tid = toast.loading("Updating asset...", {
+      description: "Saving changes to database",
+      className: "rounded-2xl border bg-white/90 backdrop-blur shadow-lg",
+      duration: 5000,
+    });
 
-      try {
+    let finished = false;
+
+    try {
       const res = await fetch(`/api/assets/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -165,12 +165,12 @@ export default function EditAssetPage() {
         style: { boxShadow: "0 8px 24px rgba(16,185,129,.25)" },
         duration: 2000,
       });
-finished = true;
+      finished = true;
       setTimeout(() => router.push(`/assets/${id}`), 2200);
       return { success: true };
     } catch (err: any) {
       toast.error("Failed to update asset", {
-       id:tid,
+        id: tid,
         description: err?.message || "Please try again.",
         icon: "⚠️",
         className:
@@ -189,7 +189,7 @@ finished = true;
     }
   };
 
-  const handleCancel = () => router.back(); 
+  const handleCancel = () => router.back();
 
   if (error && !assetData) {
     return (

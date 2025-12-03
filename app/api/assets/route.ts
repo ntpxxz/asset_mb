@@ -30,19 +30,30 @@ const assetCreateSchema = z.object({
   patchstatus: z.string().default('needs-review'),
   lastpatch_check: z.string().optional().nullable(),
   isloanable: z.boolean().default(false),
-  condition: z.enum(['new','good','fair','poor','broken']).default('good'),
+  condition: z.enum(['new', 'good', 'fair', 'poor', 'broken']).default('good'),
   description: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  // New fields
+  building: z.string().optional().nullable(),
+  division: z.string().optional().nullable(),
+  section: z.string().optional().nullable(),
+  area: z.string().optional().nullable(),
+  pc_name: z.string().optional().nullable(),
+  os_key: z.string().optional().nullable(),
+  os_version: z.string().optional().nullable(),
+  ms_office_apps: z.string().optional().nullable(),
+  ms_office_version: z.string().optional().nullable(),
+  is_legally_purchased: z.string().optional().nullable(),
 });
 
 // Helper function to clean data
 function cleanCreateData(data: any) {
   const cleaned: any = {};
-  
+
   Object.entries(data).forEach(([key, value]) => {
     // Skip undefined values
     if (value === undefined) return;
-    
+
     // Convert empty strings to null for optional fields
     if (value === '') {
       cleaned[key] = null;
@@ -50,7 +61,7 @@ function cleanCreateData(data: any) {
       cleaned[key] = value;
     }
   });
-  
+
   return cleaned;
 }
 
@@ -70,7 +81,20 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
     const conds: string[] = [];
     if (status) { params.push(status); conds.push(`a.status = $${params.length}`); }
-    if (type)   { params.push(type);   conds.push(`a.type   = $${params.length}`); }
+    if (type && type !== 'all') {
+      if (type === 'computer') {
+        const computerTypes = ['laptop', 'desktop', 'phone', 'tablet', 'PC', 'NB'];
+        params.push(computerTypes);
+        conds.push(`a.type = ANY($${params.length}::text[])`);
+      } else if (type === 'network') {
+        const networkTypes = ['router', 'switch', 'firewall', 'access-point', 'gateway'];
+        params.push(networkTypes);
+        conds.push(`a.type = ANY($${params.length}::text[])`);
+      } else {
+        params.push(type);
+        conds.push(`a.type = $${params.length}`);
+      }
+    }
     const whereSql = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
     // จับคู่ employee_id ใน a.assigneduser กับ users.employee_id
@@ -152,48 +176,31 @@ export async function POST(request: NextRequest) {
 
     let resolvedEmpId: string | null = null;
     if (rawAssigned) {
-      // 1) Try as employee_id first
-      const byId = await pool.query(
-        `SELECT employee_id FROM users WHERE employee_id = $1 LIMIT 1`,
+      // 1) Try as employee_id
+      const resId = await pool.query(
+        'SELECT employee_id FROM users WHERE employee_id = $1',
         [rawAssigned]
       );
-      const foundId = byId.rows?.[0]?.employee_id;
-
-      if (foundId) {
-        resolvedEmpId = foundId;
+      if (resId.rows.length > 0) {
+        resolvedEmpId = resId.rows[0].employee_id;
       } else {
-        // 2) Otherwise try as firstname (warning: may be non-unique)
-        const byFirst = await pool.query(
-          `SELECT employee_id FROM users WHERE firstname = $1 LIMIT 2`,
+        // 2) Try as firstname
+        const resName = await pool.query(
+          'SELECT employee_id FROM users WHERE firstname ILIKE $1',
           [rawAssigned]
         );
-        const matches = byFirst.rows ?? [];
-        if (matches.length === 1) {
-          resolvedEmpId = matches[0].employee_id;
-        } else if (matches.length > 1) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: `Firstname "${rawAssigned}" พบมากกว่า 1 คน — โปรดระบุเป็น employee_id`,
-            },
-            { status: 400 }
-          );
+        if (resName.rows.length > 0) {
+          resolvedEmpId = resName.rows[0].employee_id;
         } else {
-          return NextResponse.json(
-            {
-              success: false,
-              error: `ไม่พบผู้ใช้ "${rawAssigned}" (ไม่ตรงทั้ง employee_id และ firstname)`,
-            },
-            { status: 400 }
-          );
+          // 3) Use as free text
+          resolvedEmpId = rawAssigned;
         }
       }
     }
 
-    // Always store employee_id (or NULL) into assets.assigneduser
+    // Update cleanedData with the resolved value (or null)
     cleanedData.assigneduser = resolvedEmpId;
 
-    // ---- Field mapping to DB columns ----
     const fieldMapping = {
       asset_tag: 'asset_tag',
       type: 'type',
@@ -204,7 +211,7 @@ export async function POST(request: NextRequest) {
       purchaseprice: 'purchaseprice',
       supplier: 'supplier',
       warrantyexpiry: 'warrantyexpiry',
-      assigneduser: 'assigneduser', // <- will be employee_id from above
+      assigneduser: 'assigneduser',
       location: 'location',
       department: 'department',
       status: 'status',
@@ -221,6 +228,17 @@ export async function POST(request: NextRequest) {
       isloanable: 'isloanable',
       description: 'description',
       notes: 'notes',
+      // New fields
+      building: 'building',
+      division: 'division',
+      section: 'section',
+      area: 'area',
+      pc_name: 'pc_name',
+      os_key: 'os_key',
+      os_version: 'os_version',
+      ms_office_apps: 'ms_office_apps',
+      ms_office_version: 'ms_office_version',
+      is_legally_purchased: 'is_legally_purchased',
     } as const;
 
     const mappedData: Record<string, any> = {};

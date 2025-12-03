@@ -29,6 +29,17 @@ export interface HardwareAsset {
   condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
   description: string;
   notes: string;
+  // New fields
+  building?: string;
+  division?: string;
+  section?: string;
+  area?: string;
+  pc_name?: string;
+  os_key?: string;
+  os_version?: string;
+  ms_office_apps?: string;
+  ms_office_version?: string;
+  is_legally_purchased?: string;
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +54,7 @@ export type AssetFormData = {
   purchaseprice?: number | null;
   supplier?: string;
   warrantyexpiry?: string;
-  assigneduser?: string; 
+  assigneduser?: string;
   location?: string;
   department?: string;
   status: string | 'available' | 'assigned' | 'maintenance' | 'retired';
@@ -60,6 +71,17 @@ export type AssetFormData = {
   isloanable?: boolean;
   description?: string;
   notes?: string;
+  // New fields
+  building?: string;
+  division?: string;
+  section?: string;
+  area?: string;
+  pc_name?: string;
+  os_key?: string;
+  os_version?: string;
+  ms_office_apps?: string;
+  ms_office_version?: string;
+  is_legally_purchased?: string;
   id?: string;
 };
 
@@ -70,14 +92,14 @@ export interface SoftwareFormData {
   version?: string | null;
   license_key?: string | null;
   licenses_type?:
-    | 'perpetual' | 'subscription' | 'volume' | 'oem' | 'trial' | 'educational'| null;
+  | 'perpetual' | 'subscription' | 'volume' | 'oem' | 'trial' | 'educational' | null;
   status?:
-    | 'active'
-    | 'inactive'
-    | 'expired'
-    | 'retired'
-    | 'trial'
-    | null;
+  | 'active'
+  | 'inactive'
+  | 'expired'
+  | 'retired'
+  | 'trial'
+  | null;
   purchasedate?: string | null;   // YYYY-MM-DD
   expirydate?: string | null;     // YYYY-MM-DD
   licenses_total?: number | null;
@@ -136,11 +158,11 @@ export interface BorrowRecord {
   notes: string;
   createdAt: string;
   updatedAt: string;
-  
+
 }
 
 export interface CheckedOutAsset {
-  id: string;     
+  id: string;
   asset_tag: string;
   name: string;
   borrowername: string;
@@ -202,10 +224,10 @@ function generateId(prefix: string): string {
 // Hardware Assets CRUD
 export const hardwareService = {
   getAll: (): HardwareAsset[] => [...hardwareAssets],
-  
-  getById: (id: string): HardwareAsset | undefined => 
+
+  getById: (id: string): HardwareAsset | undefined =>
     hardwareAssets.find(asset => asset.id === id),
-  
+
   create: (data: Omit<HardwareAsset, 'id' | 'createdAt' | 'updatedAt'>): HardwareAsset => {
     const asset: HardwareAsset = {
       ...data,
@@ -216,11 +238,11 @@ export const hardwareService = {
     hardwareAssets.push(asset);
     return asset;
   },
-  
+
   update: (id: string, data: Partial<HardwareAsset>): HardwareAsset | null => {
     const index = hardwareAssets.findIndex(asset => asset.id === id);
     if (index === -1) return null;
-    
+
     hardwareAssets[index] = {
       ...hardwareAssets[index],
       ...data,
@@ -228,15 +250,15 @@ export const hardwareService = {
     };
     return hardwareAssets[index];
   },
-  
+
   delete: (id: string): boolean => {
     const index = hardwareAssets.findIndex(asset => asset.id === id);
     if (index === -1) return false;
-    
+
     hardwareAssets.splice(index, 1);
     return true;
   },
-  
+
   search: (query: string): HardwareAsset[] => {
     const lowercaseQuery = query.toLowerCase();
     return hardwareAssets.filter(asset =>
@@ -251,10 +273,10 @@ export const hardwareService = {
 // Software Licenses CRUD
 export const softwareService = {
   getAll: (): SoftwareLicense[] => [...softwareLicenses],
-  
-  getById: (id: string): SoftwareLicense | undefined => 
+
+  getById: (id: string): SoftwareLicense | undefined =>
     softwareLicenses.find(license => license.id === id),
-  
+
   create: (data: Omit<SoftwareLicense, 'id' | 'createdAt' | 'updatedAt'>): SoftwareLicense => {
     const license: SoftwareLicense = {
       ...data,
@@ -265,11 +287,11 @@ export const softwareService = {
     softwareLicenses.push(license);
     return license;
   },
-  
+
   update: (id: string, data: Partial<SoftwareLicense>): SoftwareLicense | null => {
     const index = softwareLicenses.findIndex(license => license.id === id);
     if (index === -1) return null;
-    
+
     softwareLicenses[index] = {
       ...softwareLicenses[index],
       ...data,
@@ -277,11 +299,11 @@ export const softwareService = {
     };
     return softwareLicenses[index];
   },
-  
+
   delete: (id: string): boolean => {
     const index = softwareLicenses.findIndex(license => license.id === id);
     if (index === -1) return false;
-    
+
     softwareLicenses.splice(index, 1);
     return true;
   },
@@ -290,10 +312,10 @@ export const softwareService = {
 // Users CRUD
 export const userService = {
   getAll: (): User[] => [...users],
-  
-  getById: (id: string): User | undefined => 
+
+  getById: (id: string): User | undefined =>
     users.find(user => user.id === id),
-  
+
   create: (data: Omit<User, 'id' | 'created_at' | 'updated_at' | 'assets_count'>): User => {
     const user: User = {
       ...data,
@@ -305,11 +327,11 @@ export const userService = {
     users.push(user);
     return user;
   },
-  
+
   update: (id: string, data: Partial<User>): User | null => {
     const index = users.findIndex(user => user.id === id);
     if (index === -1) return null;
-    
+
     users[index] = {
       ...users[index],
       ...data,
@@ -317,11 +339,11 @@ export const userService = {
     };
     return users[index];
   },
-  
+
   delete: (id: string): boolean => {
     const index = users.findIndex(user => user.id === id);
     if (index === -1) return false;
-    
+
     users.splice(index, 1);
     return true;
   },
@@ -330,10 +352,10 @@ export const userService = {
 // Borrow Records CRUD
 export const borrowService = {
   getAll: (): BorrowRecord[] => [...borrowRecords],
-  
-  getById: (id: string): BorrowRecord | undefined => 
+
+  getById: (id: string): BorrowRecord | undefined =>
     borrowRecords.find(record => record.id === id),
-  
+
   checkout: (asset_tag: string, borrowerId: string, due_date: string, purpose: string, notes: string): BorrowRecord => {
     const record: BorrowRecord = {
       id: generateId('BOR'),
@@ -348,36 +370,36 @@ export const borrowService = {
       updatedAt: new Date().toISOString(),
     };
     borrowRecords.push(record);
-    
+
     // Update asset status
     hardwareService.update(asset_tag, { status: 'in-use', assigneduser: borrowerId });
-    
+
     return record;
   },
-  
+
   checkin: (recordId: string): BorrowRecord | null => {
     const index = borrowRecords.findIndex(record => record.id === recordId);
     if (index === -1) return null;
-    
+
     borrowRecords[index] = {
       ...borrowRecords[index],
       checkin_date: new Date().toISOString().split('T')[0],
       status: 'returned',
       updatedAt: new Date().toISOString(),
     };
-    
+
     // Update asset status
     hardwareService.update(borrowRecords[index].asset_tag, { status: 'in-stock', assigneduser: '' });
-    
+
     return borrowRecords[index];
   },
-  
-  getCheckedOut: (): BorrowRecord[] => 
+
+  getCheckedOut: (): BorrowRecord[] =>
     borrowRecords.filter(record => record.status === 'checked-out'),
-  
+
   getOverdue: (): BorrowRecord[] => {
     const today = new Date().toISOString().split('T')[0];
-    return borrowRecords.filter(record => 
+    return borrowRecords.filter(record =>
       record.status === 'checked-out' && record.due_date < today
     );
   },
@@ -390,7 +412,7 @@ export function getAssetStats() {
   const available = hardwareAssets.filter(a => a.status === 'in-stock').length;
   const underRepair = hardwareAssets.filter(a => a.status === 'under-repair').length;
   const retired = hardwareAssets.filter(a => a.status === 'retired').length;
-  
+
   return { total, inUse, available, underRepair, retired };
 }
 
@@ -399,7 +421,7 @@ export function getSoftwareStats() {
   const totalLicenses = softwareLicenses.reduce((sum, sw) => sum + sw.licensesTotal, 0);
   const assignedLicenses = softwareLicenses.reduce((sum, sw) => sum + sw.licensesAssigned, 0);
   const availableLicenses = totalLicenses - assignedLicenses;
-  
+
   return { total, totalLicenses, assignedLicenses, availableLicenses };
 }
 
@@ -407,14 +429,14 @@ export function getUserStats() {
   const total = users.length;
   const active = users.filter(u => u.status === 'active').length;
   const inactive = users.filter(u => u.status === 'inactive').length;
-  
+
   return { total, active, inactive };
 }
 
 export function getUpcomingWarranties() {
   const today = new Date();
   const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-  
+
   return hardwareAssets
     .filter(asset => {
       if (!asset.warrantyexpiry) return false;

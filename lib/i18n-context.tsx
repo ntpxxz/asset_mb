@@ -1,0 +1,601 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+type Language = 'en' | 'th';
+
+type Translations = {
+    [key in Language]: {
+        [key: string]: string;
+    };
+};
+
+const translations: Translations = {
+    en: {
+        // Login
+        loginTitle: 'Welcome Back',
+        loginSubtitle: 'Sign in to your account',
+        usernameLabel: 'Username / Employee ID',
+        usernamePlaceholder: 'Enter your Employee ID (e.g., EMP-101)',
+        passwordLabel: 'Password',
+        passwordPlaceholder: 'Enter your secure password',
+        loginButton: 'Sign In',
+        loggingIn: 'Logging in...',
+        welcome: 'Welcome',
+        errorLogin: 'Failed to login',
+        errorOccurred: 'An error occurred',
+        toggleTheme: 'Toggle theme',
+        language: 'Language',
+
+        // Sidebar Navigation
+        home: 'Home',
+        computerAssets: 'Computer Assets',
+        networkAssets: 'Network Assets',
+        otherAssets: 'Other Assets',
+        stock: 'Stock',
+        dashboard: 'Dashboard',
+        addNew: 'Add New',
+        transaction: 'Transaction',
+        reports: 'Reports',
+        logout: 'Logout',
+        loggingOut: 'Logging out...',
+        loggedOutSuccess: 'Logged out successfully',
+
+        // Header
+        searchPlaceholder: 'Search assets, users, or serial numbers...',
+        switchToThai: 'Switch to Thai',
+        quickAdd: 'Quick Add',
+        hardwareAsset: 'Hardware Asset',
+        softwareLicense: 'Software License',
+        userAccount: 'User Account',
+
+        // Common
+        add: 'Add',
+        edit: 'Edit',
+        delete: 'Delete',
+        save: 'Save',
+        cancel: 'Cancel',
+        search: 'Search',
+        filter: 'Filter',
+        export: 'Export',
+        import: 'Import',
+        view: 'View',
+        actions: 'Actions',
+        status: 'Status',
+        active: 'Active',
+        inactive: 'Inactive',
+        all: 'All',
+
+        // Assets
+        assetName: 'Asset Name',
+        assetType: 'Asset Type',
+        serialNumber: 'Serial Number',
+        manufacturer: 'Manufacturer',
+        model: 'Model',
+        purchaseDate: 'Purchase Date',
+        warrantyExpiry: 'Warranty Expiry',
+        assignedTo: 'Assigned To',
+        location: 'Location',
+        department: 'Department',
+
+        // Inventory
+        itemName: 'Item Name',
+        category: 'Category',
+        quantity: 'Quantity',
+        unit: 'Unit',
+        minStock: 'Min Stock',
+        maxStock: 'Max Stock',
+        reorderLevel: 'Reorder Level',
+        supplier: 'Supplier',
+
+        // Users
+        username: 'Username',
+        employeeId: 'Employee ID',
+        fullName: 'Full Name',
+        email: 'Email',
+        role: 'Role',
+        phone: 'Phone',
+
+        // Software
+        softwareName: 'Software Name',
+        version: 'Version',
+        licenseKey: 'License Key',
+        licenseType: 'License Type',
+        expiryDate: 'Expiry Date',
+
+        // Reports
+        generateReport: 'Generate Report',
+        reportType: 'Report Type',
+        dateRange: 'Date Range',
+        from: 'From',
+        to: 'To',
+
+        // Settings
+        settings: 'Settings',
+        profile: 'Profile',
+        preferences: 'Preferences',
+        security: 'Security',
+        notifications: 'Notifications',
+
+        // Dashboard
+        dashboardTitle: 'Dashboard',
+        dashboardSubtitle: 'IT Asset Management Overview',
+        loadingDashboard: 'Loading dashboard data...',
+        error: 'Error',
+        retry: 'Retry',
+        totalHardware: 'Total Hardware',
+        totalComputer: 'Computer Assets',
+        totalNetwork: 'Network Assets',
+        stockItems: 'Stock Items',
+        hardwareStatus: 'Hardware Status',
+        inUse: 'In Use',
+        available: 'Available',
+        underRepair: 'Under Repair',
+        retired: 'Retired',
+        computerAssetsBreakdown: 'Computer Assets',
+        total: 'Total',
+        laptops: 'Laptops',
+        desktops: 'Desktops',
+        servers: 'Servers',
+        networkAssetsBreakdown: 'Network Assets',
+        routers: 'Routers',
+        switches: 'Switches',
+        others: 'Others',
+        inventoryStock: 'Inventory Stock',
+        totalItems: 'Total Items',
+        totalQuantity: 'Total Quantity',
+        lowStock: 'Low Stock',
+        outOfStock: 'Out of Stock',
+        warrantyExpiring: 'Warranty Expiring Soon',
+        expires: 'Expires',
+        days: 'days',
+        viewAll: 'View all',
+        expiringWarranties: 'expiring warranties',
+        noWarrantiesExpiring: 'No warranties expiring soon',
+
+        // Asset List
+        hardwareAssets: 'Hardware Assets',
+        manageAssets: 'Manage your IT assets and track their lifecycle',
+        refresh: 'Refresh',
+        exportCSV: 'Export CSV',
+        noDataToExport: 'No data to export',
+        noAssetsFound: 'No assets found',
+        hardwareInventory: 'Hardware Inventory',
+        items: 'items',
+
+        // Table Headers
+        name: 'Name',
+        price: 'Price',
+        user: 'User',
+
+        // Filters
+        searchPlaceholderAssets: 'Search by model, serial, user, or tag...',
+        allStatus: 'All Status',
+        assigned: 'Assigned',
+        maintenance: 'Maintenance',
+        allCategories: 'All Categories',
+        laptop: 'Laptop',
+        desktop: 'Desktop',
+        phoneDevice: 'Phone',
+        tablet: 'Tablet',
+        printer: 'Printer',
+        monitor: 'Monitor',
+        server: 'Server',
+        router: 'Router',
+        networkSwitch: 'Network Switch',
+
+        // Actions
+        viewDetails: 'View Details',
+        editAsset: 'Edit Asset',
+        deleteAsset: 'Delete Asset',
+        confirmDelete: 'Are you sure you want to delete this asset?',
+        deleteSuccess: 'Asset deleted successfully',
+        deleteFailed: 'Failed to delete asset',
+
+        // Inventory Page
+        inventoryTitle: 'Inventory',
+        inventorySubtitle: 'Manage consumable items and stock levels.',
+        lowStockAlert: 'Low Stock Alert',
+        lowStockMessage: 'The following item(s) are at or below the minimum stock level:',
+        stockItemsTitle: 'Stock Items',
+        searchPlaceholderInventory: 'Search by name, barcode, or category...',
+        image: 'Image',
+        totalValue: 'Total Value',
+        noItemsFound: 'No items found.',
+        printBarcode: 'Print Barcode Label',
+        printPreview: 'Preview of the label for:',
+        noBarcode: 'No barcode available for this item.',
+        print: 'Print',
+        confirmDeleteTitle: 'Are you absolutely sure?',
+        confirmDeleteMessage: 'This action cannot be undone. This will permanently delete this item and all its related history.',
+        deleteItem: 'Delete Item',
+        deletingItem: 'Deleting item...',
+        deleteItemSuccess: 'Item deleted successfully.',
+        deleteItemFailed: 'Failed to delete item.',
+        loadInventoryFailed: 'Failed to load inventory items.',
+        unitPrice: 'Unit Price',
+
+        // Inventory Dashboard
+        backToInventory: 'Back to Inventory',
+        inventoryDashboardTitle: 'Inventory Dashboard',
+        inventoryDashboardSubtitle: 'A quick overview of your stock status.',
+        goToReports: 'Go to Reports',
+        loadDashboardFailed: 'Could not load dashboard data. Please try again.',
+        totalStockValue: 'Total Stock Value',
+        itemsRunningLow: 'Items Running Low',
+        totalUniqueItems: 'Total Unique Items',
+        totalQuantityInv: 'Total Quantity',
+        stockValueByCategory: 'Stock Value by Category',
+        mostDispensedItems: 'Most Dispensed Items (Last 90 Days)',
+        quantityDispensed: 'Quantity Dispensed',
+        noDispenseData: 'No dispense data in the last 90 days.',
+        fetchError: 'An error occurred while fetching data',
+
+        // Inventory Add
+        addInventoryTitle: 'Add or Receive Stock',
+        addInventorySubtitle: 'Create a new inventory item or add quantity to existing stock.',
+        back: 'Back',
+        newPhysicalCount: 'New Physical Count *',
+        adjustment: 'Adjustment',
+        stockChangeWarning: 'This will change the stock from X to Y.',
+        qtyToDispense: 'Quantity to Dispense *',
+        qtyToReturn: 'Quantity to Return *',
+        recipient: 'Recipient (Optional)',
+        returnedBy: 'Returned By (Optional)',
+        reasonForAdjustment: 'Reason for Adjustment *',
+        notesOptional: 'Notes (Optional)',
+        confirmDispense: 'Confirm Dispense',
+        confirmReturn: 'Confirm Return',
+        confirmAdjustment: 'Confirm Adjustment',
+        saving: 'Saving...',
+        transactionSuccess: 'Transaction successful!',
+        findItemFirst: 'Please find an item first.',
+        enterValidQty: 'Please enter a valid quantity.',
+        reasonRequired: 'A reason for the adjustment is required.',
+        processingTransaction: 'Processing transaction...',
+        itemNotFound: 'Item not found.',
+        foundItem: 'Found:',
+
+        // Inventory Reports
+        inventoryReportsTitle: 'Inventory Reports',
+        inventoryReportsSubtitle: 'View and export inventory transaction history.',
+        filters: 'Filters',
+        transactionTypeLabel: 'Transaction Type',
+        allTypes: 'All Types',
+        allUsers: 'All Users',
+        applyFilters: 'Apply Filters',
+        transactionLog: 'Transaction Log',
+        date: 'Date',
+        item: 'Item',
+        type: 'Type',
+        qtyChange: 'Quantity Change',
+        notes: 'Notes',
+        noTransactionsFound: 'No transactions found for the selected filters.',
+        dispense: 'Dispense',
+        returnItem: 'Return',
+        adjust: 'Adjust',
+        receive: 'Receive',
+
+        // Pagination
+        page: 'Page',
+        of: 'of',
+        previous: 'Previous',
+        next: 'Next',
+    },
+    th: {
+        // Login
+        loginTitle: 'ยินดีต้อนรับกลับ',
+        loginSubtitle: 'ลงชื่อเข้าใช้บัญชีของคุณ',
+        usernameLabel: 'ชื่อผู้ใช้ / รหัสพนักงาน',
+        usernamePlaceholder: 'กรอกรหัสพนักงาน (เช่น EMP-101)',
+        passwordLabel: 'รหัสผ่าน',
+        passwordPlaceholder: 'กรอกรหัสผ่านของคุณ',
+        loginButton: 'เข้าสู่ระบบ',
+        loggingIn: 'กำลังเข้าสู่ระบบ...',
+        welcome: 'ยินดีต้อนรับ',
+        errorLogin: 'เข้าสู่ระบบไม่สำเร็จ',
+        errorOccurred: 'เกิดข้อผิดพลาด',
+        toggleTheme: 'เปลี่ยนธีม',
+        language: 'ภาษา',
+
+        // Sidebar Navigation
+        home: 'หน้าหลัก',
+        computerAssets: 'คอมพิวเตอร์',
+        networkAssets: 'เครือข่าย',
+        otherAssets: 'ทรัพย์สินอื่นๆ',
+        stock: 'คลังสินค้า',
+        dashboard: 'แดชบอร์ด',
+        addNew: 'เพิ่มใหม่',
+        transaction: 'รายการเคลื่อนไหว',
+        reports: 'รายงาน',
+        logout: 'ออกจากระบบ',
+        loggingOut: 'กำลังออกจากระบบ...',
+        loggedOutSuccess: 'ออกจากระบบสำเร็จ',
+
+        // Header
+        searchPlaceholder: 'ค้นหาทรัพย์สิน, ผู้ใช้งาน หรือ Serial Number...',
+        switchToThai: 'สลับเป็นภาษาอังกฤษ',
+        quickAdd: 'เพิ่มด่วน',
+        hardwareAsset: 'ทรัพย์สิน (Hardware)',
+        softwareLicense: 'ลิขสิทธิ์ซอฟต์แวร์',
+        userAccount: 'บัญชีผู้ใช้',
+
+        // Common
+        add: 'เพิ่ม',
+        edit: 'แก้ไข',
+        delete: 'ลบ',
+        save: 'บันทึก',
+        cancel: 'ยกเลิก',
+        search: 'ค้นหา',
+        filter: 'กรอง',
+        export: 'ส่งออก',
+        import: 'นำเข้า',
+        view: 'ดู',
+        actions: 'การดำเนินการ',
+        status: 'สถานะ',
+        active: 'ใช้งาน',
+        inactive: 'ไม่ใช้งาน',
+        all: 'ทั้งหมด',
+
+        // Assets
+        assetName: 'ชื่อทรัพย์สิน',
+        assetType: 'ประเภททรัพย์สิน',
+        serialNumber: 'หมายเลขซีเรียล',
+        manufacturer: 'ผู้ผลิต',
+        model: 'รุ่น',
+        purchaseDate: 'วันที่ซื้อ',
+        warrantyExpiry: 'วันหมดประกัน',
+        assignedTo: 'มอบหมายให้',
+        location: 'สถานที่',
+        department: 'แผนก',
+
+        // Inventory
+        itemName: 'ชื่อสินค้า',
+        category: 'หมวดหมู่',
+        quantity: 'จำนวน',
+        unit: 'หน่วย',
+        minStock: 'สต็อกต่ำสุด',
+        maxStock: 'สต็อกสูงสุด',
+        reorderLevel: 'ระดับสั่งซื้อใหม่',
+        supplier: 'ผู้จัดจำหน่าย',
+
+        // Users
+        username: 'ชื่อผู้ใช้',
+        employeeId: 'รหัสพนักงาน',
+        fullName: 'ชื่อ-นามสกุล',
+        email: 'อีเมล',
+        role: 'บทบาท',
+        phone: 'เบอร์โทรศัพท์',
+
+        // Software
+        softwareName: 'ชื่อซอฟต์แวร์',
+        version: 'เวอร์ชัน',
+        licenseKey: 'License Key',
+        licenseType: 'ประเภทใบอนุญาต',
+        expiryDate: 'วันหมดอายุ',
+
+        // Reports
+        generateReport: 'สร้างรายงาน',
+        reportType: 'ประเภทรายงาน',
+        dateRange: 'ช่วงวันที่',
+        from: 'จาก',
+        to: 'ถึง',
+
+        // Settings
+        settings: 'ตั้งค่า',
+        profile: 'โปรไฟล์',
+        preferences: 'การตั้งค่า',
+        security: 'ความปลอดภัย',
+        notifications: 'การแจ้งเตือน',
+
+        // Dashboard
+        dashboardTitle: 'แดชบอร์ด',
+        dashboardSubtitle: 'ภาพรวมการจัดการทรัพย์สิน IT',
+        loadingDashboard: 'กำลังโหลดข้อมูลแดชบอร์ด...',
+        error: 'ข้อผิดพลาด',
+        retry: 'ลองใหม่',
+        totalHardware: 'ฮาร์ดแวร์ทั้งหมด',
+        totalComputer: 'ทรัพย์สินคอมพิวเตอร์',
+        totalNetwork: 'ทรัพย์สินเครือข่าย',
+        stockItems: 'รายการสต็อก',
+        hardwareStatus: 'สถานะฮาร์ดแวร์',
+        inUse: 'กำลังใช้งาน',
+        available: 'พร้อมใช้งาน',
+        underRepair: 'อยู่ระหว่างซ่อม',
+        retired: 'เลิกใช้งาน',
+        computerAssetsBreakdown: 'ทรัพย์สินคอมพิวเตอร์',
+        total: 'ทั้งหมด',
+        laptops: 'แล็ปท็อป',
+        desktops: 'เดสก์ท็อป',
+        servers: 'เซิร์ฟเวอร์',
+        networkAssetsBreakdown: 'ทรัพย์สินเครือข่าย',
+        routers: 'เราเตอร์',
+        switches: 'สวิตช์',
+        others: 'อื่นๆ',
+        inventoryStock: 'สต็อกสินค้า',
+        totalItems: 'รายการทั้งหมด',
+        totalQuantity: 'จำนวนทั้งหมด',
+        lowStock: 'สต็อกต่ำ',
+        outOfStock: 'สินค้าหมด',
+        warrantyExpiring: 'การรับประกันใกล้หมดอายุ',
+        expires: 'หมดอายุ',
+        days: 'วัน',
+        viewAll: 'ดูทั้งหมด',
+        expiringWarranties: 'การรับประกันที่กำลังจะหมดอายุ',
+        noWarrantiesExpiring: 'ไม่มีการรับประกันที่กำลังจะหมดอายุ',
+
+        // Asset List
+        hardwareAssets: 'ทรัพย์สินฮาร์ดแวร์',
+        manageAssets: 'จัดการทรัพย์สิน IT และติดตามวงจรชีวิต',
+        refresh: 'รีเฟรช',
+        exportCSV: 'ส่งออก CSV',
+        noDataToExport: 'ไม่มีข้อมูลให้ส่งออก',
+        noAssetsFound: 'ไม่พบทรัพย์สิน',
+        hardwareInventory: 'คลังฮาร์ดแวร์',
+        items: 'รายการ',
+
+        // Table Headers
+        name: 'ชื่อ',
+        price: 'ราคา',
+        user: 'ผู้ใช้',
+
+        // Filters
+        searchPlaceholderAssets: 'ค้นหาด้วยรุ่น, ซีเรียล, ผู้ใช้ หรือแท็ก...',
+        allStatus: 'ทุกสถานะ',
+        assigned: 'มอบหมายแล้ว',
+        maintenance: 'ซ่อมบำรุง',
+        allCategories: 'ทุกหมวดหมู่',
+        laptop: 'แล็ปท็อป',
+        desktop: 'เดสก์ท็อป',
+        phoneDevice: 'โทรศัพท์',
+        tablet: 'แท็บเล็ต',
+        printer: 'เครื่องพิมพ์',
+        monitor: 'จอมอนิเตอร์',
+        server: 'เซิร์ฟเวอร์',
+        router: 'เราเตอร์',
+        networkSwitch: 'สวิตช์เครือข่าย',
+
+        // Actions
+        viewDetails: 'ดูรายละเอียด',
+        editAsset: 'แก้ไขทรัพย์สิน',
+        deleteAsset: 'ลบทรัพย์สิน',
+        confirmDelete: 'คุณแน่ใจหรือไม่ว่าต้องการลบทรัพย์สินนี้?',
+        deleteSuccess: 'ลบทรัพย์สินสำเร็จ',
+        deleteFailed: 'ลบทรัพย์สินไม่สำเร็จ',
+
+        // Inventory Page
+        inventoryTitle: 'คลังสินค้า',
+        inventorySubtitle: 'จัดการวัสดุสิ้นเปลืองและระดับสต็อก',
+        lowStockAlert: 'แจ้งเตือนสต็อกต่ำ',
+        lowStockMessage: 'รายการต่อไปนี้มีจำนวนต่ำกว่าหรือเท่ากับระดับสต็อกขั้นต่ำ:',
+        stockItemsTitle: 'รายการสต็อก',
+        searchPlaceholderInventory: 'ค้นหาด้วยชื่อ, บาร์โค้ด หรือหมวดหมู่...',
+        image: 'รูปภาพ',
+        totalValue: 'มูลค่ารวม',
+        noItemsFound: 'ไม่พบรายการ',
+        printBarcode: 'พิมพ์บาร์โค้ด',
+        printPreview: 'ตัวอย่างฉลากสำหรับ:',
+        noBarcode: 'ไม่มีบาร์โค้ดสำหรับรายการนี้',
+        print: 'พิมพ์',
+        confirmDeleteTitle: 'คุณแน่ใจหรือไม่?',
+        confirmDeleteMessage: 'การดำเนินการนี้ไม่สามารถย้อนกลับได้ จะลบรายการนี้อย่างถาวร',
+        deleteItem: 'ลบรายการ',
+        deletingItem: 'กำลังลบรายการ...',
+        deleteItemSuccess: 'ลบรายการสำเร็จ',
+        deleteItemFailed: 'ลบรายการไม่สำเร็จ',
+        loadInventoryFailed: 'โหลดข้อมูลคลังสินค้าไม่สำเร็จ',
+        unitPrice: 'ราคาต่อหน่วย',
+
+        // Inventory Dashboard
+        backToInventory: 'กลับไปคลังสินค้า',
+        inventoryDashboardTitle: 'แดชบอร์ดคลังสินค้า',
+        inventoryDashboardSubtitle: 'ภาพรวมสถานะสต็อกของคุณ',
+        goToReports: 'ไปที่รายงาน',
+        loadDashboardFailed: 'ไม่สามารถโหลดข้อมูลแดชบอร์ดได้ โปรดลองอีกครั้ง',
+        totalStockValue: 'มูลค่าสต็อกรวม',
+        itemsRunningLow: 'รายการที่ใกล้หมด',
+        totalUniqueItems: 'รายการสินค้าทั้งหมด',
+        totalQuantityInv: 'จำนวนรวมทั้งหมด',
+        stockValueByCategory: 'มูลค่าสต็อกตามหมวดหมู่',
+        mostDispensedItems: 'รายการเบิกจ่ายสูงสุด (90 วันล่าสุด)',
+        quantityDispensed: 'จำนวนที่เบิกจ่าย',
+        noDispenseData: 'ไม่มีข้อมูลการเบิกจ่ายใน 90 วันล่าสุด',
+        fetchError: 'เกิดข้อผิดพลาดขณะดึงข้อมูล',
+
+        // Inventory Add
+        addInventoryTitle: 'รับเข้าสต็อก',
+        addInventorySubtitle: 'สร้างรายการสินค้าใหม่หรือเพิ่มจำนวนในสต็อกที่มีอยู่',
+        back: 'ย้อนกลับ',
+
+        // Inventory Transaction
+        transactionTitle: 'ทำรายการสินค้าคงคลัง',
+        transactionSubtitle: 'เบิกจ่าย, รับคืน, หรือปรับปรุงยอดสต็อก',
+        selectTransactionType: '1. เลือกประเภทรายการ',
+        dispenseType: 'เบิกจ่าย',
+        returnType: 'รับคืน',
+        adjustType: 'ปรับปรุงยอด',
+        findItemByBarcode: '2. ค้นหาสินค้าด้วยบาร์โค้ด',
+        scanBarcodePlaceholder: 'สแกนหรือกรอกบาร์โค้ด...',
+        itemSummary: 'สรุปรายการสินค้า',
+        currentlyInStock: 'จำนวนในสต็อกปัจจุบัน',
+        transactionDetails: '3. รายละเอียดการทำรายการ',
+        adjustStockDetails: '3. รายละเอียดการปรับปรุงยอด',
+        currentSystemQty: 'จำนวนในระบบปัจจุบัน',
+        newPhysicalCount: 'จำนวนที่นับได้จริง *',
+        adjustment: 'ผลต่าง',
+        stockChangeWarning: 'การดำเนินการนี้จะเปลี่ยนยอดสต็อกจา X เป็น Y',
+        qtyToDispense: 'จำนวนที่เบิกจ่าย *',
+        qtyToReturn: 'จำนวนที่รับคืน *',
+        recipient: 'ผู้รับ',
+        returnedBy: 'ผู้คืน',
+        reasonForAdjustment: 'เหตุผลในการปรับปรุงยอด *',
+        notesOptional: 'หมายเหตุ',
+        confirmDispense: 'ยืนยันการเบิกจ่าย',
+        confirmReturn: 'ยืนยันการรับคืน',
+        confirmAdjustment: 'ยืนยันการปรับปรุงยอด',
+        saving: 'กำลังบันทึก...',
+        transactionSuccess: 'ทำรายการสำเร็จ!',
+        findItemFirst: 'กรุณาค้นหาสินค้าก่อน',
+        enterValidQty: 'กรุณากรอกจำนวนที่ถูกต้อง',
+        reasonRequired: 'จำเป็นต้องระบุเหตุผลในการปรับปรุงยอด',
+        processingTransaction: 'กำลังประมวลผลรายการ...',
+        itemNotFound: 'ไม่พบสินค้า',
+        foundItem: 'พบสินค้า:',
+
+        // Inventory Reports
+        inventoryReportsTitle: 'รายงานสินค้าคงคลัง',
+        inventoryReportsSubtitle: 'ดูและส่งออกประวัติการทำรายการสินค้าคงคลัง',
+        filters: 'ตัวกรอง',
+        transactionTypeLabel: 'ประเภทรายการ',
+        allTypes: 'ทุกประเภท',
+        allUsers: 'ผู้ใช้ทั้งหมด',
+        applyFilters: 'ใช้ตัวกรอง',
+        transactionLog: 'บันทึกรายการ',
+        date: 'วันที่',
+        item: 'สินค้า',
+        type: 'ประเภท',
+        qtyChange: 'จำนวนที่เปลี่ยนแปลง',
+        notes: 'หมายเหตุ',
+        noTransactionsFound: 'ไม่พบรายการตามเงื่อนไขที่เลือก',
+        dispense: 'เบิกจ่าย',
+        returnItem: 'รับคืน',
+        adjust: 'ปรับปรุงยอด',
+        receive: 'รับเข้า',
+
+        // Pagination
+        page: 'หน้า',
+        of: 'จาก',
+        previous: 'ก่อนหน้า',
+        next: 'ถัดไป',
+    },
+};
+
+type I18nContextType = {
+    language: Language;
+    setLanguage: (lang: Language) => void;
+    t: (key: string) => string;
+};
+
+const I18nContext = createContext<I18nContextType | undefined>(undefined);
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+    const [language, setLanguage] = useState<Language>('en');
+
+    const t = (key: string) => {
+        return translations[language][key] || key;
+    };
+
+    return (
+        <I18nContext.Provider value={{ language, setLanguage, t }}>
+            {children}
+        </I18nContext.Provider>
+    );
+}
+
+export function useI18n() {
+    const context = useContext(I18nContext);
+    if (context === undefined) {
+        throw new Error('useI18n must be used within an I18nProvider');
+    }
+    return context;
+}

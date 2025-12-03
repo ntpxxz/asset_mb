@@ -1,39 +1,53 @@
 // app/(app)/assets/page.tsx
 import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
-import AssetsClientPage from './components/assets-client-page'; // <-- Import component ใหม่
-import pool from '@/lib/db'; // <-- Import pool โดยตรง
+import AssetsClientPage from './components/assets-client-page';
+import pool from '@/lib/db';
 import type { AssetFormData } from "@/lib/data-store";
 
-// --- 1. Helper function (ใหม่) เพื่ออ่าน searchParams ---
+// Helper function to read searchParams
 function getQueryParam(param: string | string[] | undefined): string | undefined {
   if (Array.isArray(param)) {
-    return param[0]; // เอาค่าแรกถ้ามันเป็น Array
+    return param[0];
   }
-  return param; // คืนค่า string หรือ undefined
+  return param;
 }
 
-// --- 2. แก้ไข getAssets ให้อ่าน searchParams ถูกต้อง ---
+// Server-side data fetching
 async function getAssets(searchParams: { [key: string]: string | string[] | undefined }): Promise<{ assets: AssetFormData[], total: number }> {
   try {
-    // ใช้ Helper function ในการอ่านค่า
     const limit = Number(getQueryParam(searchParams['limit']) || 20);
     const offset = Number(getQueryParam(searchParams['offset']) || 0);
     const status = getQueryParam(searchParams['status']);
     const type = getQueryParam(searchParams['type']);
-    const search = getQueryParam(searchParams['search']); // <-- รับค่า search
-    
+    const search = getQueryParam(searchParams['search']);
+
     const params: any[] = [];
     const conds: string[] = [];
-    
-    if (status && status !== 'all') { 
-      params.push(status); 
-      conds.push(`a.status = $${params.length}`); 
+
+    // Status Filter
+    if (status && status !== 'all') {
+      params.push(status);
+      conds.push(`a.status = $${params.length}`);
     }
-    if (type && type !== 'all')   { 
-      params.push(type);   
-      conds.push(`a.type   = $${params.length}`); 
+
+    // Type Filter (including virtual categories)
+    if (type && type !== 'all') {
+      if (type === 'computer') {
+        const computerTypes = ['laptop', 'desktop', 'phone', 'tablet', 'pc'];
+        params.push(computerTypes);
+        conds.push(`a.type = ANY($${params.length}::text[])`);
+      } else if (type === 'network') {
+        const networkTypes = ['router', 'switch', 'monitor', 'server'];
+        params.push(networkTypes);
+        conds.push(`a.type = ANY($${params.length}::text[])`);
+      } else {
+        params.push(type);
+        conds.push(`a.type = $${params.length}`);
+      }
     }
+
+    // Search Filter
     if (search) {
       params.push(`%${search}%`);
       const searchIndex = params.length;
@@ -43,32 +57,40 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
           a.manufacturer ILIKE $${searchIndex} OR 
           a.serialnumber ILIKE $${searchIndex} OR 
           a.assigneduser ILIKE $${searchIndex} OR
-          a.asset_tag ILIKE $${searchIndex}
+          a.asset_tag ILIKE $${searchIndex} OR
+          a.hostname ILIKE $${searchIndex} OR
+          a.ipaddress ILIKE $${searchIndex} OR
+          a.macaddress ILIKE $${searchIndex} OR
+          a.location ILIKE $${searchIndex}
         )`
       );
     }
-    
+
     const whereSql = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
-    // --- Query 1: นับจำนวนทั้งหมด ---
+    // Query 1: Count total
     const totalQuery = `SELECT COUNT(*) FROM assets a ${whereSql}`;
-    // (Error 'pg-main' ของคุณเกิดขึ้นที่บรรทัดถัดไปนี้ ถ้ายังไม่ได้แก้ .env.local)
-    const totalResult = await pool.query(totalQuery, params); 
+    const totalResult = await pool.query(totalQuery, params);
     const total = parseInt(totalResult.rows[0].count, 10);
-    
-    // --- Query 2: ดึงข้อมูลตามหน้า ---
+
+    // Query 2: Fetch data
     params.push(limit, offset);
     const sql = `
-      SELECT a.*
+      SELECT
+        a.*,
+        u.firstname AS assigned_firstname,
+        u.employee_id AS assigned_employee_id_resolved,
+        COALESCE(u.firstname, a.assigneduser, '-') AS assigneduser
       FROM assets a
+      LEFT JOIN users u ON a.assigneduser = u.employee_id
       ${whereSql}
       ORDER BY a.created_at DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `;
-    
+
     const result = await pool.query(sql, params);
-    
-    // แปลง Date ให้เป็น string ที่ปลอดภัยสำหรับส่งข้าม Server/Client
+
+    // Map data
     const assets = result.rows.map(row => ({
       ...row,
       purchasedate: row.purchasedate ? new Date(row.purchasedate).toISOString() : null,
@@ -76,31 +98,25 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
       lastpatch_check: row.lastpatch_check ? new Date(row.lastpatch_check).toISOString() : null,
       created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
       updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
-      // แปลง purchaseprice เป็น number (ถ้ามันเป็น string)
       purchaseprice: row.purchaseprice ? parseFloat(row.purchaseprice) : null,
+      assigned_firstname: row.assigned_firstname ?? null,
+      assigned_employee_id: row.assigned_employee_id_resolved ?? null,
     }));
 
     return { assets: assets as AssetFormData[], total };
   } catch (error) {
-    // Log error ฝั่ง server
     console.error("Failed to fetch assets on server:", error);
-    // คืนค่าว่างเพื่อไม่ให้หน้าแครช (แต่ error จะถูก log ไว้)
     return { assets: [], total: 0 };
   }
 }
 
-// --- 3. แก้ไข Page Component ---
-export default async function AssetsServerPage({
-  searchParams,
-}: {
-  // ประเภท prop ที่ถูกต้องสำหรับ searchParams
-  searchParams: { [key: string]: string | string[] | undefined };
+// Page Component - Next.js 15 compatible
+export default async function AssetsServerPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  
-  // 4. ดึงข้อมูลบน Server (ส่ง searchParams เข้าไปตรงๆ)
+  const searchParams = await props.searchParams;
   const initialData = await getAssets(searchParams);
 
-  // 5. ส่งข้อมูล (initialData) ให้ Client Component
   return (
     <Suspense fallback={
       <div className="flex justify-center items-center h-64">

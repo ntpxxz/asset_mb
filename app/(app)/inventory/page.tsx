@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"; // 1. Import useCallback, useMemo
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,16 +43,7 @@ import { useReactToPrint } from "react-to-print";
 import Barcode from "react-barcode";
 import { BarcodePrintLayout } from "./components/barcode-print-layout";
 import { toast } from "sonner";
-
-// 2. Import Pagination components
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { useI18n } from "@/lib/i18n-context";
 
 type InventoryItem = {
   id: number;
@@ -70,22 +61,20 @@ type InventoryItem = {
 
 export default function InventoryPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // --- 3. Add Pagination State ---
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20; // กำหนดจำนวนรายการต่อหน้า
+  const itemsPerPage = 20;
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(totalItems / itemsPerPage));
   }, [totalItems, itemsPerPage]);
 
-  // --- 4. Add Debounced Search State ---
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
 
-  // (State สำหรับ Print และ Delete ไม่เปลี่ยนแปลง)
   const [itemToPrint, setItemToPrint] = useState<InventoryItem | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isDeleteModelOpen, setIsDeleteModalOpen] = useState(false);
@@ -93,19 +82,16 @@ export default function InventoryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const printComponentRef = useRef<HTMLDivElement | null>(null);
 
-  // --- 5. Create Debounce Effect ---
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300); // 300ms delay
+    }, 300);
 
     return () => {
       clearTimeout(handler);
     };
   }, [searchTerm]);
 
-
-  // --- 6. Update fetchItems to loadItems with pagination ---
   const loadItems = useCallback(async (page: number, search: string) => {
     setLoading(true);
     try {
@@ -123,30 +109,26 @@ export default function InventoryPage() {
 
       if (data.success) {
         setItems(data.data);
-        setTotalItems(data.total); // <-- รับ Total จาก API
+        setTotalItems(data.total);
       }
     } catch (error) {
       console.error("Failed to fetch inventory items", error);
-      toast.error("Failed to load inventory items.");
+      toast.error(t('loadInventoryFailed'));
     } finally {
       setLoading(false);
     }
-  }, [itemsPerPage]); // <-- useCallback จะถูกสร้างใหม่ถ้า itemsPerPage เปลี่ยน
+  }, [itemsPerPage, t]);
 
-  // --- 7. Update main useEffects for data fetching ---
   useEffect(() => {
-    // เมื่อ search term เปลี่ยน, ให้กลับไปหน้า 1
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
   }, [debouncedSearchTerm]);
 
   useEffect(() => {
-    // ดึงข้อมูลใหม่ทุกครั้งที่ page หรือ search term เปลี่ยน
     loadItems(currentPage, debouncedSearchTerm);
   }, [currentPage, debouncedSearchTerm, loadItems]);
 
-  // (ฟังก์ชัน Delete, Print, Export ไม่เปลี่ยนแปลง)
   const openDeleteModal = (item: InventoryItem) => {
     setItemToDelete(item);
     setIsDeleteModalOpen(true);
@@ -155,15 +137,14 @@ export default function InventoryPage() {
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
-    const toastId = toast.loading("Deleting item...");
+    const toastId = toast.loading(t('deletingItem'));
     try {
       const response = await fetch(`/api/inventory/${itemToDelete.id}`, { method: "DELETE" });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Failed to delete item.");
-      toast.success("Item deleted successfully.", { id: toastId });
+      if (!response.ok) throw new Error(result.error || t('deleteItemFailed'));
+      toast.success(t('deleteItemSuccess'), { id: toastId });
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
-      // โหลดหน้าปัจจุบันใหม่
       loadItems(currentPage, debouncedSearchTerm);
     } catch (error: any) {
       toast.error(error.message, { id: toastId });
@@ -184,9 +165,8 @@ export default function InventoryPage() {
   };
 
   const handleExport = () => {
-    // (ฟังก์ชันนี้ควรจะดึงข้อมูลทั้งหมดถ้าต้องการ export, แต่สำหรับตอนนี้จะ export แค่หน้าปัจจุบัน)
     const headers = ["ID", "Barcode", "Name", "Quantity", "Min Stock", "Unit Price", "Total Value", "Location", "Category"];
-    const rows = items.map(item => [ // <-- 8. เปลี่ยนจาก filteredItems เป็น items
+    const rows = items.map(item => [
       item.id,
       item.barcode || '',
       `"${item.name}"`,
@@ -209,16 +189,11 @@ export default function InventoryPage() {
     document.body.removeChild(link);
   };
 
-  // --- 9. ลบ filteredItems ---
-  // const filteredItems = items.filter(...) // <--- ลบบรรทัดนี้
-
   const lowStockItems = useMemo(() => {
-    // การคำนวณนี้ยังโอเค เพราะมันแค่ไฮไลท์ ไม่ได้กรอง
     return items.filter(
       (item) => item.quantity <= item.min_stock_level
     );
   }, [items]);
-
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "฿0.00";
@@ -228,86 +203,64 @@ export default function InventoryPage() {
     }).format(value);
   };
 
-  // --- 10. Handler สำหรับปุ่ม Pagination ---
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-
   return (
     <div className="space-y-6">
-      {/* (Header ไม่เปลี่ยนแปลง) */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('inventoryTitle')}</h1>
           <p className="text-gray-600">
-            Manage consumable items and stock levels.
+            {t('inventorySubtitle')}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button size="sm" variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
-            Export CSV
+            {t('exportCSV')}
           </Button>
-          {/*
-            <Button size="sm" variant="outline" onClick={() => router.push('/inventory/transaction')}>
-                <ArrowRightLeft className="h-4 w-4 mr-2" />
-                New Transaction
-            </Button>
-            <Button size="sm"  onClick={() => router.push('/inventory/add')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Stock
-            </Button>
-            */}
         </div>
       </div>
 
-      {/* (Low Stock Alert ไม่เปลี่ยนแปลง) */}
       {lowStockItems.length > 0 && (
         <Card className="border-orange-400 bg-orange-50">
-          <CardHeader><CardTitle className="flex items-center text-orange-800"><AlertTriangle className="h-5 w-5 mr-2" />Low Stock Alert</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center text-orange-800"><AlertTriangle className="h-5 w-5 mr-2" />{t('lowStockAlert')}</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm text-orange-700">The following {lowStockItems.length} item(s) are at or below the minimum stock level:</p>
+            <p className="text-sm text-orange-700">{t('lowStockMessage').replace('X', String(lowStockItems.length))}</p>
             <div className="flex flex-wrap gap-2 mt-2">
-              {lowStockItems.map((item) => (<Badge key={item.id} variant="outline" className="border-orange-300 text-orange-800">{item.name} (Qty: {item.quantity})</Badge>))}
+              {lowStockItems.map((item) => (<Badge key={item.id} variant="outline" className="border-orange-300 text-orange-800">{item.name} ({t('quantity')}: {item.quantity})</Badge>))}
             </div>
           </CardContent>
         </Card>
       )}
       <Card>
         <CardHeader>
-          {/* 11. อัปเดต Title ให้แสดง totalItems */}
-          <CardTitle>Stock Items ({totalItems} items)</CardTitle>
+          <CardTitle>{t('stockItemsTitle')} ({totalItems} {t('items')})</CardTitle>
           <div className="relative pt-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Search by name, barcode, or category..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input placeholder={t('searchPlaceholderInventory')} className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
-                {/* (TableHeader ไม่เปลี่ยนแปลง) */}
                 <TableRow>
-                  <TableHead className="w-[80px]">Image</TableHead>
-                  <TableHead>Item Name</TableHead>
+                  <TableHead className="w-[80px]">{t('image')}</TableHead>
+                  <TableHead>{t('itemName')}</TableHead>
                   <TableHead>Barcode</TableHead>
-                  <TableHead className="text-center">Quantity</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Total Value</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
+                  <TableHead className="text-center">{t('quantity')}</TableHead>
+                  <TableHead className="text-right">{t('unitPrice')}</TableHead>
+                  <TableHead className="text-right">{t('totalValue')}</TableHead>
+                  <TableHead>{t('location')}</TableHead>
+                  <TableHead className="text-center">{t('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={8} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
-                ) : items.length === 0 ? ( // <-- 12. เปลี่ยนเป็น items.length
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center">No items found.</TableCell></TableRow>
+                ) : items.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center">{t('noItemsFound')}</TableCell></TableRow>
                 ) : (
-                  items.map((item) => { // <-- 13. เปลี่ยนเป็น items.map
+                  items.map((item) => {
                     const isLowStock = item.quantity <= item.min_stock_level;
                     return (
                       <TableRow key={item.id} className={isLowStock ? "bg-orange-50 hover:bg-orange-100" : ""}>
@@ -327,6 +280,15 @@ export default function InventoryPage() {
                         <TableCell>{item.location || "N/A"}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/inventory/transaction?itemId=${item.id}&barcode=${item.barcode || ''}`)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Create Transaction"
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/inventory/${item.id}/edit`)}><Edit className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/inventory/history/${item.id}`)}><History className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => openPrintModal(item)} disabled={!item.barcode}><Printer className="h-4 w-4" /></Button>
@@ -348,10 +310,9 @@ export default function InventoryPage() {
             </Table>
           </div>
 
-          {/* --- 14. Add Pagination Controls --- */}
           <div className="flex items-center justify-between mt-4">
             <span className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
+              {t('page')} {currentPage} {t('of')} {totalPages}
             </span>
             <div className="space-x-2">
               <Button
@@ -360,7 +321,7 @@ export default function InventoryPage() {
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
               >
-                Previous
+                {t('previous')}
               </Button>
               <Button
                 variant="outline"
@@ -368,24 +329,22 @@ export default function InventoryPage() {
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage >= totalPages}
               >
-                Next
+                {t('next')}
               </Button>
             </div>
           </div>
-          {/* --- End Pagination Controls --- */}
 
         </CardContent>
       </Card>
 
-      {/* (Print Modal ไม่เปลี่ยนแปลง) */}
       <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Print Barcode Label</DialogTitle>
+            <DialogTitle>{t('printBarcode')}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="mb-4 text-sm text-muted-foreground">
-              Preview of the label for: <strong>{itemToPrint?.name}</strong>
+              {t('printPreview')} <strong>{itemToPrint?.name}</strong>
             </p>
             <div className="hidden">
               {itemToPrint && (
@@ -405,29 +364,26 @@ export default function InventoryPage() {
                   <p className="font-mono tracking-widest text-lg">{itemToPrint.barcode}</p>
                 </div>
               ) : (
-                <p>No barcode available for this item.</p>
+                <p>{t('noBarcode')}</p>
               )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPrintModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsPrintModalOpen(false)}>{t('cancel')}</Button>
             <Button onClick={handlePrintClick}>
               <Printer className="h-4 w-4 mr-2" />
-              Print
+              {t('print')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* (Delete Modal ไม่เปลี่ยนแปลง) */}
       <Dialog open={isDeleteModelOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogTitle>{t('confirmDeleteTitle')}</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. This will permanently delete
-              <strong className="mx-1">{itemToDelete?.name}</strong>
-              and all its related history.
+              {t('confirmDeleteMessage')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -436,7 +392,7 @@ export default function InventoryPage() {
               onClick={() => setIsDeleteModalOpen(false)}
               disabled={isDeleting}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -448,7 +404,7 @@ export default function InventoryPage() {
               ) : (
                 <Trash className="h-4 w-4 mr-2" />
               )}
-              Yes, delete item
+              {t('deleteItem')}
             </Button>
           </DialogFooter>
         </DialogContent>

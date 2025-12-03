@@ -105,8 +105,8 @@ export default function InventoryForm({
             typeof result.data.price_per_unit === "number"
               ? result.data.price_per_unit
               : typeof result.data.price === "number"
-              ? result.data.price
-              : prev.price_per_unit ?? 0,
+                ? result.data.price
+                : prev.price_per_unit ?? 0,
           category: result.data.category || "",
           location: result.data.location || "",
           description: result.data.description || "",
@@ -249,342 +249,340 @@ export default function InventoryForm({
 
   const isEditMode = mode === "edit";
   const Icon = isEditMode ? Edit : PlusCircle;
-  const title = isEditMode ? "Edit Item Details" : "Add or Receive Stock";
+  const title = isEditMode ? "Edit Item Details (แก้ไขรายละเอียดสินค้า)" : "Add or Receive Stock (เพิ่มหรือรับสินค้า)";
 
   return (
     <>
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Icon className="h-5 w-5" />
-          <span>{title}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Barcode Section */}
-          <div className="space-y-2">
-            <Label htmlFor="barcode">Barcode</Label>
-            <div className="flex items-center gap-2">
-              <Barcode className="h-5 w-5 text-muted-foreground" />
-              <Input
-                id="barcode"
-                placeholder={
-                  isEditMode
-                    ? "Item barcode"
-                    : "Scan or enter barcode then press Enter"
-                }
-                value={formData.barcode}
-                onChange={(e) => {
-                  handleInputChange("barcode", e.target.value);
-                  if (e.target.value === "") {
-                    setIsExistingItem(false);
-                    setLookupMessage(null);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleBarcodeLookup();
-                  }
-                }}
-                onBlur={handleBarcodeLookup}
-                disabled={submitting || isEditMode}
-                className={isEditMode ? "bg-gray-100" : ""}
-              />
-              {!isEditMode && (
-                <Button
-                  type="button"
-                  onClick={handleBarcodeLookup}
-                  disabled={lookupLoading || !formData.barcode}
-                >
-                  {lookupLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-            </div>
-            {lookupMessage && (
-              <p
-                className={`text-sm mt-2 ${
-                  isExistingItem ? "text-green-600" : "text-blue-600"
-                }`}
-              >
-                {lookupMessage}
-              </p>
-            )}
-          </div>
-
-          {/* Item Details Section */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Item Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  required
-                  disabled={submitting || (isExistingItem && !isEditMode)}
-                  className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) =>
-                    handleInputChange("category", e.target.value)
-                  }
-                  disabled={submitting || (isExistingItem && !isEditMode)}
-                  className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
-                />
-              </div>
-              {/* Location Input */}
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) =>
-                    handleInputChange("location", e.target.value)
-                  }
-                  disabled={submitting || (isExistingItem && !isEditMode)}
-                  className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
-                />
-              </div>
-            </div>
-
-            {/* Quantity / Min Stock / Price Per Unit (single responsive row) */}
-            <div
-              className={`grid grid-cols-1 ${
-                isEditMode ? "md:grid-cols-2" : "md:grid-cols-3"
-              } gap-4`}
-            >
-              {/* If not edit mode: Quantity; if edit mode: show min_stock_level only in first column */}
-              {!isEditMode ? (
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">
-                    {isExistingItem ? "Quantity to Add *" : "Initial Qty *"}
-                  </Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) =>
-                      handleInputChange("quantity", Number(e.target.value))
-                    }
-                    min="1"
-                    required
-                    disabled={submitting}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="min_stock_level">Minimum Stock Level *</Label>
-                  <Input
-                    id="min_stock_level"
-                    type="number"
-                    value={formData.min_stock_level}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "min_stock_level",
-                        Number(e.target.value)
-                      )
-                    }
-                    min="0"
-                    required
-                    disabled={submitting}
-                  />
-                </div>
-              )}
-
-              {/* Min Stock (for add mode this is second column) */}
-              {!isEditMode ? (
-                <div className="space-y-2">
-                  <Label htmlFor="min_stock_level">Min. Stock *</Label>
-                  <Input
-                    id="min_stock_level"
-                    type="number"
-                    value={formData.min_stock_level}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "min_stock_level",
-                        Number(e.target.value)
-                      )
-                    }
-                    min="0"
-                    required
-                    disabled={submitting}
-                  />
-                </div>
-              ) : null}
-
-              {/* Price Per Unit (always present as the last column in the row) */}
-              <div className="space-y-2">
-                <Label htmlFor="price_per_unit">Price Per Unit</Label>
-                <Input
-                  id="price_per_unit"
-                  type="text"
-              
-                  value={formData.price_per_unit}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "price_per_unit",
-                      Number(e.target.value || 0)
-                    )
-                  }
-                  disabled={submitting || (isExistingItem && !isEditMode)}
-                  placeholder="0.00"
-                  className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
-                />
-              </div>
-            </div>
-
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Icon className="h-5 w-5" />
+            <span>{title}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Barcode Section */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) =>
-                  handleInputChange("description", e.target.value)
-                }
-                disabled={submitting || (isExistingItem && !isEditMode)}
-                className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
-              />
-            </div>
-          </div>
-
-          {/* Image Upload Section */}
-          <div className="space-y-4 pt-6 border-t">
-            <h3 className="text-lg font-semibold text-gray-900">Item Image</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              <div className="space-y-2">
-                <Label htmlFor="item-image">Upload Image</Label>
+              <Label htmlFor="barcode">Barcode (บาร์โค้ด)</Label>
+              <div className="flex items-center gap-2">
+                <Barcode className="h-5 w-5 text-muted-foreground" />
                 <Input
-                  id="item-image"
-                  type="file"
-                  accept="image/png, image/jpeg, image/webp"
-                  onChange={handleImageChange}
-                  ref={fileInputRef}
-                  disabled={submitting}
+                  id="barcode"
+                  placeholder={
+                    isEditMode
+                      ? "Item barcode (บาร์โค้ดสินค้า)"
+                      : "Scan or enter barcode then press Enter (สแกนหรือกรอกบาร์โค้ดแล้วกด Enter)"
+                  }
+                  value={formData.barcode}
+                  onChange={(e) => {
+                    handleInputChange("barcode", e.target.value);
+                    if (e.target.value === "") {
+                      setIsExistingItem(false);
+                      setLookupMessage(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleBarcodeLookup();
+                    }
+                  }}
+                  onBlur={handleBarcodeLookup}
+                  disabled={submitting || isEditMode}
+                  className={isEditMode ? "bg-gray-100" : ""}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Max file size: 2MB.
-                </p>
+                {!isEditMode && (
+                  <Button
+                    type="button"
+                    onClick={handleBarcodeLookup}
+                    disabled={lookupLoading || !formData.barcode}
+                  >
+                    {lookupLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
               </div>
+              {lookupMessage && (
+                <p
+                  className={`text-sm mt-2 ${isExistingItem ? "text-green-600" : "text-blue-600"
+                    }`}
+                >
+                  {lookupMessage}
+                </p>
+              )}
+            </div>
+
+            {/* Item Details Section */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Item Name (ชื่อสินค้า) *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    required
+                    disabled={submitting || (isExistingItem && !isEditMode)}
+                    className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category (หมวดหมู่)</Label>
+                  <Input
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) =>
+                      handleInputChange("category", e.target.value)
+                    }
+                    disabled={submitting || (isExistingItem && !isEditMode)}
+                    className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
+                  />
+                </div>
+                {/* Location Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location (สถานที่)</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) =>
+                      handleInputChange("location", e.target.value)
+                    }
+                    disabled={submitting || (isExistingItem && !isEditMode)}
+                    className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
+                  />
+                </div>
+              </div>
+
+              {/* Quantity / Min Stock / Price Per Unit (single responsive row) */}
+              <div
+                className={`grid grid-cols-1 ${isEditMode ? "md:grid-cols-2" : "md:grid-cols-3"
+                  } gap-4`}
+              >
+                {/* If not edit mode: Quantity; if edit mode: show min_stock_level only in first column */}
+                {!isEditMode ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">
+                      {isExistingItem ? "Quantity to Add (จำนวนที่เพิ่ม) *" : "Initial Qty (จำนวนเริ่มต้น) *"}
+                    </Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={formData.quantity}
+                      onChange={(e) =>
+                        handleInputChange("quantity", Number(e.target.value))
+                      }
+                      min="1"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="min_stock_level">Minimum Stock Level (จุดสั่งซื้อ) *</Label>
+                    <Input
+                      id="min_stock_level"
+                      type="number"
+                      value={formData.min_stock_level}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "min_stock_level",
+                          Number(e.target.value)
+                        )
+                      }
+                      min="0"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                )}
+
+                {/* Min Stock (for add mode this is second column) */}
+                {!isEditMode ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="min_stock_level">Min. Stock (จุดสั่งซื้อ) *</Label>
+                    <Input
+                      id="min_stock_level"
+                      type="number"
+                      value={formData.min_stock_level}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "min_stock_level",
+                          Number(e.target.value)
+                        )
+                      }
+                      min="0"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                ) : null}
+
+                {/* Price Per Unit (always present as the last column in the row) */}
+                <div className="space-y-2">
+                  <Label htmlFor="price_per_unit">Price Per Unit (ราคาต่อหน่วย)</Label>
+                  <Input
+                    id="price_per_unit"
+                    type="text"
+
+                    value={formData.price_per_unit}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "price_per_unit",
+                        Number(e.target.value || 0)
+                      )
+                    }
+                    disabled={submitting || (isExistingItem && !isEditMode)}
+                    placeholder="0.00"
+                    className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Image Preview</Label>
-                <div className="w-full h-40 rounded-md border border-dashed flex items-center justify-center relative bg-muted/50">
-                  {imagePreview ? (
-                    <>
-                      <Image
-                        src={imagePreview}
-                        alt="Item preview"
-                        layout="fill"
-                        objectFit="contain"
-                        className="rounded-md p-2"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-7 w-7"
-                        onClick={handleRemoveImage}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="text-center text-muted-foreground">
-                      <Upload className="mx-auto h-8 w-8" />
-                      <p className="text-sm mt-2">No image selected</p>
-                    </div>
-                  )}
+                <Label htmlFor="description">Description (รายละเอียด)</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
+                  disabled={submitting || (isExistingItem && !isEditMode)}
+                  className={isExistingItem && !isEditMode ? "bg-gray-100" : ""}
+                />
+              </div>
+            </div>
+
+            {/* Image Upload Section */}
+            <div className="space-y-4 pt-6 border-t">
+              <h3 className="text-lg font-semibold text-gray-900">Item Image (รูปภาพสินค้า)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <div className="space-y-2">
+                  <Label htmlFor="item-image">Upload Image (อัปโหลดรูปภาพ)</Label>
+                  <Input
+                    id="item-image"
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    onChange={handleImageChange}
+                    ref={fileInputRef}
+                    disabled={submitting}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Max file size: 2MB.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Image Preview (ตัวอย่างรูปภาพ)</Label>
+                  <div className="w-full h-40 rounded-md border border-dashed flex items-center justify-center relative bg-muted/50">
+                    {imagePreview ? (
+                      <>
+                        <Image
+                          src={imagePreview}
+                          alt="Item preview"
+                          layout="fill"
+                          objectFit="contain"
+                          className="rounded-md p-2"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-7 w-7"
+                          onClick={handleRemoveImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <Upload className="mx-auto h-8 w-8" />
+                        <p className="text-sm mt-2">No image selected</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between space-x-3 pt-6 border-t">
-          <div>
-              {mode === "edit" && (
+            <div className="flex justify-between space-x-3 pt-6 border-t">
+              <div>
+                {mode === "edit" && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    disabled={submitting}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Delete Item (ลบรายการ)
+                  </Button>
+                )}
+              </div>
+              <div className="flex space-x-3">
                 <Button
                   type="button"
-                  variant="destructive"
-                  onClick={() => setIsDeleteModalOpen(true)}
+                  variant="outline"
+                  onClick={() => router.back()}
                   disabled={submitting}
                 >
-                  <Trash className="h-4 w-4 mr-2" />
-                  Delete Item
+                  Cancel (ยกเลิก)
                 </Button>
-              )}
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {submitting
+                    ? "Saving... (กำลังบันทึก)"
+                    : isEditMode
+                      ? "Save Changes (บันทึกการเปลี่ยนแปลง)"
+                      : isExistingItem
+                        ? "Add Stock (เพิ่มสต็อก)"
+                        : "Create New Item (สร้างรายการใหม่)"}
+                </Button>
+              </div>
             </div>
-            <div className="flex space-x-3">
+          </form>
+        </CardContent>
+      </Card>
+      {/* +++ 7. เพิ่ม Delete Confirmation Dialog +++ */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete
+              <strong className="mx-1">{formData.name}</strong>
+              and all its related history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <Button
-              type="button"
               variant="outline"
-              onClick={() => router.back()}
+              onClick={() => setIsDeleteModalOpen(false)}
               disabled={submitting}
             >
-              Cancel
+              Cancel (ยกเลิก)
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={submitting}
+            >
               {submitting ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Save className="h-4 w-4 mr-2" />
+                <Trash className="h-4 w-4 mr-2" />
               )}
-              {submitting
-                ? "Saving..."
-                : isEditMode
-                ? "Save Changes"
-                : isExistingItem
-                ? "Add Stock"
-                : "Create New Item"}
+              Yes, delete item (ยืนยันลบ)
             </Button>
-            </div>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-    {/* +++ 7. เพิ่ม Delete Confirmation Dialog +++ */}
-    <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Are you absolutely sure?</DialogTitle>
-          <DialogDescription>
-            This action cannot be undone. This will permanently delete
-            <strong className="mx-1">{formData.name}</strong>
-            and all its related history.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setIsDeleteModalOpen(false)}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirmDelete}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Trash className="h-4 w-4 mr-2" />
-            )}
-            Yes, delete item
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

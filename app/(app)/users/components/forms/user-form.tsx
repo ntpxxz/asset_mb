@@ -69,20 +69,20 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isSubmitting }
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <UserPlus className="h-5 w-5" />
-          <span>{mode === 'create' ? 'New User Information' : 'Edit User Information'}</span>
+          <span>{mode === 'create' ? 'New User Information (ข้อมูลผู้ใช้ใหม่)' : 'Edit User Information (แก้ไขข้อมูลผู้ใช้)'}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Personal Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Personal Information (ข้อมูลส่วนตัว)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstname">First Name *</Label>
+                <Label htmlFor="firstname">First Name (ชื่อจริง) *</Label>
                 <Input
                   id="firstname"
-                  placeholder="John"
+                  placeholder="เช่น Somchai"
                   value={formData.firstname || ''}
                   onChange={(e) => handleInputChange('firstname', e.target.value)}
                   required
@@ -90,10 +90,10 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isSubmitting }
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastname">Last Name *</Label>
+                <Label htmlFor="lastname">Last Name (นามสกุล) *</Label>
                 <Input
                   id="lastname"
-                  placeholder="Smith"
+                  placeholder="เช่น Jaidee"
                   value={formData.lastname || ''}
                   onChange={(e) => handleInputChange('lastname', e.target.value)}
                   required
@@ -101,14 +101,14 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isSubmitting }
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email">Email Address (อีเมล) *</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="john.smith@company.com"
+                  placeholder="somchai.j@company.com"
                   value={formData.email || ''}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   required
@@ -117,11 +117,11 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isSubmitting }
               </div>
               {mode === 'create' && (
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
+                  <Label htmlFor="password">Password (รหัสผ่าน) *</Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Min. 8 characters"
+                    placeholder="อย่างน้อย 8 ตัวอักษร"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -129,78 +129,78 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isSubmitting }
                   />
                 </div>
               )}
-                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="+1 (555) 123-4567"
-                    value={formData.phone || ''}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                     disabled={isSubmitting}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number (เบอร์โทรศัพท์)</Label>
+                <Input
+                  id="phone"
+                  placeholder="+66 81 234 5678"
+                  value={formData.phone || ''}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
           </div>
 
           {/* Work Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Work Information</h3>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.role || 'user'} onValueChange={(value) => handleInputChange('role', value)} disabled={isSubmitting}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="employee_id">Employee ID</Label>
-                  <Input
-                    id="employee_id"
-                    placeholder="EMP-001"
-                    value={formData.employee_id || ''}
-                    onChange={(e) => handleInputChange('employee_id', e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-               </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    placeholder="e.g., Engineering"
-                    value={formData.department || ''}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="e.g., Main Office"
-                    value={formData.location || ''}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </div>
+            <h3 className="text-lg font-semibold text-gray-900">Work Information (ข้อมูลการทำงาน)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="role">Role (บทบาท) *</Label>
+                <Select value={formData.role || 'user'} onValueChange={(value) => handleInputChange('role', value)} disabled={isSubmitting}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกบทบาท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="employee_id">Employee ID (รหัสพนักงาน)</Label>
+                <Input
+                  id="employee_id"
+                  placeholder="EMP-001"
+                  value={formData.employee_id || ''}
+                  onChange={(e) => handleInputChange('employee_id', e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="department">Department (แผนก)</Label>
+                <Input
+                  id="department"
+                  placeholder="เช่น Engineering"
+                  value={formData.department || ''}
+                  onChange={(e) => handleInputChange('department', e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location (สถานที่)</Label>
+                <Input
+                  id="location"
+                  placeholder="เช่น สำนักงานใหญ่"
+                  value={formData.location || ''}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Form Actions */}
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Cancel (ยกเลิก)
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               <Save className="h-4 w-4 mr-2" />
-              {isSubmitting ? 'Saving...' : (mode === 'create' ? 'Create User' : 'Save Changes')}
+              {isSubmitting ? 'Saving... (กำลังบันทึก)' : (mode === 'create' ? 'Create User (สร้างผู้ใช้)' : 'Save Changes (บันทึกการเปลี่ยนแปลง)')}
             </Button>
           </div>
         </form>

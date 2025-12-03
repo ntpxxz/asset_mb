@@ -23,6 +23,7 @@ import {
 import { ArrowLeft, Download, Filter, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { User } from "@/lib/data-store";
+import { useI18n } from "@/lib/i18n-context";
 
 type Transaction = {
   id: number;
@@ -36,6 +37,7 @@ type Transaction = {
 
 export default function InventoryReportsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,11 +89,11 @@ export default function InventoryReportsPage() {
         toast.error("Failed to load transactions.");
       }
     } catch (error) {
-      toast.error("An error occurred while fetching transactions.");
+      toast.error(t('fetchError'));
     } finally {
       setLoading(false);
     }
-  }, [filters, itemsPerPage]);
+  }, [filters, itemsPerPage, t]);
 
   useEffect(() => {
     fetchUsers();
@@ -141,72 +143,72 @@ export default function InventoryReportsPage() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('back')}
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Inventory Reports</h1>
-            <p className="text-gray-600">View and export inventory transaction history.</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('inventoryReportsTitle')}</h1>
+            <p className="text-gray-600">{t('inventoryReportsSubtitle')}</p>
           </div>
         </div>
         <Button size="sm" variant="outline" onClick={handleExport} disabled={transactions.length === 0}>
           <Download className="h-4 w-4 mr-2" />
-          Export CSV
+          {t('exportCSV')}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>{t('filters')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Input type="date" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
           <Input type="date" value={filters.endDate} onChange={e => handleFilterChange('endDate', e.target.value)} />
           <Select value={filters.type} onValueChange={value => handleFilterChange('type', value)}>
-            <SelectTrigger><SelectValue placeholder="Transaction Type" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t('transactionTypeLabel')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="dispense">Dispense</SelectItem>
-              <SelectItem value="return">Return</SelectItem>
-              <SelectItem value="adjust">Adjust</SelectItem>
-              <SelectItem value="receive">Receive</SelectItem>
+              <SelectItem value="all">{t('allTypes')}</SelectItem>
+              <SelectItem value="dispense">{t('dispense')}</SelectItem>
+              <SelectItem value="return">{t('returnItem')}</SelectItem>
+              <SelectItem value="adjust">{t('adjust')}</SelectItem>
+              <SelectItem value="receive">{t('receive')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filters.userId} onValueChange={value => handleFilterChange('userId', value)}>
             <SelectTrigger><SelectValue placeholder="User" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
+              <SelectItem value="all">{t('allUsers')}</SelectItem>
               {users.map(user => <SelectItem key={user.id} value={user.id}>{user.firstname} {user.lastname}</SelectItem>)}
             </SelectContent>
           </Select>
           <Button onClick={handleApplyFilters} variant="secondary" disabled={loading}>
             <Filter className="h-4 w-4 mr-2" />
-            Apply Filters
+            {t('applyFilters')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Transaction Log ({totalItems})</CardTitle>
+          <CardTitle>{t('transactionLog')} ({totalItems})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Quantity Change</TableHead>
+                  <TableHead>{t('date')}</TableHead>
+                  <TableHead>{t('item')}</TableHead>
+                  <TableHead>{t('type')}</TableHead>
+                  <TableHead className="text-right">{t('qtyChange')}</TableHead>
                   <TableHead>User</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>{t('notes')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                 ) : transactions.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="h-24 text-center">No transactions found for the selected filters.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-24 text-center">{t('noTransactionsFound')}</TableCell></TableRow>
                 ) : (
                   transactions.map(t => (
                     <TableRow key={t.id}>
@@ -226,7 +228,7 @@ export default function InventoryReportsPage() {
           {/* Pagination Controls */}
           <div className="flex items-center justify-between mt-4">
             <span className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
+              {t('page')} {currentPage} {t('of')} {totalPages}
             </span>
             <div className="space-x-2">
               <Button
@@ -235,7 +237,7 @@ export default function InventoryReportsPage() {
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1 || loading}
               >
-                Previous
+                {t('previous')}
               </Button>
               <Button
                 variant="outline"
@@ -243,7 +245,7 @@ export default function InventoryReportsPage() {
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage >= totalPages || loading}
               >
-                Next
+                {t('next')}
               </Button>
             </div>
           </div>

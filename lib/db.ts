@@ -7,8 +7,8 @@ declare global {
 
 function boolEnv(name: string, def = false) {
   const v = (process.env[name] || '').toLowerCase();
-  if (['1','true','yes','on'].includes(v)) return true;
-  if (['0','false','no','off'].includes(v)) return false;
+  if (['1', 'true', 'yes', 'on'].includes(v)) return true;
+  if (['0', 'false', 'no', 'off'].includes(v)) return false;
   return def;
 }
 
@@ -17,6 +17,7 @@ function createPool() {
 
   // 1) ถ้ามี DATABASE_URL ให้ใช้ก่อนเสมอ และให้ SSL อิงตาม POSTGRES_SSL
   if (process.env.DATABASE_URL) {
+    console.log('🔌 Connecting to DB via DATABASE_URL:', process.env.DATABASE_URL.split('@')[1]); // Log host only for security
     return new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: useSSL ? { rejectUnauthorized: false } : false,
