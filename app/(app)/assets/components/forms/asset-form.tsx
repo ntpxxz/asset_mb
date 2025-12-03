@@ -281,143 +281,51 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                   disabled={submitting}
                 />
               </div>
+              <Input
+                id="serialnumber"
+                placeholder="เช่น NXB7-SB17-4X2F-8ZTM"
+                value={formData.serialnumber || ''}
+                onChange={(e) => handleInputChange('serialnumber', e.target.value)}
+                disabled={submitting}
+                required
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="pc_name">PC Name (ชื่อเครื่อง)</Label>
-                <Input
-                  id="pc_name"
-                  placeholder="เช่น BAS-999"
-                  value={formData.pc_name || ''}
-                  onChange={(e) => handleInputChange('pc_name', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Basic Hardware Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Hardware Information (ข้อมูลฮาร์ดแวร์)</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="type">Type (ประเภท) *</Label>
-                <Select
-                  value={formData.type || ''}
-                  onValueChange={(value) => handleInputChange('type', value)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกประเภท" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(!category || category === 'computer') && (
-                      <SelectGroup>
-                        <SelectLabel>Computer</SelectLabel>
-                        <SelectItem value="pc">PC</SelectItem>
-                        <SelectItem value="laptop">Laptop / NB</SelectItem>
-                        <SelectItem value="desktop">Desktop</SelectItem>
-                        <SelectItem value="server">Server</SelectItem>
-                        <SelectItem value="tablet">Tablet</SelectItem>
-                      </SelectGroup>
-                    )}
-                    {(!category || category === 'network') && (
-                      <SelectGroup>
-                        <SelectLabel>Network</SelectLabel>
-                        <SelectItem value="router">Router</SelectItem>
-                        <SelectItem value="switch">Switch</SelectItem>
-                        <SelectItem value="firewall">Firewall</SelectItem>
-                        <SelectItem value="access-point">Access Point</SelectItem>
-                      </SelectGroup>
-                    )}
-                    {!category && (
-                      <SelectGroup>
-                        <SelectLabel>Peripherals & Others</SelectLabel>
-                        <SelectItem value="monitor">Monitor</SelectItem>
-                        <SelectItem value="printer">Printer</SelectItem>
-                        <SelectItem value="projector">Projector</SelectItem>
-                        <SelectItem value="storage">Storage</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectGroup>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="manufacturer">Maker (ยี่ห้อ) *</Label>
-                <Input
-                  id="manufacturer"
-                  placeholder="เช่น Lenovo, Dell, HP"
-                  value={formData.manufacturer || ''}
-                  onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-                  disabled={submitting}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="model">Model (รุ่น) *</Label>
-                <Input
-                  id="model"
-                  placeholder="เช่น Lenovo 105X"
-                  value={formData.model || ''}
-                  onChange={(e) => handleInputChange('model', e.target.value)}
-                  disabled={submitting}
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="assigneduser">User Owner (ผู้ใช้งาน)</Label>
+              <Input
+                id="assigneduser"
+                placeholder="ชื่อผู้ใช้งาน"
+                value={formData.assigneduser || ''}
+                onChange={(e) => handleInputChange('assigneduser', e.target.value)}
+                disabled={submitting}
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="serialnumber">Serial Number (หมายเลขซีเรียล) *</Label>
-                <Input
-                  id="serialnumber"
-                  placeholder="เช่น NXB7-SB17-4X2F-8ZTM"
-                  value={formData.serialnumber || ''}
-                  onChange={(e) => handleInputChange('serialnumber', e.target.value)}
-                  disabled={submitting}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assigneduser">User Owner (ผู้ใช้งาน)</Label>
-                <Input
-                  id="assigneduser"
-                  placeholder="ชื่อผู้ใช้งาน"
-                  value={formData.assigneduser || ''}
-                  onChange={(e) => handleInputChange('assigneduser', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status (สถานะ)</Label>
-                <Select
-                  value={formData.status || 'available'}
-                  onValueChange={(value) => handleInputChange('status', value as any)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกสถานะ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status (สถานะ)</Label>
+              <Select
+                value={formData.status || 'available'}
+                onValueChange={(value) => handleInputChange('status', value as any)}
+                disabled={submitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกสถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="retired">Retired</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </div>
 
-          {/* 3. Operating System & Software */}
-          {isComputer && (
+        {/* 3. Operating System & Software */}
+        {
+          isComputer && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Operating System & Software (ระบบปฏิบัติการและซอ
 
@@ -500,10 +408,12 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 </div>
               </div>
             </div>
-          )}
+          )
+        }
 
-          {/* 4. Technical Specs (for computers) */}
-          {isComputer && (
+        {/* 4. Technical Specs (for computers) */}
+        {
+          isComputer && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Technical Specifications (ข้อมูลทางเทคนิค)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -539,10 +449,12 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 </div>
               </div>
             </div>
-          )}
+          )
+        }
 
-          {/* 5. Network Information (for both computer and network) */}
-          {(isComputer || isNetwork) && (
+        {/* 5. Network Information (for both computer and network) */}
+        {
+          (isComputer || isNetwork) && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Network Configuration (การตั้งค่าเครือข่าย)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -575,106 +487,107 @@ export default function AssetForm({ mode = 'create', initialData, assetId, onSub
                 </div>
               </div>
             </div>
-          )}
+          )
+        }
 
-          {/* 6. Purchase & Warranty */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty (การจัดซื้อและประกัน)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="purchasedate">Purchase Date (วันที่ซื้อ)</Label>
-                <Input
-                  id="purchasedate"
-                  type="date"
-                  value={formData.purchasedate || ''}
-                  onChange={(e) => handleInputChange('purchasedate', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="purchaseprice">Price (ราคา)</Label>
-                <Input
-                  id="purchaseprice"
-                  type="number"
-                  step="0.01"
-                  value={formData.purchaseprice ?? ''}
-                  onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier (ผู้จัดจำหน่าย)</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier || ''}
-                  onChange={(e) => handleInputChange('supplier', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="warrantyexpiry">Warranty Expiry (วันหมดประกัน)</Label>
-                <Input
-                  id="warrantyexpiry"
-                  type="date"
-                  value={formData.warrantyexpiry || ''}
-                  onChange={(e) => handleInputChange('warrantyexpiry', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 7. Additional Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Additional Information (ข้อมูลเพิ่มเติม)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (รายละเอียด)</Label>
-                <Textarea
-                  id="description"
-                  rows={3}
-                  value={formData.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (หมายเหตุ)</Label>
-                <Textarea
-                  id="notes"
-                  rows={3}
-                  value={formData.notes || ''}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isloanable"
-                checked={!!formData.isloanable}
-                onCheckedChange={(v) => handleInputChange('isloanable', !!v)}
+        {/* 6. Purchase & Warranty */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Purchase & Warranty (การจัดซื้อและประกัน)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="purchasedate">Purchase Date (วันที่ซื้อ)</Label>
+              <Input
+                id="purchasedate"
+                type="date"
+                value={formData.purchasedate || ''}
+                onChange={(e) => handleInputChange('purchasedate', e.target.value)}
                 disabled={submitting}
               />
-              <Label htmlFor="isloanable">Available for loan (สามารถยืมได้)</Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="purchaseprice">Price (ราคา)</Label>
+              <Input
+                id="purchaseprice"
+                type="number"
+                step="0.01"
+                value={formData.purchaseprice ?? ''}
+                onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))}
+                disabled={submitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Supplier (ผู้จัดจำหน่าย)</Label>
+              <Input
+                id="supplier"
+                value={formData.supplier || ''}
+                onChange={(e) => handleInputChange('supplier', e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="warrantyexpiry">Warranty Expiry (วันหมดประกัน)</Label>
+              <Input
+                id="warrantyexpiry"
+                type="date"
+                value={formData.warrantyexpiry || ''}
+                onChange={(e) => handleInputChange('warrantyexpiry', e.target.value)}
+                disabled={submitting}
+              />
             </div>
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end space-x-2 pt-4 border-t">
-            {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
-                Cancel (ยกเลิก)
-              </Button>
-            )}
-            <Button type="submit" disabled={submitting || loading}>
-              <Save className="h-4 w-4 mr-2" />
-              {submitting ? 'Saving... (กำลังบันทึก)' : mode === 'create' ? 'Add Asset (เพิ่มทรัพย์สิน)' : 'Save Changes (บันทึกการเปลี่ยนแปลง)'}
-            </Button>
+        {/* 7. Additional Info */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Additional Information (ข้อมูลเพิ่มเติม)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (รายละเอียด)</Label>
+              <Textarea
+                id="description"
+                rows={3}
+                value={formData.description || ''}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (หมายเหตุ)</Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                value={formData.notes || ''}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                disabled={submitting}
+              />
+            </div>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isloanable"
+              checked={!!formData.isloanable}
+              onCheckedChange={(v) => handleInputChange('isloanable', !!v)}
+              disabled={submitting}
+            />
+            <Label htmlFor="isloanable">Available for loan (สามารถยืมได้)</Label>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end space-x-2 pt-4 border-t">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+              Cancel (ยกเลิก)
+            </Button>
+          )}
+          <Button type="submit" disabled={submitting || loading}>
+            <Save className="h-4 w-4 mr-2" />
+            {submitting ? 'Saving... (กำลังบันทึก)' : mode === 'create' ? 'Add Asset (เพิ่มทรัพย์สิน)' : 'Save Changes (บันทึกการเปลี่ยนแปลง)'}
+          </Button>
+        </div>
+      </form >
+    </CardContent >
+    </Card >
   );
 }
 
