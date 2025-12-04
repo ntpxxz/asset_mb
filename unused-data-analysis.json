@@ -1,0 +1,213 @@
+{
+  "unusedColumns": [
+    {
+      "table": "assets",
+      "column": "building",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "division",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "section",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "area",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "pc_name",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "license_free",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "os_key",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "os_version",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "ms_office_apps",
+      "type": "text",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "ms_office_version",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "is_legally_purchased",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "refer_document",
+      "type": "text",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "ip_address",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "assets",
+      "column": "mac_address",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "inventory_items",
+      "column": "is_active",
+      "type": "boolean",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "inventory_items",
+      "column": "min_quantity",
+      "type": "integer",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "inventory_items",
+      "column": "supplier",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "inventory_items",
+      "column": "notes",
+      "type": "text",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "inventory_transactions",
+      "column": "price_per_unit",
+      "type": "numeric",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "inventory_transactions",
+      "column": "created_at",
+      "type": "timestamp without time zone",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "users",
+      "column": "position",
+      "type": "character varying",
+      "reason": "Column not in expected schema"
+    },
+    {
+      "table": "users",
+      "column": "is_active",
+      "type": "boolean",
+      "reason": "Column not in expected schema"
+    }
+  ],
+  "unusedTables": [
+    {
+      "table": "asset_history",
+      "reason": "Table not defined in expected schema",
+      "columnCount": 8
+    }
+  ],
+  "orphanedFiles": [
+    {
+      "directory": "public/uploads",
+      "fileCount": 14,
+      "files": [
+        "1759900938802-985882133-Screenshot_2025-10-08_121502.png",
+        "1759905716810-510619651-Screenshot_2025-10-08_121502.png",
+        "1759906326462-130171639-Screenshot_2025-10-08_121502.png",
+        "1759906735198-935646069-Screenshot_2025-10-08_121502.png",
+        "1759907015330-249089912-Screenshot_2025-10-08_121502.png",
+        "1759907289782-119622068-Screenshot_2025-10-08_121502.png",
+        "1759907417982-361751942-Screenshot_2025-10-08_121502.png",
+        "1759907497754-258348373-Screenshot_2025-10-08_121502.png",
+        "1759907598638-930176260-Screenshot_2025-10-08_121502.png",
+        "1759907656319-69177454-Screenshot_2025-10-08_121502.png",
+        "1759908165644-708656130-Screenshot_2025-10-08_121502.png",
+        "1760505726313-337453317-Screenshot_2025-10-15_122144.png",
+        "1760505917575-868779803-Screenshot_2025-10-15_122456.png",
+        "1761104347745-667109089-Screenshot_2025-10-21_162110.png"
+      ],
+      "reason": "Files not referenced in database"
+    }
+  ],
+  "unusedTypes": [
+    {
+      "type": "HardwareAsset",
+      "extraFields": [
+        "ipaddress",
+        "macaddress"
+      ],
+      "reason": "Fields defined in TypeScript type but not in database"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "Medium",
+      "category": "Database Cleanup",
+      "action": "Remove unused columns",
+      "details": "Found 22 unused columns that can be safely removed",
+      "impact": "Reduces database size and improves query performance"
+    },
+    {
+      "priority": "Low",
+      "category": "File System Cleanup",
+      "action": "Remove orphaned files",
+      "details": "Found 14 orphaned files in upload directories",
+      "impact": "Frees up disk space"
+    },
+    {
+      "priority": "High",
+      "category": "Code Cleanup",
+      "action": "Update TypeScript type definitions",
+      "details": "Remove fields from types that don't exist in database schema",
+      "impact": "Improves type safety and prevents confusion"
+    },
+    {
+      "priority": "High",
+      "category": "Database Cleanup",
+      "action": "Review and remove unused tables",
+      "details": "Found 1 tables not referenced in application",
+      "impact": "Simplifies database schema and reduces maintenance overhead"
+    }
+  ],
+  "summary": {
+    "totalUnusedColumns": 22,
+    "totalUnusedTables": 1,
+    "totalOrphanedFiles": 14,
+    "totalRecommendations": 4,
+    "analysisDate": "2025-12-04T02:13:54.856Z"
+  }
+}
