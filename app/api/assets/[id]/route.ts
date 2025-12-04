@@ -1,4 +1,3 @@
-// app/api/assets/[id]/route.ts
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -6,17 +5,20 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { z } from "zod";
 
+// Helper Functions
 const price = z.preprocess((v) => {
   if (v === "" || v == null) return null;
   const n = typeof v === "number" ? v : Number(String(v).replace(/,/g, ""));
   return Number.isFinite(n) ? n : null;
 }, z.number().nullable());
 
-const strToNull = (v: unknown) => {
-  if (v === undefined) return undefined;
-  if (v === null) return null;
-  if (typeof v === "string" && v.trim() === "") return null;
-  return typeof v === "string" ? v.trim() : v;
+const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+
+const undefIfEmpty = (v: unknown) => {
+  if (v === undefined) return undefined; // ถ้าไม่ส่งมา ให้เป็น undefined (ไม่ update)
+  if (v === null) return null;           // ถ้าส่ง null มา ให้เป็น null (ลบค่า)
+  if (typeof v === "string" && v.trim() === "") return null; // ถ้าส่งว่างมา ให้เป็น null (ลบค่า)
+  return v;
 };
 
 const toISOorNull = (v: unknown) => {
@@ -31,51 +33,114 @@ const ok = (data: any, init?: ResponseInit) =>
 const bad = (error: string, status = 400) =>
   NextResponse.json({ success: false, error }, { status });
 
-const assetUpdateSchema = z.object({
-  asset_tag: z.string().min(1).optional(),
-  serialnumber: z.string().nullable().optional(),
-  manufacturer: z.string().nullable().optional(),
-  model: z.string().nullable().optional(),
-  purchaseprice: price.optional(),
-  supplier: z.string().nullable().optional(),
-  type: z.string().optional(),
-  status: z.string().optional(),
-  location: z.string().nullable().optional(),
-  department: z.string().nullable().optional(),
-  operatingsystem: z.string().nullable().optional(),
-  processor: z.string().nullable().optional(),
-  memory: z.string().nullable().optional(),
-  storage: z.string().nullable().optional(),
-  hostname: z.string().nullable().optional(),
-  ipaddress: z.string().nullable().optional(),
-  macaddress: z.string().nullable().optional(),
-  patchstatus: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  purchasedate: z.string().nullable().optional(),
-  warrantyexpiry: z.string().nullable().optional(),
-  lastpatch_check: z.string().nullable().optional(),
-  assigneduser: z.string().nullable().optional(),
-  isloanable: z.boolean().optional(),
-  condition: z.string().nullable().optional(),
-}).partial();
+// Validation Schema (Relaxed to allow free text)
+const assetUpdateSchema = z
+  .object({
+    asset_tag: z.string().min(1).optional(),
+    serialnumber: z.string().nullable().optional(),
+    manufacturer: z.string().nullable().optional(),
+    model: z.string().nullable().optional(),
+    purchaseprice: price.optional(),
+    supplier: z.string().nullable().optional(),
 
+    // เปลี่ยนจาก Enum เป็น String เพื่อรองรับค่าใหม่ๆ และ Free text
+    type: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    location: z.string().nullable().optional(),
+    department: z.string().nullable().optional(),
+
+    operatingsystem: z.string().nullable().optional(),
+    processor: z.string().nullable().optional(),
+    memory: z.string().nullable().optional(),
+    storage: z.string().nullable().optional(),
+
+    hostname: z.string().nullable().optional(),
+    ip_address: z.string().nullable().optional(),
+    mac_address: z.string().nullable().optional(),
+
+    patchstatus: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+
+    // New Fields matching DB Schema
+    building: z.string().nullable().optional(),
+    division: z.string().nullable().optional(),
+    section: z.string().nullable().optional(),
+    area: z.string().nullable().optional(),
+    pc_name: z.string().nullable().optional(),
+    os_key: z.string().nullable().optional(),
+    os_version: z.string().nullable().optional(),
+    ms_office_apps: z.string().nullable().optional(),
+    ms_office_version: z.string().nullable().optional(),
+    is_legally_purchased: z.string().nullable().optional(),
+
+    purchasedate: z.string().nullable().optional(),
+    warrantyexpiry: z.string().nullable().optional(),
+    lastpatch_check: z.string().nullable().optional(),
+
+    assigneduser: z.string().nullable().optional(),
+    isloanable: z.boolean().optional(),
+    condition: z.string().nullable().optional(),
+  })
+  .partial();
+
+/** GET /api/assets/[id] */
 export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  const params = await props.params;
-  const { id } = params;
-  let result = await pool.query(
-    `SELECT * FROM assets WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1 LIMIT 1`,
-    [id]
-  );
-  if (result.rowCount === 0) return NextResponse.json({ success: false, error: 'Asset not found' }, { status: 404 });
-  const asset = result.rows[0];
-  delete asset.delete_at;
-  return NextResponse.json({ success: true, data: asset });
+  try {
+    const params = await props.params;
+    const { id } = params;
+
+    let result = await pool.query('SELECT * FROM assets WHERE id = $1', [id]);
+
+    if (result.rowCount === 0) {
+      result = await pool.query('SELECT * FROM assets WHERE asset_tag = $1', [id]);
+    }
+
+    if (result.rowCount === 0) {
+      // Fallback search
+      result = await pool.query(
+        `SELECT * FROM assets 
+         WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1
+         LIMIT 1`,
+        [id]
+      );
+    }
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Asset not found' },
+        { status: 404 }
+      );
+    }
+
+    const asset = result.rows[0];
+
+    // ลบ delete_at ออก แต่ **ห้าม** เขียนทับ isloanable
+    const cleanAsset = { ...asset };
+    delete cleanAsset.delete_at;
+
+    return NextResponse.json({
+      success: true,
+      data: cleanAsset,
+      message: `Asset ${cleanAsset.asset_tag} loaded successfully`,
+    });
+  } catch (error: any) {
+    console.error('Failed to fetch asset:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch asset',
+        details: error.message || 'Internal server error',
+      },
+      { status: 500 }
+    );
+  }
 }
 
+/** PUT /api/assets/[id] */
 export async function PUT(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -88,7 +153,8 @@ export async function PUT(
   try {
     const parsed = assetUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return bad(parsed.error.errors.map((e) => e.message).join("; "), 400);
+      console.error("Validation Error:", parsed.error.errors);
+      return bad(parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join("; "), 400);
     }
 
     await client.query("BEGIN");
@@ -104,51 +170,81 @@ export async function PUT(
     const current = cur.rows[0];
     const v = parsed.data;
 
-    // Map frontend fields to actual database columns
+    // Prepare Update Object
     const updates: Record<string, any> = {
-      asset_tag: strToNull(v.asset_tag),
-      serialnumber: strToNull(v.serialnumber),
-      manufacturer: strToNull(v.manufacturer),
-      model: strToNull(v.model),
+      asset_tag: undefIfEmpty(trim(v.asset_tag)),
+      serialnumber: undefIfEmpty(trim(v.serialnumber)),
+      manufacturer: undefIfEmpty(trim(v.manufacturer)),
+      model: undefIfEmpty(trim(v.model)),
       purchaseprice: v.purchaseprice,
-      supplier: strToNull(v.supplier),
-      type: strToNull(v.type),
-      status: strToNull(v.status),
-      location: strToNull(v.location),
-      department: strToNull(v.department),
-      operatingsystem: strToNull(v.operatingsystem),
-      processor: strToNull(v.processor),
-      memory: strToNull(v.memory),
-      storage: strToNull(v.storage),
-      hostname: strToNull(v.hostname),
-      ip_address: strToNull(v.ipaddress),      // DB column is ip_address
-      mac_address: strToNull(v.macaddress),    // DB column is mac_address
-      patchstatus: strToNull(v.patchstatus),
-      description: strToNull(v.description),
-      notes: strToNull(v.notes),
+      supplier: undefIfEmpty(trim(v.supplier)),
+
+      type: undefIfEmpty(trim(v.type)),
+      status: undefIfEmpty(trim(v.status)),
+      location: undefIfEmpty(trim(v.location)),
+      department: undefIfEmpty(trim(v.department)),
+
+      // New Fields
+      building: undefIfEmpty(trim(v.building)),
+      division: undefIfEmpty(trim(v.division)),
+      section: undefIfEmpty(trim(v.section)),
+      area: undefIfEmpty(trim(v.area)),
+      pc_name: undefIfEmpty(trim(v.pc_name)),
+      os_key: undefIfEmpty(trim(v.os_key)),
+      os_version: undefIfEmpty(trim(v.os_version)),
+      ms_office_apps: undefIfEmpty(trim(v.ms_office_apps)),
+      ms_office_version: undefIfEmpty(trim(v.ms_office_version)),
+      is_legally_purchased: undefIfEmpty(trim(v.is_legally_purchased)),
+
+      operatingsystem: undefIfEmpty(trim(v.operatingsystem)),
+      processor: undefIfEmpty(trim(v.processor)),
+      memory: undefIfEmpty(trim(v.memory)),
+      storage: undefIfEmpty(trim(v.storage)),
+      hostname: undefIfEmpty(trim(v.hostname)),
+      ip_address: undefIfEmpty(trim(v.ip_address)),
+      mac_address: undefIfEmpty(trim(v.mac_address)),
+
+      patchstatus: undefIfEmpty(trim(v.patchstatus)),
+      description: undefIfEmpty(trim(v.description)),
+      notes: undefIfEmpty(trim(v.notes)),
+
       purchasedate: toISOorNull(v.purchasedate),
       warrantyexpiry: toISOorNull(v.warrantyexpiry),
       lastpatch_check: toISOorNull(v.lastpatch_check),
-      assigneduser: strToNull(v.assigneduser),
-      isloanable: v.isloanable,
-      condition: strToNull(v.condition),
+
+      assigneduser: v.assigneduser === "-" ? null : undefIfEmpty(trim(v.assigneduser)),
+      isloanable: typeof v.isloanable === "boolean" ? v.isloanable : undefined,
+      condition: undefIfEmpty(trim(v.condition)),
     };
 
-    if (updates.asset_tag && updates.asset_tag !== current.asset_tag) {
-      const isDup = await client.query("SELECT 1 FROM assets WHERE LOWER(asset_tag) = LOWER($1) AND id <> $2", [updates.asset_tag, id]);
-      if (isDup.rowCount && isDup.rowCount > 0) { await client.query("ROLLBACK"); return bad("Duplicate asset tag", 409); }
-    }
-    if (updates.serialnumber && updates.serialnumber !== current.serialnumber) {
-      const isDup = await client.query("SELECT 1 FROM assets WHERE LOWER(serialnumber) = LOWER($1) AND id <> $2", [updates.serialnumber, id]);
-      if (isDup.rowCount && isDup.rowCount > 0) { await client.query("ROLLBACK"); return bad("Duplicate serial number", 409); }
+    // Duplicate Check
+    const checkDuplicate = async (field: string, value: string) => {
+      if (!value || value === current[field]) return false;
+      const res = await client.query(
+        `SELECT 1 FROM assets WHERE LOWER(${field}) = LOWER($1) AND id <> $2 LIMIT 1`,
+        [value, id]
+      );
+      return res.rowCount && res.rowCount > 0;
+    };
+
+    if (updates.asset_tag && await checkDuplicate('asset_tag', updates.asset_tag)) {
+      await client.query("ROLLBACK");
+      return bad("Duplicate asset tag", 409);
     }
 
+    if (updates.serialnumber && await checkDuplicate('serialnumber', updates.serialnumber)) {
+      await client.query("ROLLBACK");
+      return bad("Duplicate serial number", 409);
+    }
+
+    // Build Dynamic Query
     const sets: string[] = [];
     const vals: any[] = [];
     let i = 1;
+
     for (const [k, val] of Object.entries(updates)) {
       if (val !== undefined) {
-        sets.push(`"${k}" = $${i++}`);
+        sets.push(`"${k}" = $${i++}`); // Quote column names for safety
         vals.push(val);
       }
     }
@@ -179,14 +275,24 @@ export async function PUT(
   }
 }
 
-export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+/** DELETE /api/assets/[id] */
+export async function DELETE(
+  _req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   const { id } = params;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const r = await client.query("DELETE FROM assets WHERE id = $1 RETURNING id", [id]);
-    if (r.rowCount === 0) { await client.query("ROLLBACK"); return bad("Asset not found", 404); }
+    const r = await client.query(
+      "DELETE FROM assets WHERE id = $1 RETURNING id",
+      [id]
+    );
+    if (r.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return bad("Asset not found", 404);
+    }
     await client.query("COMMIT");
     return ok({ id: r.rows[0].id });
   } catch (e) {

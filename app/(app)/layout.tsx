@@ -19,11 +19,11 @@ export default function RootLayout({
 }) {
   return (
 
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col min-h-0">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
+        <main className="flex-1 bg-muted/30 p-6">
           {children}
           <Toaster position="top-center" richColors closeButton />
         </main>

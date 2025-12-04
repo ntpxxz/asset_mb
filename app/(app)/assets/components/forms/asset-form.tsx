@@ -65,8 +65,8 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
     department: '',
     pc_name: '',
     hostname: '',
-    ipaddress: '',
-    macaddress: '',
+    ip_address: '',
+    mac_address: '',
     processor: '',
     memory: '',
     storage: '',
@@ -353,8 +353,8 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
               <Input id="department" value={formData.department || ''} onChange={(e) => handleInputChange('department', e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location">{t('location')}</Label>
-              <Input id="location" value={formData.location || ''} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="e.g. Server Room" />
+              <Label htmlFor="area">{t('area')}</Label>
+              <Input id="area" value={formData.area || ''} onChange={(e) => handleInputChange('area', e.target.value)} placeholder="e.g. Server Room" />
             </div>
           </div>
         </CardContent>
@@ -460,11 +460,11 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
                 </div>
                 <div className="space-y-2">
                   <Label>{t('ipAddress')}</Label>
-                  <Input value={formData.ipaddress || ''} onChange={(e) => handleInputChange('ipaddress', e.target.value)} placeholder="192.168.x.x" className="font-mono" />
+                  <Input value={formData.ip_address || ''} onChange={(e) => handleInputChange('ip_address', e.target.value)} placeholder="192.168.x.x" className="font-mono" />
                 </div>
                 <div className="space-y-2">
                   <Label>{t('macAddress')}</Label>
-                  <Input value={formData.macaddress || ''} onChange={(e) => handleInputChange('macaddress', e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" className="font-mono" />
+                  <Input value={formData.mac_address || ''} onChange={(e) => handleInputChange('mac_address', e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" className="font-mono" />
                 </div>
               </div>
             </div>

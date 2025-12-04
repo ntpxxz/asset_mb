@@ -428,7 +428,7 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                                     <TableCell className="font-mono text-sm">{asset.serialnumber || "-"}</TableCell>
                                                     <TableCell>{getStatusBadge(asset.status!, t)}</TableCell>
                                                     <TableCell>{asset.assigneduser || "-"}</TableCell>
-                                                    <TableCell>{asset.location || "-"}</TableCell>
+                                                    <TableCell>{asset.area || "-"}</TableCell>
                                                     <TableCell className="font-medium">
                                                         {asset.purchaseprice ? `${asset.purchaseprice}฿` : "-"}
                                                     </TableCell>
