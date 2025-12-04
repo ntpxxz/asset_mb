@@ -25,17 +25,18 @@ import {
 } from "lucide-react";
 import { HardwareAsset } from "@/lib/data-store";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useI18n } from "@/lib/i18n-context";
 
 const getStatusBadge = (status: string) => {
     switch (status) {
-        case "assigned":
-            return <Badge className="bg-green-100 text-green-800">Assigned</Badge>;
+        case "active":
+            return <Badge className="bg-green-100 text-green-800">Active</Badge>;
         case "available":
             return <Badge className="bg-blue-100 text-blue-800">Available</Badge>;
         case "maintenance":
             return <Badge className="bg-yellow-100 text-yellow-800">Maintenance</Badge>;
         case "retired":
-            return <Badge className="bg-gray-100 text-gray-800">Retired</Badge>;
+            return <Badge className="bg-gray-100 text-gray-800">Scraped</Badge>;
         default:
             return <Badge variant="secondary">{status}</Badge>;
     }
@@ -75,6 +76,7 @@ const getAssetIcon = (type: string) => {
 
 export default function NetworkAssetViewPage() {
     const router = useRouter();
+    const { t } = useI18n();
     const params = useParams();
     const [asset, setAsset] = useState<HardwareAsset | null>(null);
     const [assignedUser, setAssignedUser] = useState<any>(null);
@@ -185,7 +187,7 @@ export default function NetworkAssetViewPage() {
                 <div className="flex items-center space-x-4">
                     <Button variant="ghost" size="sm" onClick={() => router.push("/assets/network")}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
+                        {t('back')}
                     </Button>
                 </div>
                 <Card>
@@ -212,7 +214,7 @@ export default function NetworkAssetViewPage() {
                 <div className="flex items-center space-x-4">
                     <Button variant="ghost" size="sm" onClick={() => router.push("/assets/network")}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
+                        {t('back')}
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">

@@ -7,9 +7,11 @@ import { ArrowLeft, Package } from 'lucide-react';
 import { SoftwareFormData } from '@/lib/data-store';
 import SoftwareForm from '../../components/forms/software-form';
 import { Card, CardContent } from '@/components/ui/card';
+import { useI18n } from '@/lib/i18n-context';
 
 export default function EditSoftwarePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const [softwareData, setSoftwareData] = useState<Partial<SoftwareFormData> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ export default function EditSoftwarePage() {
       if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
       // ถ้าส่งมาเป็น 'YYYY-MM-DD' อยู่แล้ว
       if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-    } catch {}
+    } catch { }
     return '';
   };
 
@@ -40,7 +42,7 @@ export default function EditSoftwarePage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/software/${id}`,{ cache: "no-store" });
+      const response = await fetch(`/api/software/${id}`, { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
@@ -102,7 +104,7 @@ export default function EditSoftwarePage() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('back')}
           </Button>
         </div>
         <Card>
@@ -122,7 +124,7 @@ export default function EditSoftwarePage() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t('back')}
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Software</h1>

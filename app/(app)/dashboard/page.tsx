@@ -167,7 +167,7 @@ export default function DashboardPage() {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-muted-foreground">{t('stockItems')}</p>
+                                    <p className="text-sm text-muted-foreground">{t('Others')}</p>
                                     <p className="text-2xl font-bold">{stats.inventory.totalItems}</p>
                                 </div>
                                 <Box className="h-8 w-8 text-orange-600" />

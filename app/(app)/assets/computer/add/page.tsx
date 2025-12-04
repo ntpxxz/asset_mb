@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { AssetForm } from '@/app/(app)/assets/components/forms/asset-form';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n-context';
 
 export default function AddComputerAssetPage() {
     const router = useRouter();
+    const { t } = useI18n();
 
     const handleSubmit = async (formData: any) => {
         const tid = toast.loading("Adding computer asset...", {
@@ -56,7 +58,7 @@ export default function AddComputerAssetPage() {
             <div className="flex items-center space-x-4">
                 <Button variant="ghost" size="sm" onClick={() => router.back()}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
+                    {t('back')}
                 </Button>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Add Computer Asset</h1>

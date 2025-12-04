@@ -116,7 +116,7 @@ export default function InventoryDashboardPage() {
                 <div className="flex items-center space-x-4">
                     <Button variant="ghost" size="sm" onClick={() => router.push('/inventory')}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        {t('backToInventory')}
+                        {t('Back')}
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">{t('inventoryDashboardTitle')}</h1>

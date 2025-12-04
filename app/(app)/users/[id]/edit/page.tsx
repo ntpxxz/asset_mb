@@ -7,9 +7,11 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { UserForm } from '../../components/forms/user-form';
 import { User } from '@/lib/data-store';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n-context';
 
 export default function EditUserPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const userId = params.id as string;
 
@@ -19,7 +21,7 @@ export default function EditUserPage() {
 
   useEffect(() => {
     if (!userId) return;
-    
+
     const fetchUser = async () => {
       setLoading(true);
       try {
@@ -36,7 +38,7 @@ export default function EditUserPage() {
         setLoading(false);
       }
     };
-    
+
     fetchUser();
   }, [userId, router]);
 
@@ -53,12 +55,12 @@ export default function EditUserPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
       });
-      
+
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update user');
       }
-      
+
       toast.success('User updated successfully', { id: tid });
       router.push(`/users`);
       router.refresh();
@@ -74,7 +76,7 @@ export default function EditUserPage() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t('back')}
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit User</h1>

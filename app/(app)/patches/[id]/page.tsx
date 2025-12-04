@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useI18n } from '@/lib/i18n-context';
 
 interface PatchRecord {
   id: string;
@@ -124,6 +125,7 @@ const getSeverityBadge = (severity: string) => {
 export default function PatchDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const patchId = params?.id as string;
 
   const [patchRecord, setPatchRecord] = useState<PatchRecord | null>(null);
@@ -244,7 +246,7 @@ export default function PatchDetailsPage() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('back')}
           </Button>
         </div>
         <Card>
@@ -265,7 +267,7 @@ export default function PatchDetailsPage() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('back')}
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Patch Management Details</h1>

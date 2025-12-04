@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  ArrowLeft, 
-  User, 
-  Edit, 
+import {
+  ArrowLeft,
+  User,
+  Edit,
   Trash2,
   Mail,
   Phone,
@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { userService, hardwareService, User as UserType } from '@/lib/data-store';
 import { EditUserForm } from '@/components/forms/edit-user-form';
-import { HardwareAsset,  } from '@/lib/data-store';
+import { HardwareAsset } from '@/lib/data-store';
+import { useI18n } from '@/lib/i18n-context';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -37,6 +38,7 @@ const getStatusBadge = (status: string) => {
 
 export default function UserViewPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const [user, setUser] = useState<UserType | null>(null);
   const [userAssets, setUserAssets] = useState<any[]>([]);
@@ -54,14 +56,14 @@ export default function UserViewPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`/api/users/${id}`);
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch user');
       }
-      
+
       if (result.success && result.data) {
         setUser(result.data);
         // Fetch assets assigned to this user
@@ -81,7 +83,7 @@ export default function UserViewPage() {
     try {
       const response = await fetch('/api/assets');
       const result = await response.json();
-      
+
       if (response.ok && result.success && result.data) {
         const assignedAssets = result.data.filter((asset: HardwareAsset) => asset.assigneduser === userId);
         setUserAssets(assignedAssets);
@@ -115,7 +117,7 @@ export default function UserViewPage() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('back')}
           </Button>
         </div>
         <Card>
@@ -136,7 +138,7 @@ export default function UserViewPage() {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('back')}
           </Button>
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12">
@@ -184,7 +186,7 @@ export default function UserViewPage() {
                   <p className="text-lg">{user.lastname}</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Email</label>
@@ -214,7 +216,7 @@ export default function UserViewPage() {
                   <div className="mt-1">{getStatusBadge(user.status)}</div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Department</label>
@@ -237,7 +239,7 @@ export default function UserViewPage() {
                 </div>
               </div>
 
-              
+
             </CardContent>
           </Card>
 

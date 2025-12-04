@@ -8,6 +8,7 @@ import { AssetForm } from "../../components/forms/asset-form";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AssetFormData } from "@/lib/data-store";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n-context";
 
 /** ---------- Robust normalizer ---------- */
 const toKey = (v?: string | null) =>
@@ -100,6 +101,7 @@ function normalizeAssetData(raw: any): AssetFormData {
 
 export default function EditAssetPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { id } = useParams() as { id?: string }; // ✅ type ชัด
 
   const [assetData, setAssetData] = useState<AssetFormData | null>(null);
@@ -196,7 +198,7 @@ export default function EditAssetPage() {
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('back')}
           </Button>
         </div>
         <Card>
@@ -214,7 +216,7 @@ export default function EditAssetPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/assets")}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t('back')}
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Asset</h1>

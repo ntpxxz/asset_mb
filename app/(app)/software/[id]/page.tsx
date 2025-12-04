@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Shield, Edit, Trash2, Calendar, Users, Key, Package } from 'lucide-react';
+import { useI18n } from '@/lib/i18n-context';
 
 type Row = {
   id: string;
@@ -31,13 +32,13 @@ const getLicenseTypeBadge = (type?: string | null) => {
   return <Badge className={type ? (colors[type] || 'bg-gray-100 text-gray-800') : 'bg-gray-100 text-gray-800'}>{type || '—'}</Badge>;
 };
 
-const formatDateOnly = (v?: string | null) => (!v ? '—' : /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0,10) : new Date(v).toISOString().slice(0,10));
+const formatDateOnly = (v?: string | null) => (!v ? '—' : /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : new Date(v).toISOString().slice(0, 10));
 
 const deriveStatus = (expirydate: string | null) => {
   if (!expirydate) return 'active';
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const exp = new Date(expirydate + 'T00:00:00');
-  const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000*60*60*24));
+  const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   if (diff < 0) return 'expired';
   if (diff <= 30) return 'expiring-soon';
   return 'active';
@@ -45,6 +46,7 @@ const deriveStatus = (expirydate: string | null) => {
 
 export default function SoftwareViewPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const [software, setSoftware] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function SoftwareViewPage() {
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('back')}
           </Button>
         </div>
         <Card><CardContent className="p-6 text-center">
@@ -125,7 +127,7 @@ export default function SoftwareViewPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('back')}
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{software.software_name}</h1>
@@ -267,7 +269,7 @@ export default function SoftwareViewPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Days Remaining</label>
                   <p className="text-lg">
-                    {Math.max(0, Math.ceil((new Date(software.expirydate).getTime() - new Date().getTime()) / (1000*60*60*24)))} days
+                    {Math.max(0, Math.ceil((new Date(software.expirydate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days
                   </p>
                 </div>
               )}

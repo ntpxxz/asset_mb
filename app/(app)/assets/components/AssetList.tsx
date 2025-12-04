@@ -54,14 +54,14 @@ interface AssetListProps {
 // Helper to render a colored badge based on asset status
 const getStatusBadge = (status: string, t: (key: string) => string) => {
     switch (status) {
-        case "assigned":
-            return <Badge className="bg-green-100 text-green-800">{t('assigned')}</Badge>;
+        case "active":
+            return <Badge className="bg-green-100 text-green-800">{t('active')}</Badge>;
         case "available":
             return <Badge className="bg-blue-100 text-blue-800">{t('available')}</Badge>;
         case "maintenance":
             return <Badge className="bg-yellow-100 text-yellow-800">{t('maintenance')}</Badge>;
-        case "retired":
-            return <Badge className="bg-gray-100 text-gray-800">{t('retired')}</Badge>;
+        case "scraped":
+            return <Badge className="bg-gray-100 text-gray-800">{t('scraped')}</Badge>;
         default:
             return <Badge variant="secondary">{status}</Badge>;
     }
@@ -241,13 +241,13 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
             asset.memory || '',
             asset.storage || '',
             asset.hostname || '',
-            asset.ipaddress || '',
-            asset.macaddress || '',
+            asset.ip_address || '',
+            asset.mac_address || '',
             asset.purchasedate || '',
             asset.purchaseprice?.toString() || '',
             asset.supplier || '',
             asset.warrantyexpiry || '',
-            asset.location || '',
+            asset.area || '',
             asset.department || '',
             asset.description || '',
             asset.notes || ''

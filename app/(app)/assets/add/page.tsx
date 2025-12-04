@@ -3,11 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import AssetForm from '../components/forms/asset-form'; // ← ปรับ path ให้ถูกกับโปรเจกต์คุณ
+import { AssetForm } from '../components/forms/asset-form';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n-context';
 
 export default function AddAssetPage() {
   const router = useRouter();
+  const { t } = useI18n();
 
   const handleSubmit = async (formData: any) => {
 
@@ -66,7 +68,7 @@ export default function AddAssetPage() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t('back')}
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Add Hardware Asset</h1>

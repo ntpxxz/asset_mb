@@ -8,14 +8,17 @@ import { UserForm } from '../components/forms/user-form';
 import { toast } from 'sonner';
 import { User } from '@/lib/data-store';
 
+import { useI18n } from '@/lib/i18n-context';
+
 export default function AddUserPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (formData: Partial<User>) => {
     setIsSubmitting(true);
     const tid = toast.loading('Creating user...');
-    
+
     try {
       const res = await fetch('/api/users', {
         method: 'POST',
@@ -43,7 +46,7 @@ export default function AddUserPage() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t('back')}
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Add New User</h1>

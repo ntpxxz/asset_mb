@@ -6,8 +6,11 @@ import { ArrowLeft } from 'lucide-react';
 import { SoftwareFormData } from '@/lib/data-store';
 import SoftwareForm from '../components/forms/software-form';
 
+import { useI18n } from '@/lib/i18n-context';
+
 export default function AddSoftwarePage() {
   const router = useRouter();
+  const { t } = useI18n();
 
   const handleSubmit = async (payload: Partial<SoftwareFormData>) => {
     try {
@@ -42,7 +45,7 @@ export default function AddSoftwarePage() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t('back')}
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Add Software</h1>

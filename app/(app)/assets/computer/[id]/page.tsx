@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { HardwareAsset } from "@/lib/data-store";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useI18n } from "@/lib/i18n-context";
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -75,6 +76,7 @@ const getAssetIcon = (type: string) => {
 
 export default function ComputerAssetViewPage() {
     const router = useRouter();
+    const { t } = useI18n();
     const params = useParams();
     const [asset, setAsset] = useState<HardwareAsset | null>(null);
     const [assignedUser, setAssignedUser] = useState<any>(null);
@@ -185,7 +187,7 @@ export default function ComputerAssetViewPage() {
                 <div className="flex items-center space-x-4">
                     <Button variant="ghost" size="sm" onClick={() => router.push("/assets/computer")}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
+                        {t('back')}
                     </Button>
                 </div>
                 <Card>
@@ -212,7 +214,7 @@ export default function ComputerAssetViewPage() {
                 <div className="flex items-center space-x-4">
                     <Button variant="ghost" size="sm" onClick={() => router.push("/assets/computer")}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
+                        {t('back')}
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">
@@ -570,7 +572,7 @@ export default function ComputerAssetViewPage() {
                                 </CardContent>
                             </Card>
 
-                            {/* Patch Status */}
+                            {/*{/* Patch Status 
                             {(() => {
                                 const t = (asset.type || "").toLowerCase();
                                 const hidePatch = new Set(["monitor", "storage", "projector"]);
@@ -607,7 +609,7 @@ export default function ComputerAssetViewPage() {
                                     </Card>
                                 );
                             })()}
-                            {/* Borrowing */}
+                            {/* Borrowing 
                             {asset.isloanable && (
                                 <Card>
                                     <CardHeader>
@@ -625,7 +627,7 @@ export default function ComputerAssetViewPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            )}
+                            )}*/}
 
                             {/* Notes */}
                             {asset.notes && (
