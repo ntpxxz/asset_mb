@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,8 @@ type User = {
   lastname: string;
 }
 
-export default function NewTransactionPage() {
+// 1. Logic Component (Renamed from NewTransactionPage)
+function TransactionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
@@ -243,7 +244,8 @@ export default function NewTransactionPage() {
                 {isDispense && <MinusCircle className="h-5 w-5" />}
                 {isReturn && <Undo2 className="h-5 w-5" />}
                 {isAdjust && <PenSquare className="h-5 w-5" />}
-                <span>{isAdjust ? t('adjustStockDetails') : t('transactionDetails')}</span>
+                {isAdjust && <span>{t('adjustStockDetails')}</span>}
+                {!isAdjust && <span>{t('transactionDetails')}</span>}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -302,5 +304,18 @@ export default function NewTransactionPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// 2. Main Page Component with Suspense Wrapper
+export default function NewTransactionPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[50vh] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    }>
+      <TransactionContent />
+    </Suspense>
   );
 }

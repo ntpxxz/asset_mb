@@ -50,14 +50,16 @@ export type AssetFormData = {
   manufacturer?: string;
   model?: string;
   serialnumber?: string;
-  purchasedate?: string;
+  purchasedate?: string | null;
   purchaseprice?: number | null;
   supplier?: string;
-  warrantyexpiry?: string;
+  warrantyexpiry?: string | null;
   assigneduser?: string;
+  location?: string;
   department?: string;
   status: string | 'available' | 'assigned' | 'maintenance' | 'retired';
   condition?: 'new' | 'good' | 'fair' | 'poor' | 'broken';
+  image_url?: string | null;
   operatingsystem?: string;
   processor?: string;
   memory?: string;
@@ -66,7 +68,7 @@ export type AssetFormData = {
   ip_address?: string;
   mac_address?: string;
   patchstatus?: 'up-to-date' | 'needs-review' | 'update-pending';
-  lastpatch_check?: string;
+  lastpatch_check?: string | null;
   isloanable?: boolean;
   description?: string;
   notes?: string;

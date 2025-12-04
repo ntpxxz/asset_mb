@@ -55,7 +55,7 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
     model: '',
     status: 'available',
     condition: 'good',
-    image_url: null,
+    image_url: '',
     assigneduser: '',
     location: '',
     building: '',
