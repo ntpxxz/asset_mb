@@ -164,7 +164,11 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
       if (onSubmit) {
         const res = await onSubmit(payload);
         if (!res.success) throw new Error(res.error);
+
+        toast.success(t('savedSuccess'), { id: tid });
         setSubmitting(false);
+        onSaved?.(res);
+        setTimeout(() => router.back(), 1000);
         return;
       }
 

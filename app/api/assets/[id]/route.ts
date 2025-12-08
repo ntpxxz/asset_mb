@@ -15,9 +15,9 @@ const price = z.preprocess((v) => {
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
 const undefIfEmpty = (v: unknown) => {
-  if (v === undefined) return undefined; // ถ้าไม่ส่งมา ให้เป็น undefined (ไม่ update)
-  if (v === null) return null;           // ถ้าส่ง null มา ให้เป็น null (ลบค่า)
-  if (typeof v === "string" && v.trim() === "") return null; // ถ้าส่งว่างมา ให้เป็น null (ลบค่า)
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
   return v;
 };
 
@@ -43,7 +43,6 @@ const assetUpdateSchema = z
     purchaseprice: price.optional(),
     supplier: z.string().nullable().optional(),
 
-    // เปลี่ยนจาก Enum เป็น String เพื่อรองรับค่าใหม่ๆ และ Free text
     type: z.string().nullable().optional(),
     status: z.string().nullable().optional(),
     location: z.string().nullable().optional(),
@@ -100,7 +99,6 @@ export async function GET(
     }
 
     if (result.rowCount === 0) {
-      // Fallback search
       result = await pool.query(
         `SELECT * FROM assets 
          WHERE id::text = $1 OR asset_tag = $1 OR serialnumber = $1
@@ -117,8 +115,6 @@ export async function GET(
     }
 
     const asset = result.rows[0];
-
-    // ลบ delete_at ออก แต่ **ห้าม** เขียนทับ isloanable
     const cleanAsset = { ...asset };
     delete cleanAsset.delete_at;
 
@@ -170,7 +166,8 @@ export async function PUT(
     const current = cur.rows[0];
     const v = parsed.data;
 
-    // Prepare Update Object
+    // Prepare Update Object - Map frontend field names to DB column names
+    // Note: Frontend uses ip_address/mac_address but DB uses ipaddress/macaddress
     const updates: Record<string, any> = {
       asset_tag: undefIfEmpty(trim(v.asset_tag)),
       serialnumber: undefIfEmpty(trim(v.serialnumber)),
@@ -184,7 +181,6 @@ export async function PUT(
       location: undefIfEmpty(trim(v.location)),
       department: undefIfEmpty(trim(v.department)),
 
-      // New Fields
       building: undefIfEmpty(trim(v.building)),
       division: undefIfEmpty(trim(v.division)),
       section: undefIfEmpty(trim(v.section)),
@@ -201,8 +197,9 @@ export async function PUT(
       memory: undefIfEmpty(trim(v.memory)),
       storage: undefIfEmpty(trim(v.storage)),
       hostname: undefIfEmpty(trim(v.hostname)),
-      ip_address: undefIfEmpty(trim(v.ip_address)),
-      mac_address: undefIfEmpty(trim(v.mac_address)),
+      // Map frontend field names to correct DB column names
+      ipaddress: undefIfEmpty(trim(v.ip_address)),
+      macaddress: undefIfEmpty(trim(v.mac_address)),
 
       patchstatus: undefIfEmpty(trim(v.patchstatus)),
       description: undefIfEmpty(trim(v.description)),
@@ -244,7 +241,7 @@ export async function PUT(
 
     for (const [k, val] of Object.entries(updates)) {
       if (val !== undefined) {
-        sets.push(`"${k}" = $${i++}`); // Quote column names for safety
+        sets.push(`${k} = $${i++}`);
         vals.push(val);
       }
     }

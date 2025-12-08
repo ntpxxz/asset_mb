@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
@@ -35,15 +35,15 @@ export async function POST(req: NextRequest) {
     });
 
     // Remove password from user object before sending back to the client
-    delete user.password;
+    delete user.password_hash;
 
-    return NextResponse.json({ 
-      message: 'Login successful', 
+    return NextResponse.json({
+      message: 'Login successful',
       user: {
         id: user.id,
         firstname: user.firstname,
         role: user.role
-      } 
+      }
     });
   } catch (error) {
     console.error('Login API Error:', error);
