@@ -275,7 +275,7 @@ export default function DashboardPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center space-x-2">
                             <Box className="h-5 w-5 text-orange-600" />
-                            <span>{t('inventoryStock')}</span>
+                            <span>{t('Other Stock')}</span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent>

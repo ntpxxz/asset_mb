@@ -14,20 +14,28 @@ export async function GET(
 
   try {
     const client = await pool.connect();
-    
+
     const itemResult = await client.query('SELECT name FROM inventory_items WHERE id = $1', [id]);
     const itemName = itemResult.rows[0]?.name || `Item ID ${id}`;
 
     // FIX 2: Ensure price_per_unit is selected from the transaction table directly
+    // FIX 3: Use COALESCE to fallback to created_at if transaction_date doesn't exist
     const historyResult = await client.query(`
       SELECT 
-        t.*,
+        t.id,
+        t.item_id,
+        t.user_id,
+        t.transaction_type,
+        t.quantity_change,
+        t.price_per_unit,
+        t.notes,
+        COALESCE(t.transaction_date, t.created_at) as transaction_date,
         (t.quantity_change * t.price_per_unit) as value_change,
         COALESCE(u.firstname || ' ' || u.lastname, t.user_id, 'System') as user_name
       FROM inventory_transactions t
-      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN users u ON t.user_id::text = u.id::text
       WHERE t.item_id = $1
-      ORDER BY t.transaction_date DESC
+      ORDER BY COALESCE(t.transaction_date, t.created_at) DESC
     `, [id]);
 
     client.release();

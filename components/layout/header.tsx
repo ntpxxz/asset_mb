@@ -26,10 +26,13 @@ export function Header() {
 
   return (
     <header className="bg-card border-b border-border px-6 py-5">
-      <div className="flex items-center justify-between">
+      <div className="grid grid-cols-3 items-center justify-between">
+        <div className="col-span-2 items-start space-x-4">
+
+        </div>
         {/* Search */}
-        <div className="flex-1 max-w-lg">
-          <div className="relative">
+        {/* <div className="col-span-1 items-center space-x-4">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t('searchPlaceholder')}
@@ -37,9 +40,9 @@ export function Header() {
             />
           </div>
         </div>
-
+*/}
         {/* Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="col-span-1 flex justify-end space-x-4">
           <Button
             variant="ghost"
             size="icon"

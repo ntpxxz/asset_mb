@@ -22,12 +22,12 @@ export async function GET(req: NextRequest) {
     let paramIndex = 1;
 
     if (startDate) {
-      whereClauses.push(`t.transaction_date >= $${paramIndex++}`);
+      whereClauses.push(`COALESCE(t.transaction_date, t.created_at) >= $${paramIndex++}`);
       queryParams.push(startDate);
     }
     if (endDate) {
       // Adjust end date to cover the full day
-      whereClauses.push(`t.transaction_date <= $${paramIndex++}::timestamp + INTERVAL '1 day'`);
+      whereClauses.push(`COALESCE(t.transaction_date, t.created_at) <= $${paramIndex++}::timestamp + INTERVAL '1 day'`);
       queryParams.push(endDate);
     }
     if (type && type !== 'all') {
@@ -60,12 +60,12 @@ export async function GET(req: NextRequest) {
         t.transaction_type,
         t.quantity_change,
         t.notes,
-        t.transaction_date
+        COALESCE(t.transaction_date, t.created_at) as transaction_date
       FROM inventory_transactions t
       JOIN inventory_items i ON t.item_id = i.id
-      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN users u ON t.user_id::text = u.id::text
       ${whereSql}
-      ORDER BY t.transaction_date DESC
+      ORDER BY COALESCE(t.transaction_date, t.created_at) DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
     `;
 

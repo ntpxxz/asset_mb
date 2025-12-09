@@ -17,7 +17,7 @@ const fs = require('fs');
 const config = {
     collection: path.join(__dirname, 'api-tests.postman_collection.json'),
     environment: {
-        baseUrl: process.env.API_BASE_URL || 'http://localhost:3000'
+        baseUrl: process.env.API_BASE_URL || 'http://localhost:3091'
     },
     reporters: ['cli', 'json', 'html'],
     reporter: {

@@ -102,7 +102,7 @@ function TransactionContent() {
     if (barcodeParam && barcode === barcodeParam && !foundItem && !lookupError) {
       handleBarcodeLookup();
     }
-  }, [barcode, searchParams, foundItem, lookupError, handleBarcodeLookup]);
+  }, [barcode, searchParams, foundItem, lookupError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +174,7 @@ function TransactionContent() {
           {t('back')}
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('transactionTitle')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('Transaction')}</h1>
           <p className="text-gray-600">{t('transactionSubtitle')}</p>
         </div>
       </div>
@@ -228,7 +228,7 @@ function TransactionContent() {
             <CardHeader><CardTitle>{t('itemSummary')}</CardTitle></CardHeader>
             <CardContent className="flex flex-col items-center text-center space-y-4">
               <div className="w-32 h-32 relative rounded-md border bg-white flex items-center justify-center overflow-hidden">
-                {foundItem.image_url ? (<Image src={foundItem.image_url} alt={foundItem.name} layout="fill" objectFit="contain" className="p-2" />) : (<Archive className="h-12 w-12 text-slate-400" />)}
+                {foundItem.image_url ? (<Image src={foundItem.image_url} alt={foundItem.name} fill className="object-contain p-2" unoptimized />) : (<Archive className="h-12 w-12 text-slate-400" />)}
               </div>
               <p className="font-semibold text-lg">{foundItem.name}</p>
               <div>

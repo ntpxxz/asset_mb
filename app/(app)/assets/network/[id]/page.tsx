@@ -1,4 +1,3 @@
-// app/(app)/assets/network/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -210,23 +209,27 @@ export default function NetworkAssetViewPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                    <Button variant="ghost" size="sm" onClick={() => router.push("/assets/network")}>
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        {t('back')}
-                    </Button>
-                    <div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => router.push("/assets/network")}>
+                            <ArrowLeft className="h-4 w-4 mr-1" />
+                            {t('back')}
+                        </Button>
+                    </div>
+                    <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight">
                             {asset.asset_tag}
                         </h1>
-                        <p className="text-gray-600">
-                            {" "}
-                            {asset.manufacturer} • {asset.model}
-                        </p>
+                        {getStatusBadge(asset.status)}
+                        <Badge variant="outline" className="capitalize">{asset.condition}</Badge>
                     </div>
+                    <p className="text-muted-foreground flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        {asset.manufacturer} {asset.model}
+                    </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     <Button
                         variant="outline"
                         size="sm"
@@ -236,9 +239,8 @@ export default function NetworkAssetViewPage() {
                         Edit
                     </Button>
                     <Button
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
-                        className="text-red-600 hover:text-red-700"
                         onClick={handleDelete}
                     >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -246,299 +248,131 @@ export default function NetworkAssetViewPage() {
                     </Button>
                 </div>
             </div>
+
             <Tabs defaultValue="details" className="w-full">
                 <TabsList>
                     <TabsTrigger value="details">Details</TabsTrigger>
                     <TabsTrigger value="history">History</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-                        {/* Main Information */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                        {/* Main Information (Left Column) */}
                         <div className="lg:col-span-2 space-y-6">
-                            {/* Basic Information */}
+
+
+
+                            {/* Software & Licensing */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <Icon className="h-5 w-5" />
-                                        <span>Asset Information</span>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Monitor className="h-5 w-5 text-primary" />
+                                        Software & Licensing
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Asset Tag
-                                            </label>
-                                            <p className="text-lg font-mono">{asset.asset_tag}</p>
+                                            <label className="text-sm font-medium text-muted-foreground">OS/Firmware Version</label>
+                                            <p className="text-base">{asset.os_version || "-"}</p>
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Serial Number
-                                            </label>
-                                            <p className="text-lg font-mono">{asset.serialnumber}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Manufacturer
-                                            </label>
-                                            <p className="text-lg">{asset.manufacturer}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Model
-                                            </label>
-                                            <p className="text-lg">{asset.model}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Status
-                                            </label>
-                                            <div className="mt-1">{getStatusBadge(asset.status)}</div>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Condition
-                                            </label>
-                                            <p className="text-lg capitalize">{asset.condition}</p>
-                                        </div>
-                                    </div>
-
-                                    {asset.description && (
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Description
-                                            </label>
-                                            <p className="text-lg">{asset.description}</p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* Technical Specifications */}
-                            {(() => {
-                                const t = (asset.type || "").toLowerCase();
-                                const hideAll = new Set([
-                                    "monitor",
-                                    "printer",
-                                    "router",
-                                    "switch",
-                                    "firewall",
-                                    "projector",
-                                ]);
-
-                                if (t === "storage") {
-                                    return (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>
-                                                    <Cpu className="h-5 w-5 inline-block mr-2" />
-                                                    <span>Technical Specifications</span>
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        Storage
-                                                    </label>
-                                                    <p className="text-lg">
-                                                        {asset.storage || "Not specified"}
-                                                    </p>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                }
-
-                                if (hideAll.has(t)) return null;
-
-                                return (
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>
-                                                <Cpu className="h-5 w-5 inline-block mr-2" />
-                                                <span>Technical Specifications</span>
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        Operating System
-                                                    </label>
-                                                    <p className="text-lg">
-                                                        {asset.operatingsystem || "Not specified"}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        Processor
-                                                    </label>
-                                                    <p className="text-lg">
-                                                        {asset.processor || "Not specified"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        Memory
-                                                    </label>
-                                                    <p className="text-lg">
-                                                        {asset.memory || "Not specified"}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        Storage
-                                                    </label>
-                                                    <p className="text-lg">
-                                                        {asset.storage || "Not specified"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })()}
-                            {/* Network Informaion*/}
-                            {(() => {
-                                const t = (asset.type || "").toLowerCase();
-                                const hideNet = new Set(["monitor", "storage", "projector"]);
-                                if (hideNet.has(t)) return null;
-
-                                if (asset.hostname || asset.ipaddress || asset.macaddress) {
-                                    return (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Network Information</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        Hostname
-                                                    </label>
-                                                    <p className="text-lg font-mono">
-                                                        {asset.hostname || "-"}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        IP Address
-                                                    </label>
-                                                    <p className="text-lg font-mono">
-                                                        {asset.ipaddress || "-"}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-medium text-gray-500">
-                                                        MAC Address
-                                                    </label>
-                                                    <p className="text-lg font-mono">
-                                                        {asset.macaddress || "-"}
-                                                    </p>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                }
-                                return null;
-                            })()}
-
-                            {/* Purchase Information */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <Coins className="h-5 w-5" />
-                                        <span>Purchase Information</span>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Purchase Date
-                                            </label>
-                                            <p className="text-lg">
-                                                {asset.purchasedate ? asset.purchasedate.split("T")[0] : ""}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Purchase Price
-                                            </label>
-                                            <p className="text-lg">{asset.purchaseprice || "0"}฿</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Supplier
-                                            </label>
-                                            <p className="text-lg">{asset.supplier || "Not specified"}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Warranty Expiry
-                                            </label>
-                                            <p className="text-lg">
-                                                {asset.warrantyexpiry
-                                                    ? asset.warrantyexpiry.split("T")[0]
-                                                    : ""}
-                                            </p>
+                                            <label className="text-sm font-medium text-muted-foreground">Legally Purchased</label>
+                                            <p className="text-base">{asset.is_legally_purchased || "-"}</p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Network Information (Detailed) */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Activity className="h-5 w-5 text-primary" />
+                                        Network Details
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">Device Name</label>
+                                            <p className="text-base font-mono">{asset.pc_name || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">IP Address</label>
+                                            <p className="text-base font-mono">{asset.ipaddress || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">MAC Address</label>
+                                            <p className="text-base font-mono">{asset.macaddress || "-"}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Hardware Details */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Cpu className="h-5 w-5 text-primary" />
+                                        Hardware Details
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">Serial Number</label>
+                                            <p className="text-base font-mono">{asset.serialnumber}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">Manufacturer</label>
+                                            <p className="text-base">{asset.manufacturer}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">Model</label>
+                                            <p className="text-base">{asset.model}</p>
+                                        </div>
+                                        {asset.description && (
+                                            <div className="col-span-full">
+                                                <label className="text-sm font-medium text-muted-foreground">Description</label>
+                                                <p className="text-base">{asset.description}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
                         </div>
 
-                        {/* Sidebar */}
+                        {/* Sidebar (Right Column) */}
                         <div className="space-y-6">
+
                             {/* Assignment */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <User className="h-5 w-5" />
-                                        <span>Assignment</span>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <User className="h-5 w-5 text-primary" />
+                                        Assignment
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-6">
                                     {assignedUser ? (
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-500">
-                                                    Assigned To
-                                                </label>
-                                                <p className="text-lg font-medium">
-                                                    {assignedUser.firstName} {assignedUser.lastName}
-                                                </p>
-                                                <p className="text-sm text-gray-600">
-                                                    {assignedUser.email}
-                                                </p>
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                                {assignedUser.firstName?.[0]}{assignedUser.lastName?.[0]}
                                             </div>
                                             <div>
-                                                <label className="text-sm font-medium text-gray-500">
-                                                    Department
-                                                </label>
-                                                <p className="text-lg">{assignedUser.department}</p>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-500">
-                                                    Role
-                                                </label>
-                                                <p className="text-lg">{assignedUser.role}</p>
+                                                <p className="font-medium text-lg leading-none">{assignedUser.firstName} {assignedUser.lastName}</p>
+                                                <p className="text-sm text-muted-foreground mt-1">{assignedUser.email}</p>
+                                                <div className="flex gap-2 mt-2">
+                                                    <Badge variant="secondary">{assignedUser.department}</Badge>
+                                                    <Badge variant="outline">{assignedUser.role}</Badge>
+                                                </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="text-center py-4">
-                                            <User className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                            <p className="text-gray-500">Not assigned</p>
+                                        <div className="text-center py-6 bg-muted/30 rounded-lg border border-dashed">
+                                            <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                            <p className="text-muted-foreground">No user assigned</p>
                                         </div>
                                     )}
                                 </CardContent>
@@ -547,26 +381,66 @@ export default function NetworkAssetViewPage() {
                             {/* Location */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <MapPin className="h-5 w-5" />
-                                        <span>Location</span>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <MapPin className="h-5 w-5 text-primary" />
+                                        Location
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Current Location
-                                            </label>
-                                            <p className="text-lg">{asset.location}</p>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase">Location</label>
+                                            <p className="font-medium">{asset.location}</p>
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium text-gray-500">
-                                                Department
-                                            </label>
-                                            <p className="text-lg">
-                                                {asset.department || "Not specified"}
-                                            </p>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase">Building</label>
+                                            <p className="font-medium">{asset.building || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase">Division</label>
+                                            <p className="font-medium">{asset.division || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase">Section</label>
+                                            <p className="font-medium">{asset.section || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase">Area</label>
+                                            <p className="font-medium">{asset.area || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase">Department</label>
+                                            <p className="font-medium">{asset.department || "-"}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Purchase Information */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Coins className="h-5 w-5 text-primary" />
+                                        Purchase Info
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex justify-between items-center border-b pb-2">
+                                        <span className="text-sm text-muted-foreground">Price</span>
+                                        <span className="font-bold text-lg">{asset.purchaseprice ? `${asset.purchaseprice}฿` : "-"}</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-muted-foreground">Date</span>
+                                            <span className="text-sm font-medium">{asset.purchasedate ? asset.purchasedate.split("T")[0] : "-"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-muted-foreground">Warranty</span>
+                                            <span className="text-sm font-medium">{asset.warrantyexpiry ? asset.warrantyexpiry.split("T")[0] : "-"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-muted-foreground">Supplier</span>
+                                            <span className="text-sm font-medium">{asset.supplier || "-"}</span>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -589,7 +463,7 @@ export default function NetworkAssetViewPage() {
                                         <CardContent>
                                             <div className="space-y-3">
                                                 <div>
-                                                    <label className="text-sm font-medium text-gray-500">
+                                                    <label className="text-sm font-medium text-muted-foreground">
                                                         Status
                                                     </label>
                                                     <div className="mt-1">
@@ -597,7 +471,7 @@ export default function NetworkAssetViewPage() {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="text-sm font-medium text-gray-500">
+                                                    <label className="text-sm font-medium text-muted-foreground">
                                                         Last Check
                                                     </label>
                                                     <p className="text-lg">
@@ -609,34 +483,17 @@ export default function NetworkAssetViewPage() {
                                     </Card>
                                 );
                             })()}
-                            {/* Borrowing */}
-                            {asset.isloanable && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center space-x-2">
-                                            <Activity className="h-5 w-5" />
-                                            <span>Borrowing</span>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-center py-4">
-                                            <Activity className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                                            <p className="text-green-600 font-medium">
-                                                Available for borrowing
-                                            </p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
 
                             {/* Notes */}
                             {asset.notes && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Notes</CardTitle>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <span>Notes</span>
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-gray-700 whitespace-pre-wrap">
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted/30 p-3 rounded-md">
                                             {asset.notes}
                                         </p>
                                     </CardContent>

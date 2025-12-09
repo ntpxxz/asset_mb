@@ -46,7 +46,7 @@ export default function ImportPage() {
                         Excel Import
                     </CardTitle>
                     <CardDescription>
-                        The system will read the file from the server's local path.
+                        The system will read the file from the server&apos;s local path.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -54,7 +54,7 @@ export default function ImportPage() {
                         <p className="font-medium text-slate-700 mb-2">Instructions:</p>
                         <ol className="list-decimal list-inside space-y-1 text-slate-600">
                             <li>Ensure your Excel file is named <strong>assets.xlsx</strong></li>
-                            <li>Place it in the server's document folder (e.g., <code>Documents/assets.xlsx</code>)</li>
+                            <li>Place it in the server&apos;s document folder (e.g., <code>Documents/assets.xlsx</code>)</li>
                             <li>The file should have headers like: <em>Asset Tag, Serial Number, Model, Type, Status</em></li>
                         </ol>
                     </div>

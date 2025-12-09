@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -278,10 +278,10 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
               <Select value={formData.status} onValueChange={(v) => handleInputChange('status', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="available">🟢 {t('available')}</SelectItem>
-                  <SelectItem value="assigned">🔵 {t('assigned')}</SelectItem>
-                  <SelectItem value="maintenance">🟠 {t('maintenance')}</SelectItem>
-                  <SelectItem value="retired">⚫ {t('retired')}</SelectItem>
+                  <SelectItem value="available">๐ข {t('available')}</SelectItem>
+                  <SelectItem value="assigned">๐”ต {t('assigned')}</SelectItem>
+                  <SelectItem value="maintenance">๐  {t('maintenance')}</SelectItem>
+                  <SelectItem value="retired">โซ {t('retired')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -323,31 +323,30 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
         </CardContent>
       </Card>
 
-      {/* --- 2. Location & Assignment --- */}
+      {/* --- 2.Assignment & Location --- */}
       <Card className="shadow-sm">
         <CardHeader className="pb-4 border-b bg-gray-50/50">
           <CardTitle className="flex items-center gap-2 text-base text-orange-600">
-            <MapPin className="h-5 w-5" /> {t('locationAssignment')}
+            <MapPin className="h-5 w-5" /> {t('Assignment &Location')}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-6 pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="assigneduser">{t('assignedUser')}</Label>
-              <Input
-                id="assigneduser"
-                value={formData.assigneduser || ''}
-                onChange={(e) => handleInputChange('assigneduser', e.target.value)}
-                placeholder={t('usernamePlaceholder')}
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {category !== 'network' && (
+              <div className="space-y-2">
+                <Label htmlFor="assigneduser">{t('assignedUser')}</Label>
+                <Input
+                  id="assigneduser"
+                  value={formData.assigneduser || ''}
+                  onChange={(e) => handleInputChange('assigneduser', e.target.value)}
+                  placeholder={t('usernamePlaceholder')}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="building">{t('building')}</Label>
               <Input id="building" value={formData.building || ''} onChange={(e) => handleInputChange('building', e.target.value)} />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <Label htmlFor="division">{t('division')}</Label>
               <Input id="division" value={formData.division || ''} onChange={(e) => handleInputChange('division', e.target.value)} />
@@ -357,9 +356,10 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
               <Input id="department" value={formData.department || ''} onChange={(e) => handleInputChange('department', e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="area">{t('area')}</Label>
+              <Label htmlFor="area">{t('Area')}</Label>
               <Input id="area" value={formData.area || ''} onChange={(e) => handleInputChange('area', e.target.value)} placeholder="e.g. Server Room" />
             </div>
+
           </div>
         </CardContent>
       </Card>
@@ -404,7 +404,7 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                   <ShieldCheck className="h-4 w-4" /> {t('softwareLicense')}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label>{t('osUsage')}</Label>
                     <Input value={formData.operatingsystem || ''} onChange={(e) => handleInputChange('operatingsystem', e.target.value)} placeholder="e.g. Windows 11" />
@@ -413,14 +413,19 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
                     <Label>{t('osVersion')}</Label>
                     <Input value={formData.os_version || ''} onChange={(e) => handleInputChange('os_version', e.target.value)} placeholder="e.g. win11" />
                   </div>
+                  <div className="space-y-2">
+                    <Label>{t('LicenseKey')}</Label>
+                    <Input value={formData.os_key || ''} onChange={(e) => handleInputChange('os_key', e.target.value)} className="font-mono text-sm" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>{t('productKey')}</Label>
-                  <Input value={formData.os_key || ''} onChange={(e) => handleInputChange('os_key', e.target.value)} className="font-mono text-sm" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" />
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label>{t('officeApps')}</Label>
+                    <Input value={formData.ms_office_apps || ''} onChange={(e) => handleInputChange('ms_office_apps', e.target.value)} placeholder="e.g. Word, Excel, PowerPoint" />
+                  </div>
                   <div className="space-y-2">
                     <Label>{t('officeVersion')}</Label>
                     <Input value={formData.ms_office_version || ''} onChange={(e) => handleInputChange('ms_office_version', e.target.value)} placeholder="e.g. Office 2021" />
@@ -446,22 +451,16 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                 <Network className="h-4 w-4" /> {t('networkSettings')}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label>{isComputer ? t('computerName') : t('deviceName')}</Label>
+                  <Label>{isComputer ? t('Hostname') : t('deviceName')}</Label>
                   <Input
                     value={formData.pc_name || ''}
-                    onChange={(e) => {
-                      handleInputChange('pc_name', e.target.value);
-                      if (!formData.hostname) handleInputChange('hostname', e.target.value);
-                    }}
+                    onChange={(e) => handleInputChange('pc_name', e.target.value)}
                     placeholder={isComputer ? "DESKTOP-ABC" : "SW-CORE-01"}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('hostname')}</Label>
-                  <Input value={formData.hostname || ''} onChange={(e) => handleInputChange('hostname', e.target.value)} />
-                </div>
+
                 <div className="space-y-2">
                   <Label>{t('ipAddress')}</Label>
                   <Input value={formData.ip_address || ''} onChange={(e) => handleInputChange('ip_address', e.target.value)} placeholder="192.168.x.x" className="font-mono" />
@@ -492,8 +491,8 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
           <div className="space-y-2">
             <Label>{t('price')}</Label>
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-gray-500">฿</span>
-              <Input type="number" className="pl-8" value={formData.purchaseprice ?? ''} onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))} placeholder="0.00" />
+              <span className="absolute left-3 top-2.5 text-gray-500"></span>
+              <Input type="text" value={formData.purchaseprice ?? ''} onChange={(e) => handleInputChange('purchaseprice', normalizeNumber(e.target.value))} placeholder="0.00" />
             </div>
           </div>
           <div className="space-y-2">
