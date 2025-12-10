@@ -182,7 +182,7 @@ function TransactionContent() {
       {/* Step 1: Select Type */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('selectTransactionType')}</CardTitle>
+          <CardTitle>{t('TransactionType')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ToggleGroup

@@ -307,10 +307,10 @@ export default function ComputerAssetViewPage() {
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-muted-foreground">OS Version</label>
-                                                <p className="text-base">{asset.os_version || "-"}</p>
+                                                <p className="text-base">{asset.operatingsystem || "-"}</p>
                                             </div>
                                             <div>
-                                                <label className="text-sm font-medium text-muted-foreground">OS Key</label>
+                                                <label className="text-sm font-medium text-muted-foreground">LicenseKey</label>
                                                 <p className="text-base font-mono bg-muted/50 p-1 rounded px-2 w-fit">{asset.os_key || "-"}</p>
                                             </div>
                                         </div>
