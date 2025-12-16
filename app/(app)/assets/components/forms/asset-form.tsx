@@ -455,8 +455,8 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
                 <div className="space-y-2">
                   <Label>{isComputer ? t('Hostname') : t('deviceName')}</Label>
                   <Input
-                    value={formData.pc_name || ''}
-                    onChange={(e) => handleInputChange('pc_name', e.target.value)}
+                    value={formData.hostname || ''}
+                    onChange={(e) => handleInputChange('hostname', e.target.value)}
                     placeholder={isComputer ? "DESKTOP-ABC" : "SW-CORE-01"}
                   />
                 </div>
