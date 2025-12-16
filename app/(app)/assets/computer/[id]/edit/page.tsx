@@ -85,6 +85,11 @@ const DEPT_ALIASES: Record<string, string> = {
 
 function normalizeAssetData(raw: any): AssetFormData {
     const d: any = { ...raw };
+
+    // Map DB fields to Form fields
+    if (d.ipaddress && !d.ip_address) d.ip_address = d.ipaddress;
+    if (d.macaddress && !d.mac_address) d.mac_address = d.macaddress;
+
     d.type = mapBy(d.type, TYPE_ALIASES);
     d.status = mapBy(d.status, STATUS_ALIASES);
     d.location = mapBy(d.location, LOCATION_ALIASES);
