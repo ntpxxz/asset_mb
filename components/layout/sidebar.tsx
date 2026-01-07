@@ -21,6 +21,7 @@ import {
   Network,
   Download,
   ChevronDown,
+  Map,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/lib/i18n-context';
@@ -37,7 +38,12 @@ type NavItem = {
 const navigation: NavItem[] = [
   { nameKey: 'home', href: '/dashboard', icon: Home },
   { nameKey: 'computerAssets', href: '/assets/computer', icon: Laptop },
-  { nameKey: 'networkAssets', href: '/assets/network', icon: Network },
+  {
+    nameKey: 'networkAssets', href: '/assets/network', icon: Network, submenu: [
+      { nameKey: 'networkEquipment', href: '/assets/network', icon: Network },
+      { nameKey: 'networkLayout', href: '/assets/network/layout', icon: Map },
+    ],
+  },
   {
     nameKey: 'otherAssets',
     href: '/inventory',
@@ -136,6 +142,20 @@ export function Sidebar() {
           const hasSubmenu = item.submenu && item.submenu.length > 0;
           const isOpen = openSubmenus[item.nameKey] || false;
 
+          // Determine the active submenu item by finding the longest matching href
+          let activeSubHref = '';
+          if (hasSubmenu) {
+            const matches = item.submenu!.filter((sub) => {
+              const h = sub.href.split('?')[0];
+              return pathname === h || pathname.startsWith(h + '/');
+            });
+            // Sort by length descending to match the most specific path
+            matches.sort((a, b) => b.href.length - a.href.length);
+            if (matches.length > 0) {
+              activeSubHref = matches[0].href.split('?')[0];
+            }
+          }
+
           // Updated active logic: check if pathname starts with href (unless it's root dashboard)
           const isMainActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');
           const isChildActive = item.submenu?.some((sub) => pathname.startsWith(sub.href.split('?')[0]));
@@ -188,7 +208,8 @@ export function Sidebar() {
                   <div className="pl-4 space-y-1">
                     {item.submenu!.map((sub) => {
                       const SubIcon = sub.icon;
-                      const isSubActive = pathname.startsWith(sub.href.split('?')[0]);
+                      // Use the calculated activeSubHref
+                      const isSubActive = sub.href.split('?')[0] === activeSubHref;
                       return (
                         <Link key={sub.nameKey} href={sub.href}>
                           <div
