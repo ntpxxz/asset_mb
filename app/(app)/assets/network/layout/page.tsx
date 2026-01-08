@@ -6,13 +6,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { FloorPlanSelector, FloorPlan } from './components/FloorPlanSelector';
 import { AssetSidebar, Asset } from './components/AssetSidebar';
-import { LayoutEditor, Placement } from './components/LayoutEditor';
+import { LayoutEditor, Placement, Connection } from './components/LayoutEditor';
 
 export default function NetworkLayoutPage() {
     const { t } = useI18n();
 
     const [selectedPlan, setSelectedPlan] = useState<FloorPlan | null>(null);
     const [placements, setPlacements] = useState<Placement[]>([]);
+    const [connections, setConnections] = useState<Connection[]>([]);
     const [allAssets, setAllAssets] = useState<Asset[]>([]);
     const [loadingAssets, setLoadingAssets] = useState(true);
 
@@ -21,22 +22,20 @@ export default function NetworkLayoutPage() {
         fetchAssets();
     }, []);
 
-    // Fetch placements when selected plan changes
+    // Fetch placements and connections when selected plan changes
     useEffect(() => {
         if (selectedPlan) {
             fetchPlacements(selectedPlan.id);
+            fetchConnections(selectedPlan.id);
         } else {
             setPlacements([]);
+            setConnections([]);
         }
     }, [selectedPlan]);
 
     const fetchAssets = async () => {
         try {
-            // We assume there's an API to get network assets. 
-            // If not, we might need to use the existing assets API with a filter?
-            // Let's try fetching all and filtering client side if API doesn't support type filter well
-            // Or use the existing /api/assets route
-            const res = await fetch('/api/assets?type=network'); // Assuming this works or returns all
+            const res = await fetch('/api/assets?type=network');
             if (res.ok) {
                 const responseData = await res.json();
                 const assets = responseData.data || [];
@@ -65,6 +64,18 @@ export default function NetworkLayoutPage() {
             }
         } catch (error) {
             console.error('Failed to fetch placements', error);
+        }
+    };
+
+    const fetchConnections = async (planId: number) => {
+        try {
+            const res = await fetch(`/api/floor-plans/${planId}/connections`);
+            if (res.ok) {
+                const data = await res.json();
+                setConnections(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch connections', error);
         }
     };
 
@@ -119,6 +130,8 @@ export default function NetworkLayoutPage() {
 
         // Optimistic update
         setPlacements(prev => prev.filter(p => p.asset_id !== assetId));
+        // Also remove connections involving this asset
+        setConnections(prev => prev.filter(c => c.from_asset_id !== assetId && c.to_asset_id !== assetId));
 
         try {
             const res = await fetch(`/api/floor-plans/${selectedPlan.id}/placements?assetId=${assetId}`, {
@@ -133,15 +146,75 @@ export default function NetworkLayoutPage() {
             console.error(error);
             toast.error('Failed to remove placement');
             fetchPlacements(selectedPlan.id);
+            fetchConnections(selectedPlan.id);
         }
     };
 
-    // Filter out assets that are already placed on THIS floor
-    // (Or globally if we enforce single placement, but for now let's just hide from sidebar if on this floor)
-    // Actually, if we enforce single placement globally, we should check if asset is in ANY placement?
-    // But we only have placements for current floor loaded.
-    // Ideally, the asset list should indicate if it's placed somewhere else.
-    // For now, let's just hide if it's on the CURRENT floor.
+    const handleConnectAssets = async (fromId: number, toId: number) => {
+        if (!selectedPlan) return;
+
+        // Check if connection already exists
+        const exists = connections.some(c =>
+            (c.from_asset_id === fromId && c.to_asset_id === toId) ||
+            (c.from_asset_id === toId && c.to_asset_id === fromId)
+        );
+
+        if (exists) {
+            toast.error('Connection already exists');
+            return;
+        }
+
+        // Optimistic update
+        const newConnection: Connection = {
+            id: Date.now(),
+            floor_plan_id: selectedPlan.id,
+            from_asset_id: fromId,
+            to_asset_id: toId
+        };
+        setConnections(prev => [...prev, newConnection]);
+
+        try {
+            const res = await fetch(`/api/floor-plans/${selectedPlan.id}/connections`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fromAssetId: fromId, toAssetId: toId }),
+            });
+
+            if (res.ok) {
+                const savedConnection = await res.json();
+                setConnections(prev => prev.map(c => c.id === newConnection.id ? savedConnection : c));
+                toast.success('Connection created');
+            } else {
+                throw new Error('Failed to create connection');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to create connection');
+            fetchConnections(selectedPlan.id);
+        }
+    };
+
+    const handleRemoveConnection = async (connectionId: number) => {
+        if (!selectedPlan) return;
+
+        setConnections(prev => prev.filter(c => c.id !== connectionId));
+
+        try {
+            const res = await fetch(`/api/floor-plans/${selectedPlan.id}/connections?connectionId=${connectionId}`, {
+                method: 'DELETE',
+            });
+
+            if (!res.ok) {
+                throw new Error('Failed to remove connection');
+            }
+            toast.success('Connection removed');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to remove connection');
+            fetchConnections(selectedPlan.id);
+        }
+    };
+
     const unplacedAssets = allAssets.filter(
         (asset) => !placements.some((p) => p.asset_id === asset.id)
     );
@@ -180,8 +253,11 @@ export default function NetworkLayoutPage() {
                         <LayoutEditor
                             floorPlan={selectedPlan}
                             placements={placements}
+                            connections={connections}
                             onDropAsset={handleDropAsset}
                             onRemovePlacement={handleRemovePlacement}
+                            onConnectAssets={handleConnectAssets}
+                            onRemoveConnection={handleRemoveConnection}
                         />
                     ) : (
                         <div className="flex-1 flex items-center justify-center text-muted-foreground">

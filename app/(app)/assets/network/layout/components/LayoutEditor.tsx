@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 
-import { Network, Server, Router, Info, Trash2, Save } from 'lucide-react';
+import { Network, Server, Router, Info, Trash2, Save, Link as LinkIcon, X } from 'lucide-react';
 import {
     Popover,
     PopoverContent,
@@ -25,18 +25,31 @@ export type Placement = {
     ipaddress: string;
 };
 
+export type Connection = {
+    id: number;
+    floor_plan_id: number;
+    from_asset_id: number;
+    to_asset_id: number;
+};
+
 interface LayoutEditorProps {
     floorPlan: FloorPlan;
     placements: Placement[];
+    connections: Connection[];
     onDropAsset: (assetId: number, x: number, y: number) => void;
     onRemovePlacement: (assetId: number) => void;
+    onConnectAssets: (fromId: number, toId: number) => void;
+    onRemoveConnection: (connectionId: number) => void;
 }
 
 export function LayoutEditor({
     floorPlan,
     placements,
+    connections,
     onDropAsset,
     onRemovePlacement,
+    onConnectAssets,
+    onRemoveConnection,
 }: LayoutEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -48,6 +61,10 @@ export function LayoutEditor({
     const [isPanning, setIsPanning] = useState(false);
     const [startPan, setStartPan] = useState({ x: 0, y: 0 });
 
+    // Drag-to-Connect state
+    const [dragConnectionStart, setDragConnectionStart] = useState<number | null>(null);
+    const [dragConnectionCurrent, setDragConnectionCurrent] = useState<{ x: number, y: number } | null>(null);
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
@@ -58,15 +75,6 @@ export function LayoutEditor({
         if (!contentRef.current) return;
 
         const rect = contentRef.current.getBoundingClientRect();
-
-        // Calculate relative position within the scaled content
-        // We need to account for the scale and current pan position
-        // But wait, the drop target IS the scaled content div?
-        // If we drop on the container, we need to transform.
-        // Let's assume the drop target is the content div (the one with the image).
-
-        // Actually, if we use the content div as drop target, the coordinates are relative to it.
-        // But `e.clientX` is global.
 
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -109,10 +117,32 @@ export function LayoutEditor({
                 y: e.clientY - startPan.y
             });
         }
+
+        if (dragConnectionStart && contentRef.current) {
+            e.preventDefault();
+            const rect = contentRef.current.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            setDragConnectionCurrent({ x, y });
+        }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: React.MouseEvent) => {
         setIsPanning(false);
+
+        if (dragConnectionStart) {
+            // Check if we dropped on an asset
+            const target = e.target as HTMLElement;
+            const assetMarker = target.closest('.asset-marker');
+            if (assetMarker) {
+                const targetId = parseInt(assetMarker.getAttribute('data-asset-id') || '0');
+                if (targetId && targetId !== dragConnectionStart) {
+                    onConnectAssets(dragConnectionStart, targetId);
+                }
+            }
+            setDragConnectionStart(null);
+            setDragConnectionCurrent(null);
+        }
     };
 
     // Zoom Handlers
@@ -139,6 +169,18 @@ export function LayoutEditor({
         return Network;
     };
 
+    const handleConnectorMouseDown = (e: React.MouseEvent, assetId: number) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setDragConnectionStart(assetId);
+
+        // Set initial position to the asset's position
+        const placement = placements.find(p => p.asset_id === assetId);
+        if (placement) {
+            setDragConnectionCurrent({ x: placement.x_position, y: placement.y_position });
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-muted/20 border rounded-lg">
             {/* Toolbar */}
@@ -159,7 +201,8 @@ export function LayoutEditor({
                 ref={containerRef}
                 className={cn(
                     "flex-1 overflow-hidden relative cursor-grab active:cursor-grabbing",
-                    isPanning && "cursor-grabbing"
+                    isPanning && "cursor-grabbing",
+                    dragConnectionStart && "cursor-crosshair"
                 )}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -175,13 +218,9 @@ export function LayoutEditor({
                     className="absolute origin-center transition-transform duration-75 ease-out"
                     style={{
                         transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                        // Center initially if position is 0,0? 
-                        // Actually, let's just start at top-left or center.
-                        // To center, we might need to know content size vs container size.
-                        // For now, let's rely on manual pan.
                         left: '50%',
                         top: '50%',
-                        marginLeft: floorPlan ? '-400px' : 0, // Approximate centering logic or just rely on flex
+                        marginLeft: floorPlan ? '-400px' : 0,
                         marginTop: floorPlan ? '-300px' : 0,
                     }}
                 >
@@ -194,25 +233,92 @@ export function LayoutEditor({
                             draggable={false}
                         />
 
+                        {/* Connections Layer (SVG) */}
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
+                            {connections.map(conn => {
+                                const from = placements.find(p => p.asset_id === conn.from_asset_id);
+                                const to = placements.find(p => p.asset_id === conn.to_asset_id);
+                                if (!from || !to) return null;
+                                return (
+                                    <g key={conn.id} className="group cursor-pointer pointer-events-auto" onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Delete connection?')) {
+                                            onRemoveConnection(conn.id);
+                                        }
+                                    }}>
+                                        <line
+                                            x1={`${from.x_position}%`}
+                                            y1={`${from.y_position}%`}
+                                            x2={`${to.x_position}%`}
+                                            y2={`${to.y_position}%`}
+                                            stroke="#3b82f6"
+                                            strokeWidth="2"
+                                            strokeDasharray="4,4"
+                                            className="opacity-60 group-hover:opacity-100 group-hover:stroke-red-500 transition-all animate-flow"
+                                        />
+                                        {/* Invisible wider line for easier clicking */}
+                                        <line
+                                            x1={`${from.x_position}%`}
+                                            y1={`${from.y_position}%`}
+                                            x2={`${to.x_position}%`}
+                                            y2={`${to.y_position}%`}
+                                            stroke="transparent"
+                                            strokeWidth="10"
+                                        />
+                                    </g>
+                                );
+                            })}
+                            {/* Dragging Line */}
+                            {dragConnectionStart && dragConnectionCurrent && (
+                                (() => {
+                                    const from = placements.find(p => p.asset_id === dragConnectionStart);
+                                    if (!from) return null;
+                                    return (
+                                        <line
+                                            x1={`${from.x_position}%`}
+                                            y1={`${from.y_position}%`}
+                                            x2={`${dragConnectionCurrent.x}%`}
+                                            y2={`${dragConnectionCurrent.y}%`}
+                                            stroke="#3b82f6"
+                                            strokeWidth="2"
+                                            strokeDasharray="4,4"
+                                            className="animate-pulse"
+                                        />
+                                    );
+                                })()
+                            )}
+                        </svg>
+
                         {/* Placements */}
                         {placements.map((p) => {
                             const Icon = getIcon(p.type);
+
                             return (
                                 <Popover key={p.id}>
                                     <PopoverTrigger asChild>
                                         <div
-                                            draggable
+                                            draggable={!dragConnectionStart}
                                             onDragStart={(e) => {
-                                                e.stopPropagation(); // Prevent panning start
+                                                e.stopPropagation();
                                                 setDraggedPlacementId(p.id);
                                             }}
-                                            className="asset-marker absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
+                                            className={cn(
+                                                "asset-marker absolute transform -translate-x-1/2 -translate-y-1/2 transition-transform z-10 group",
+                                                "cursor-pointer hover:scale-110"
+                                            )}
                                             style={{ left: `${p.x_position}%`, top: `${p.y_position}%` }}
-                                            // Prevent panning when clicking asset
                                             onMouseDown={(e) => e.stopPropagation()}
+                                            data-asset-id={p.asset_id}
                                         >
-                                            <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md border-2 border-white">
+                                            <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md border-2 border-white relative">
                                                 <Icon className="h-5 w-5" />
+
+                                                {/* Connector Handle */}
+                                                <div
+                                                    className="absolute -right-1 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full border border-white opacity-0 group-hover:opacity-100 cursor-crosshair transition-opacity hover:scale-125"
+                                                    onMouseDown={(e) => handleConnectorMouseDown(e, p.asset_id)}
+                                                    title="Drag to connect"
+                                                />
                                             </div>
                                             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-black/75 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
                                                 {p.asset_tag}
@@ -258,7 +364,7 @@ export function LayoutEditor({
 
             {/* Overlay instructions */}
             <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur p-2 rounded text-xs text-muted-foreground border pointer-events-none">
-                Scroll to zoom • Drag to pan • Drag assets to move
+                Scroll to zoom • Drag to pan • Drag assets to move • Drag blue dot to connect
             </div>
         </div>
     );
