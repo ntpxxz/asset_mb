@@ -22,6 +22,7 @@ type InventoryItem = {
   name: string;
   quantity: number;
   image_url: string | null;
+  barcode: string | null;
 };
 
 type User = {
@@ -51,6 +52,11 @@ function TransactionContent() {
 
   const [users, setUsers] = useState<User[]>([]);
 
+  // Search Suggestions State
+  const [suggestions, setSuggestions] = useState<InventoryItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
   // Auto-fill from URL
   useEffect(() => {
     const barcodeParam = searchParams.get('barcode');
@@ -75,11 +81,40 @@ function TransactionContent() {
     fetchUsers();
   }, []);
 
+  // Debounced Search for Suggestions
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (barcode.trim().length > 1 && !foundItem) {
+        setSuggestionsLoading(true);
+        try {
+          const response = await fetch(`/api/inventory?search=${encodeURIComponent(barcode)}&limit=5`);
+          const result = await response.json();
+          if (result.success) {
+            setSuggestions(result.data);
+          } else {
+            setSuggestions([]);
+          }
+        } catch (error) {
+          console.error("Failed to fetch suggestions", error);
+        } finally {
+          setSuggestionsLoading(false);
+        }
+      } else {
+        setSuggestions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [barcode, foundItem]);
+
+
   const handleBarcodeLookup = useCallback(async () => {
     if (!barcode.trim()) return;
     setLoading(true);
     setLookupError(null);
     setFoundItem(null);
+    setSuggestions([]); // Clear suggestions on manual lookup
+    setShowSuggestions(false);
     try {
       const response = await fetch(`/api/inventory?barcode=${encodeURIComponent(barcode)}`);
       const result = await response.json();
@@ -205,18 +240,81 @@ function TransactionContent() {
       </Card>
 
       {/* Step 2: Find Item */}
-      <Card>
+      <Card className="overflow-visible">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Barcode className="h-5 w-5" />
             <span>{t('findItemByBarcode')}</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           <div className="flex gap-2">
-            <Input id="barcode" placeholder={t('scanBarcodePlaceholder')} value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyPress={handleBarcodeKeyPress} disabled={loading} autoFocus />
-            <Button onClick={handleBarcodeLookup} disabled={loading || !barcode.trim()}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}</Button>
+            <Input
+              id="barcode"
+              placeholder={t('scanBarcodePlaceholder')}
+              value={barcode}
+              onChange={(e) => {
+                setBarcode(e.target.value);
+                setFoundItem(null); // Reset found item when typing
+                setShowSuggestions(true);
+              }}
+              onKeyPress={handleBarcodeKeyPress}
+              disabled={loading}
+              autoFocus
+              autoComplete="off"
+            />
+            <Button onClick={handleBarcodeLookup} disabled={loading || !barcode.trim()}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </Button>
           </div>
+
+          {/* Search Suggestions Dropdown */}
+          {showSuggestions && barcode.trim().length > 0 && !foundItem && (
+            <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto left-0 top-full">
+              {suggestionsLoading ? (
+                <div className="p-4 text-center text-sm text-gray-500">Loading...</div>
+              ) : suggestions.length > 0 ? (
+                suggestions.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                    onClick={() => {
+                      setFoundItem(item);
+                      setBarcode(item.barcode || ''); // Set barcode if available, or keep name? Better to keep what identifies it.
+                      setNewQuantity(item.quantity);
+                      setSuggestions([]);
+                      setShowSuggestions(false);
+                      toast.success(`${t('foundItem')} ${item.name}`);
+                    }}
+                  >
+                    <div className="h-10 w-10 relative flex-shrink-0 bg-gray-50 border rounded flex items-center justify-center overflow-hidden">
+                      {item.image_url ? (
+                        <Image
+                          src={item.image_url}
+                          alt={item.name}
+                          fill
+                          className="object-contain p-1"
+                          unoptimized
+                        />
+                      ) : (
+                        <Archive className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-gray-500 font-mono">{item.barcode || 'No Barcode'}</p>
+                    </div>
+                    <div className="text-xs text-gray-500 whitespace-nowrap">
+                      Qty: {item.quantity}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-gray-500">No items found</div>
+              )}
+            </div>
+          )}
+
           {lookupError && <p className="text-sm text-red-500 mt-2">{lookupError}</p>}
         </CardContent>
       </Card>

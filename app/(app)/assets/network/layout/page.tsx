@@ -86,6 +86,8 @@ export default function NetworkLayoutPage() {
         const asset = allAssets.find(a => a.id === assetId);
         if (!asset) return;
 
+        const isMove = placements.some(p => p.asset_id === assetId);
+
         const newPlacement: Placement = {
             id: Date.now(), // Temp ID
             asset_id: assetId,
@@ -113,7 +115,11 @@ export default function NetworkLayoutPage() {
                 const savedPlacement = await res.json();
                 // Update with real ID
                 setPlacements(prev => prev.map(p => p.asset_id === assetId ? { ...p, id: savedPlacement.id } : p));
-                toast.success('Asset placed');
+
+                // Only show toast for new placements, not moves
+                if (!isMove) {
+                    toast.success('Asset placed');
+                }
             } else {
                 throw new Error('Failed to save');
             }

@@ -15,6 +15,8 @@ type InventoryItem = {
   location: string;
   category: string;
   description: string;
+  min_stock_level: number;
+  price_per_unit: number;
 };
 
 export default function EditInventoryPage() {
@@ -47,37 +49,37 @@ export default function EditInventoryPage() {
       fetchItem();
     }
   }, [itemId]);
-  
+
   // Create a new handleSubmit for editing
   const handleEditSubmit = async (formData: any) => {
     const toastId = toast.loading("Saving changes...");
     try {
-        const response = await fetch(`/api/inventory/${itemId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData),
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.error || 'Failed to update item');
-        }
-        toast.success("Item updated successfully!", { id: toastId });
-        router.push('/inventory');
-    } catch(error: any) {
-        toast.error(error.message, { id: toastId });
+      const response = await fetch(`/api/inventory/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update item');
+      }
+      toast.success("Item updated successfully!", { id: toastId });
+      router.push('/inventory');
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
     }
   };
 
   if (loading) {
     return (
-        <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   if (!initialData) {
-      return <div>Item not found.</div>
+    return <div>Item not found.</div>
   }
 
   return (
@@ -94,9 +96,9 @@ export default function EditInventoryPage() {
       </div>
 
       {/* Re-use the form component in "edit" mode */}
-      <InventoryForm 
-        onSave={() => router.push('/inventory')} 
-        initialData={{ ...initialData, id: initialData.id.toString() }} 
+      <InventoryForm
+        onSave={() => router.push('/inventory')}
+        initialData={{ ...initialData, id: initialData.id.toString() }}
         mode="edit"
         onSubmit={handleEditSubmit}
       />

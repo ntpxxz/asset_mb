@@ -9,6 +9,8 @@ const itemUpdateSchema = z.object({
   category: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   image_url: z.string().optional().nullable(),
+  min_stock_level: z.coerce.number().optional().nullable(),
+  price_per_unit: z.coerce.number().optional().nullable(),
 });
 
 type Ctx = { params: Promise<{ id: string }> }; // <-- ต้องเป็น Promise<{ id }>
@@ -39,14 +41,14 @@ export async function PUT(request: NextRequest, context: Ctx) {
     if (!validation.success) {
       return NextResponse.json({ success: false, error: 'Invalid input', details: validation.error.flatten() }, { status: 400 });
     }
-    const { name, barcode, location, category, description, image_url } = validation.data;
+    const { name, barcode, location, category, description, image_url, min_stock_level, price_per_unit } = validation.data;
 
     await client.query('BEGIN');
     const { rows } = await client.query(
       `UPDATE inventory_items 
-       SET name = $1, barcode = $2, location = $3, category = $4, description = $5, image_url = $6, updated_at = NOW() 
-       WHERE id = $7 RETURNING *`,
-      [name, barcode ?? null, location ?? null, category ?? null, description ?? null, image_url ?? null, id]
+       SET name = $1, barcode = $2, location = $3, category = $4, description = $5, image_url = $6, min_stock_level = $7, price_per_unit = $8, updated_at = NOW() 
+       WHERE id = $9 RETURNING *`,
+      [name, barcode ?? null, location ?? null, category ?? null, description ?? null, image_url ?? null, min_stock_level ?? 0, price_per_unit ?? 0, id]
     );
     await client.query('COMMIT');
 
@@ -65,6 +67,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     client.release();
   }
 }
+
 export async function DELETE(
   request: NextRequest,
   context: Ctx,

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Network, Server, Router } from 'lucide-react';
+import { Search, Network, Server, Router, ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,6 +14,7 @@ export type Asset = {
     model: string;
     type: string;
     ipaddress: string;
+    image_url?: string | null;
 };
 
 interface AssetSidebarProps {
@@ -70,8 +72,18 @@ export function AssetSidebar({ assets, onDragStart }: AssetSidebarProps) {
                                             "flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent cursor-grab active:cursor-grabbing transition-colors"
                                         )}
                                     >
-                                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center text-primary">
-                                            <Icon className="h-4 w-4" />
+                                        <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center overflow-hidden relative flex-shrink-0">
+                                            {asset.image_url ? (
+                                                <Image
+                                                    src={asset.image_url}
+                                                    alt={asset.asset_tag}
+                                                    fill
+                                                    className="object-contain p-1"
+                                                    unoptimized
+                                                />
+                                            ) : (
+                                                <Icon className="h-5 w-5 text-muted-foreground" />
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-sm truncate">{asset.asset_tag}</p>
