@@ -22,7 +22,7 @@ export type Placement = {
     asset_tag: string;
     model: string;
     type: string;
-    ipaddress: string;
+    ip_address: string;
 };
 
 export type Connection = {
@@ -330,7 +330,7 @@ export function LayoutEditor({
                                             <h4 className="font-medium leading-none">{p.asset_tag}</h4>
                                             <p className="text-sm text-muted-foreground">{p.model}</p>
                                             <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1">
-                                                <span>IP:</span> <span className="font-mono">{p.ipaddress || 'N/A'}</span>
+                                                <span>IP:</span> <span className="font-mono">{p.ip_address || 'N/A'}</span>
                                                 <span>Type:</span> <span>{p.type}</span>
                                             </div>
                                             <div className="pt-2 flex justify-between">

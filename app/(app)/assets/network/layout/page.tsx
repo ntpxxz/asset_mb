@@ -97,7 +97,7 @@ export default function NetworkLayoutPage() {
             asset_tag: asset.asset_tag,
             model: asset.model,
             type: asset.type,
-            ipaddress: asset.ipaddress
+            ip_address: asset.ip_address
         };
 
         // Remove existing placement for this asset if it was already on this floor

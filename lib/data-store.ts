@@ -15,14 +15,14 @@ export interface HardwareAsset {
   assigneduser: string;
   location: string;
   department: string;
-  status: 'in-stock' | 'in-use' | 'under-repair' | 'retired';
+  status: 'active' | 'available' | 'maintenance' | 'scraped' | 'retired' | 'in-stock' | 'in-use' | 'under-repair';
   operatingsystem: string;
   processor: string;
   memory: string;
   storage: string;
   hostname: string;
-  ipaddress: string;
-  macaddress: string;
+  ip_address: string;
+  mac_address: string;
   patchstatus: 'up-to-date' | 'needs-review' | 'update-pending';
   lastpatch_check: string;
   isloanable: boolean;
@@ -229,7 +229,7 @@ export const hardwareService = {
   getById: (id: string): HardwareAsset | undefined =>
     hardwareAssets.find(asset => asset.id === id),
 
-  create: (data: Omit<HardwareAsset, 'id' | 'createdAt' | 'updatedAt'>): HardwareAsset => {
+  create: (data: Omit<HardwareAsset, 'id' | 'created_at' | 'updated_at'>): HardwareAsset => {
     const asset: HardwareAsset = {
       ...data,
       id: data.asset_tag || generateId('AST'),

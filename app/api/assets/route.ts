@@ -150,6 +150,8 @@ export async function GET(request: NextRequest) {
 
     const data = result.rows.map(r => ({
       ...r,
+      ip_address: r.ipaddress,
+      mac_address: r.macaddress,
       assigned_employee_id: r.assigned_employee_id_resolved ?? null,
       assigned_firstname: r.assigned_firstname ?? null,
       // Use the resolved display name or fallback to raw value

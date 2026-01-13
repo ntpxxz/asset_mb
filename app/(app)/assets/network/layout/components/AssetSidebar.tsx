@@ -13,7 +13,7 @@ export type Asset = {
     asset_tag: string;
     model: string;
     type: string;
-    ipaddress: string;
+    ip_address: string;
     image_url?: string | null;
 };
 
@@ -29,7 +29,7 @@ export function AssetSidebar({ assets, onDragStart }: AssetSidebarProps) {
         (a) =>
             a.asset_tag.toLowerCase().includes(search.toLowerCase()) ||
             a.model.toLowerCase().includes(search.toLowerCase()) ||
-            (a.ipaddress && a.ipaddress.includes(search))
+            (a.ip_address && a.ip_address.includes(search))
     );
 
     const getIcon = (type: string) => {

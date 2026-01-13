@@ -115,7 +115,11 @@ export async function GET(
     }
 
     const asset = result.rows[0];
-    const cleanAsset = { ...asset };
+    const cleanAsset = {
+      ...asset,
+      ip_address: asset.ipaddress,
+      mac_address: asset.macaddress
+    };
     delete cleanAsset.delete_at;
 
     return NextResponse.json({

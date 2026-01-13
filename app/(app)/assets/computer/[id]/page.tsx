@@ -333,7 +333,7 @@ export default function ComputerAssetViewPage() {
                             </Card>
 
                             {/* Network Information */}
-                            {(asset.hostname || asset.ipaddress || asset.macaddress) && (
+                            {(asset.hostname || asset.ip_address || asset.mac_address) && (
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
@@ -349,11 +349,11 @@ export default function ComputerAssetViewPage() {
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-muted-foreground">IP Address</label>
-                                                <p className="text-base font-mono">{asset.ipaddress || "-"}</p>
+                                                <p className="text-base font-mono">{asset.ip_address || "-"}</p>
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-muted-foreground">MAC Address</label>
-                                                <p className="text-base font-mono">{asset.macaddress || "-"}</p>
+                                                <p className="text-base font-mono">{asset.mac_address || "-"}</p>
                                             </div>
                                         </div>
                                     </CardContent>

@@ -299,11 +299,11 @@ export default function NetworkAssetViewPage() {
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-muted-foreground">IP Address</label>
-                                            <p className="text-base font-mono">{asset.ipaddress || "-"}</p>
+                                            <p className="text-base font-mono">{asset.ip_address || "-"}</p>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-muted-foreground">MAC Address</label>
-                                            <p className="text-base font-mono">{asset.macaddress || "-"}</p>
+                                            <p className="text-base font-mono">{asset.mac_address || "-"}</p>
                                         </div>
                                     </div>
                                 </CardContent>

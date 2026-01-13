@@ -93,6 +93,8 @@ async function getAssets(searchParams: { [key: string]: string | string[] | unde
     // Map data
     const assets = result.rows.map(row => ({
       ...row,
+      ip_address: row.ipaddress,
+      mac_address: row.macaddress,
       purchasedate: row.purchasedate ? new Date(row.purchasedate).toISOString() : null,
       warrantyexpiry: row.warrantyexpiry ? new Date(row.warrantyexpiry).toISOString() : null,
       lastpatch_check: row.lastpatch_check ? new Date(row.lastpatch_check).toISOString() : null,

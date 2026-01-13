@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
 export async function GET() {
@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(await file.arrayBuffer());
         const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
         const uploadDir = path.join(process.cwd(), 'public/uploads/floor-plans');
+
+        // Ensure directory exists
+        await mkdir(uploadDir, { recursive: true });
+
         const filePath = path.join(uploadDir, filename);
 
         await writeFile(filePath, buffer);
@@ -39,8 +43,8 @@ export async function POST(request: NextRequest) {
         );
 
         return NextResponse.json(result.rows[0], { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating floor plan:', error);
-        return NextResponse.json({ error: 'Failed to create floor plan' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create floor plan', details: error.message }, { status: 500 });
     }
 }

@@ -14,7 +14,11 @@ export async function GET(
        WHERE ap.floor_plan_id = $1`,
             [floorPlanId]
         );
-        return NextResponse.json(result.rows);
+        const data = result.rows.map(r => ({
+            ...r,
+            ip_address: r.ipaddress
+        }));
+        return NextResponse.json(data);
     } catch (error) {
         console.error('Error fetching placements:', error);
         return NextResponse.json({ error: 'Failed to fetch placements' }, { status: 500 });

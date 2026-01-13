@@ -414,7 +414,7 @@ export default function AssetViewPage() {
                 const hideNet = new Set(["monitor", "storage", "projector"]);
                 if (hideNet.has(t)) return null;
 
-                if (asset.hostname || asset.ipaddress || asset.macaddress) {
+                if (asset.hostname || asset.ip_address || asset.mac_address) {
                   return (
                     <Card>
                       <CardHeader>
@@ -434,7 +434,7 @@ export default function AssetViewPage() {
                             IP Address
                           </label>
                           <p className="text-lg font-mono">
-                            {asset.ipaddress || "-"}
+                            {asset.ip_address || "-"}
                           </p>
                         </div>
                         <div>
@@ -442,7 +442,7 @@ export default function AssetViewPage() {
                             MAC Address
                           </label>
                           <p className="text-lg font-mono">
-                            {asset.macaddress || "-"}
+                            {asset.mac_address || "-"}
                           </p>
                         </div>
                       </CardContent>

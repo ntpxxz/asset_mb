@@ -394,9 +394,9 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                         <TableRow>
                                             <TableHead className="font-semibold text-gray-700">{t('name')}</TableHead>
                                             <TableHead className="font-semibold text-gray-700">{t('model')}</TableHead>
-                                            <TableHead className="font-semibold text-gray-700">{t('serialNumber')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('IP address')}</TableHead>
+                                            <TableHead className="font-semibold text-gray-700">{t('MAC Address')}</TableHead>
                                             <TableHead className="font-semibold text-gray-700">{t('status')}</TableHead>
-                                            <TableHead className="font-semibold text-gray-700">{t('user')}</TableHead>
                                             <TableHead className="font-semibold text-gray-700">{t('location')}</TableHead>
                                             <TableHead className="font-semibold text-gray-700">{t('price')}</TableHead>
                                             <TableHead className="font-semibold text-gray-700">{t('actions')}</TableHead>
@@ -425,9 +425,9 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                                                             </div>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-sm">{asset.serialnumber || "-"}</TableCell>
+                                                    <TableCell className="font-mono text-sm">{asset.ip_address || "-"}</TableCell>
+                                                    <TableCell className="font-mono text-sm">{asset.mac_address || "-"}</TableCell>
                                                     <TableCell>{getStatusBadge(asset.status!, t)}</TableCell>
-                                                    <TableCell>{asset.assigneduser || "-"}</TableCell>
                                                     <TableCell>{asset.area || "-"}</TableCell>
                                                     <TableCell className="font-medium">
                                                         {asset.purchaseprice ? `${asset.purchaseprice}฿` : "-"}
