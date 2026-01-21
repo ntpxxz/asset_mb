@@ -13,6 +13,8 @@ export async function GET() {
     }
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();

@@ -54,8 +54,8 @@ interface AssetListProps {
 // Helper to render a colored badge based on asset status
 const getStatusBadge = (status: string, t: (key: string) => string) => {
     switch (status) {
-        case "active":
-            return <Badge className="bg-green-100 text-green-800">{t('active')}</Badge>;
+        case "assigned":
+            return <Badge className="bg-green-100 text-green-800">{t('assigned')}</Badge>;
         case "available":
             return <Badge className="bg-blue-100 text-blue-800">{t('available')}</Badge>;
         case "maintenance":
@@ -335,10 +335,10 @@ export default function AssetList({ defaultCategory, initialData, basePath = "/a
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">{t('allStatus')}</SelectItem>
-                                <SelectItem value="available">{t('available')}</SelectItem>
-                                <SelectItem value="assigned">{t('assigned')}</SelectItem>
-                                <SelectItem value="maintenance">{t('maintenance')}</SelectItem>
-                                <SelectItem value="retired">{t('retired')}</SelectItem>
+                                <SelectItem value="available">{t('Available')}</SelectItem>
+                                <SelectItem value="assigned">{t('Assigned')}</SelectItem>
+                                <SelectItem value="maintenance">{t('Maintenance')}</SelectItem>
+                                <SelectItem value="retired">{t('Retired')}</SelectItem>
                             </SelectContent>
                         </Select>
                         <Select value={categoryFilter} onValueChange={setCategoryFilter}>

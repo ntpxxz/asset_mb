@@ -7,6 +7,15 @@ import { toast } from 'sonner';
 import { FloorPlanSelector, FloorPlan } from './components/FloorPlanSelector';
 import { AssetSidebar, Asset } from './components/AssetSidebar';
 import { LayoutEditor, Placement, Connection } from './components/LayoutEditor';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { AssetForm } from '@/app/(app)/assets/components/forms/asset-form';
 
 export default function NetworkLayoutPage() {
     const { t } = useI18n();
@@ -16,6 +25,7 @@ export default function NetworkLayoutPage() {
     const [connections, setConnections] = useState<Connection[]>([]);
     const [allAssets, setAllAssets] = useState<Asset[]>([]);
     const [loadingAssets, setLoadingAssets] = useState(true);
+    const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
 
     // Fetch all network assets on mount
     useEffect(() => {
@@ -235,10 +245,16 @@ export default function NetworkLayoutPage() {
                         Manage network equipment locations
                     </p>
                 </div>
-                <FloorPlanSelector
-                    selectedId={selectedPlan?.id || null}
-                    onSelect={setSelectedPlan}
-                />
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => setIsAddDeviceOpen(true)} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add New Device
+                    </Button>
+                    <FloorPlanSelector
+                        selectedId={selectedPlan?.id || null}
+                        onSelect={setSelectedPlan}
+                    />
+                </div>
             </div>
 
             {/* Main Content */}
@@ -275,6 +291,24 @@ export default function NetworkLayoutPage() {
                     )}
                 </div>
             </div>
-        </div>
+
+            <Dialog open={isAddDeviceOpen} onOpenChange={setIsAddDeviceOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Network Device</DialogTitle>
+                    </DialogHeader>
+                    <AssetForm
+                        mode="create"
+                        category="network"
+                        onSaved={(newAsset) => {
+                            setIsAddDeviceOpen(false);
+                            fetchAssets(); // Refresh the list
+                            toast.success('Device created successfully');
+                        }}
+                        onCancel={() => setIsAddDeviceOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }

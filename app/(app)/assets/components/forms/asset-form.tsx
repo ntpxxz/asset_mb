@@ -278,10 +278,10 @@ export function AssetForm({ mode = 'create', initialData, assetId, onSubmit, onC
               <Select value={formData.status} onValueChange={(v) => handleInputChange('status', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="available">๐ข {t('available')}</SelectItem>
-                  <SelectItem value="assigned">๐”ต {t('assigned')}</SelectItem>
-                  <SelectItem value="maintenance">๐  {t('maintenance')}</SelectItem>
-                  <SelectItem value="retired">โซ {t('retired')}</SelectItem>
+                  <SelectItem value="available">{t('available')}</SelectItem>
+                  <SelectItem value="assigned">{t('assigned')}</SelectItem>
+                  <SelectItem value="maintenance">{t('maintenance')}</SelectItem>
+                  <SelectItem value="retired">{t('retired')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
